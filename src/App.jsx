@@ -20,20 +20,62 @@ function sunLon(jd){
   return norm(L0+C-0.00569-0.00478*Math.sin(norm(125.04-1934.136*T)*D2R));
 }
 function moonLon(jd){
+  // Meeus "Astronomical Algorithms" Ch 47 — 30-term truncation (accuracy ±0.04°)
   const T=(jd-2451545)/36525;
-  const Lp=norm(218.3164477+481267.88123421*T),D2=norm(297.8501921+445267.1114034*T);
-  const M=norm(357.5291092+35999.0502909*T),Mp=norm(134.9633964+477198.8675055*T),F=norm(93.2720950+483202.0175233*T);
-  return norm(Lp+6.2886*Math.sin(Mp*D2R)+1.2740*Math.sin((2*D2-Mp)*D2R)-0.6583*Math.sin(2*D2*D2R)+0.2136*Math.sin(2*Mp*D2R)-0.1850*Math.sin(M*D2R)-0.1143*Math.sin(2*F*D2R)+0.0588*Math.sin((2*D2-2*Mp)*D2R));
+  const Lp=norm(218.3164477+481267.88123421*T-0.0015786*T*T+T*T*T/538841-T*T*T*T/65194000);
+  const D =norm(297.8501921+445267.1114034*T -0.0018819*T*T+T*T*T/545868 -T*T*T*T/113065000);
+  const M =norm(357.5291092+35999.0502909*T  -0.0001536*T*T+T*T*T/24490000);
+  const Mp=norm(134.9633964+477198.8675055*T +0.0087414*T*T+T*T*T/69699   -T*T*T*T/14712000);
+  const F =norm(93.2720950 +483202.0175233*T -0.0036539*T*T-T*T*T/3526000 +T*T*T*T/863310000);
+  const E=1-0.002516*T-0.0000074*T*T, E2=E*E;
+  const A1=norm(119.75+131.849*T), A2=norm(53.09+479264.290*T);
+  // Table 47.A — [D, M, M', F, Σl] in units of 1e-6 degrees; E-factor applied to |M|=1,2 terms
+  const LT=[
+    [0,0,1,0,6288774],[2,0,-1,0,1274027],[2,0,0,0,658314],[0,0,2,0,213618],
+    [0,1,0,0,-185116],[0,0,0,2,-114332],[2,0,-2,0,58793],[2,-1,-1,0,57066],
+    [2,0,1,0,53322],[2,1,0,0,45758],[0,1,-1,0,-40923],[1,0,0,0,-34720],
+    [0,1,1,0,-30383],[2,0,0,-2,15327],[0,0,1,2,-12528],[0,0,1,-2,10980],
+    [4,0,-1,0,10675],[0,0,3,0,10034],[4,0,-2,0,8548],[0,1,-2,0,-7888],
+    [2,1,-1,0,-6766],[1,0,1,0,-5163],[1,1,0,0,4987],[2,-1,2,0,4036],
+    [2,0,2,0,3994],[4,0,0,0,3861],[2,0,-3,0,3665],[0,1,2,0,-2689],
+    [2,0,-1,2,-2602],[2,-1,-2,0,2390]
+  ];
+  let sl=0;
+  for(const [cd,cm,cmp,cf,cl] of LT){
+    const ef=Math.abs(cm)===1?E:Math.abs(cm)===2?E2:1;
+    sl+=ef*cl*Math.sin((cd*D+cm*M+cmp*Mp+cf*F)*D2R);
+  }
+  sl+=3958*Math.sin(A1*D2R)+1962*Math.sin((Lp-F)*D2R)+318*Math.sin(A2*D2R);
+  return norm(Lp+sl/1000000);
 }
-const EL={mercury:{L0:252.25084,Lr:149472.675,M0:174.79,Mr:149472.52,e:0.20563,a:0.387},venus:{L0:181.97973,Lr:58517.816,M0:50.42,Mr:58517.80,e:0.00677,a:0.723},mars:{L0:355.43327,Lr:19140.299,M0:19.37,Mr:19140.29,e:0.09341,a:1.524},jupiter:{L0:34.35148,Lr:3034.906,M0:20.02,Mr:3034.91,e:0.04853,a:5.203},saturn:{L0:50.07747,Lr:1222.114,M0:317.02,Mr:1221.91,e:0.05551,a:9.537}};
+// Meeus Table 31.a — J2000.0 elements with secular rates; e,ω vary with T
+const EL={
+  mercury:{L0:252.250906,Lr:149472.6746358,e0:0.20563175,de:-0.000000261,w0:77.45611904,dw:0.15940013,a:0.387098},
+  venus:  {L0:181.979801,Lr:58517.8156760, e0:0.00677188,de:-0.000047766,w0:131.563707, dw:1.4022812, a:0.723330},
+  mars:   {L0:355.433275,Lr:19140.2993313, e0:0.09341233,de:0.000090484, w0:336.060234, dw:1.8410331, a:1.523679},
+  jupiter:{L0:34.351484, Lr:3034.9056746,  e0:0.04849485,de:0.000163244, w0:14.331309,  dw:1.6126170, a:5.202603},
+  saturn: {L0:50.077471, Lr:1222.1137943,  e0:0.05550825,de:-0.000346641,w0:93.056787,  dw:1.9637613, a:9.554909},
+};
+// Full equation of center to order e^5 (Meeus Ch 27 generalised)
+function equationOfCenter(e,M){
+  const Mr=M*D2R,e2=e*e,e3=e2*e,e4=e3*e,e5=e4*e;
+  return R2D*((2*e-e3/4+5*e5/96)*Math.sin(Mr)+(5*e2/4-11*e4/24)*Math.sin(2*Mr)+(13*e3/12-43*e5/64)*Math.sin(3*Mr)+(103*e4/96)*Math.sin(4*Mr)+(1097*e5/960)*Math.sin(5*Mr));
+}
 function planetLon(name,jd){
   if(name==="sun")return sunLon(jd);if(name==="moon")return moonLon(jd);
-  const d=jd-2451545,T=d/36525,el=EL[name];if(!el)return 0;
-  const L=norm(el.L0+el.Lr*T),M=norm(el.M0+el.Mr*T),Mr=M*D2R;
-  const v=norm(M+R2D*(2*el.e*Math.sin(Mr)+1.25*el.e*el.e*Math.sin(2*Mr)));
-  const r=el.a*(1-el.e*el.e)/(1+el.e*Math.cos(v*D2R));
-  const hL=norm(L+(v-M)),eL=norm(sunLon(jd)+180);
-  return norm(R2D*Math.atan2(r*Math.sin(hL*D2R)-Math.sin(eL*D2R),r*Math.cos(hL*D2R)-Math.cos(eL*D2R)));
+  const T=(jd-2451545)/36525,el=EL[name];if(!el)return 0;
+  const e=el.e0+el.de*T;
+  const L=norm(el.L0+el.Lr*T);
+  const w=norm(el.w0+el.dw*T);
+  const M=norm(L-w);
+  const v=norm(M+equationOfCenter(e,M));
+  const r=el.a*(1-e*e)/(1+e*Math.cos(v*D2R));
+  const hL=norm(w+v);
+  // Earth heliocentric position from Sun longitude + radius
+  const eL=norm(sunLon(jd)+180);
+  const eM=norm(357.52911+35999.05029*T)*D2R,ee=0.016708634-0.000042037*T;
+  const eR=1.000001018*(1-ee*ee)/(1+ee*Math.cos(eM));
+  return norm(R2D*Math.atan2(r*Math.sin(hL*D2R)-eR*Math.sin(eL*D2R),r*Math.cos(hL*D2R)-eR*Math.cos(eL*D2R)));
 }
 function dailyMotion(name,jd){let d=planetLon(name,jd+0.5)-planetLon(name,jd-0.5);if(d>180)d-=360;if(d<-180)d+=360;return d;}
 const SIGNS=[{name:"Aries",sym:"♈",el:"fire",mod:"cardinal"},{name:"Taurus",sym:"♉",el:"earth",mod:"fixed"},{name:"Gemini",sym:"♊",el:"air",mod:"mutable"},{name:"Cancer",sym:"♋",el:"water",mod:"cardinal"},{name:"Leo",sym:"♌",el:"fire",mod:"fixed"},{name:"Virgo",sym:"♍",el:"earth",mod:"mutable"},{name:"Libra",sym:"♎",el:"air",mod:"cardinal"},{name:"Scorpio",sym:"♏",el:"water",mod:"fixed"},{name:"Sagittarius",sym:"♐",el:"fire",mod:"mutable"},{name:"Capricorn",sym:"♑",el:"earth",mod:"cardinal"},{name:"Aquarius",sym:"♒",el:"air",mod:"fixed"},{name:"Pisces",sym:"♓",el:"water",mod:"mutable"}];
@@ -70,9 +112,13 @@ function checkVoC(jd){
   planets.forEach(pk=>{
     const pl=planetLon(pk,jd);
     aspectAngles.forEach(asp=>{
-      let diff=norm(pl-moonL+asp);
-      if(diff>180)diff=360-diff;
-      if(diff<8&&diff<degsLeft)hasApplyingAspect=true;
+      // Check both symmetric aspect positions (e.g. both trines for a given planet)
+      const checks=asp===0||asp===180?[asp]:[asp,360-asp];
+      checks.forEach(a=>{
+        const aspPoint=norm(pl+a);
+        const moonsTravel=norm(aspPoint-moonL);
+        if(moonsTravel<8&&moonsTravel<degsLeft)hasApplyingAspect=true;
+      });
     });
   });
   const moonSpeed=0.549;
@@ -101,6 +147,10 @@ function getPlanetaryHour(date){
   const hn=Math.floor((date-mn)/3600000)%24,pi=(ri+hn)%7;
   return{planet:HOUR_ORDER[pi],hourNum:hn,msRemaining:new Date(mn.getTime()+(hn+1)*3600000)-date,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:dr};
 }
+// Precess a J2000.0 star longitude to current epoch (~50.29"/year = 1.3969°/century)
+function precessStar(lon0,jd){return norm(lon0+1.396971*(jd-2451545)/36525);}
+// Mean lunar node (True Node uses additional ~±1.5° perturbation; mean is sufficient for electional)
+function meanNode(jd){const T=(jd-2451545)/36525;return norm(125.04452-1934.136261*T+0.0020708*T*T+T*T*T/450000);}
 
 // ═══════════════════════════════════════════════════════════════════════
 // PLANETARY DATA
@@ -254,12 +304,14 @@ function useEphemeris(date){
   const phases=["New","Waxing Crescent","First Quarter","Waxing Gibbous","Full","Waning Gibbous","Last Quarter","Waning Crescent"];
   const voc=checkVoC(jd);
   const decanIdx=Math.min(35,Math.floor(pos.sun.lon/10));
+  const northNode=meanNode(jd),southNode=norm(northNode+180);
   const nearStars=FIXED_STARS.filter(s=>{
+    const sLon=precessStar(s.lon,jd);
     const tp=Object.values(pos);
-    return tp.some(p=>{let d=Math.abs(norm(s.lon-p.lon));if(d>180)d=360-d;return d<3;});
+    return tp.some(p=>{let d=Math.abs(norm(sLon-p.lon));if(d>180)d=360-d;return d<3;});
   });
   const aspects=getAspectsAll(pos);
-  return{pos,jd,moonPhase:phases[Math.floor(mpDeg/45)],moonPhaseDeg:mpDeg,voc,decanIdx,nearStars,aspects};
+  return{pos,jd,moonPhase:phases[Math.floor(mpDeg/45)],moonPhaseDeg:mpDeg,voc,decanIdx,nearStars,aspects,northNode,southNode};
 }
 
 function calcNatal(bd){
@@ -483,6 +535,16 @@ function SkyScreen({now,hour,eph,fractal,natalPos,onWork}){
               </div>
             );
           })}
+          <div style={{gridColumn:"1/-1",borderTop:"1px solid rgba(200,175,100,0.06)",marginTop:4,paddingTop:6,display:"flex",gap:8}}>
+            {[{sym:"☊",label:"N. Node",lon:eph.northNode,col:"#90C890"},{sym:"☋",label:"S. Node",lon:eph.southNode,col:"#C08080"}].map(nd=>{
+              const z=lonToZodiac(nd.lon);
+              return <div key={nd.sym} style={{flex:1,padding:"5px 8px",borderRadius:10,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",gap:7}}>
+                <span style={{fontSize:13,color:nd.col}}>{nd.sym}</span>
+                <div><div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>{z.degree}°{String(z.minutes).padStart(2,"0")}' {z.sym}</div>
+                <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.45)",letterSpacing:0.5}}>{nd.label}</div></div>
+              </div>;
+            })}
+          </div>
         </div>
       </div>
       {(() => {const d=DECANS[eph.decanIdx],col=P[d.ruler].col;return (
@@ -609,13 +671,17 @@ function getMoonAspects(jd){
   ["sun","mercury","venus","mars","jupiter","saturn"].forEach(pk=>{
     const pl=planetLon(pk,jd);
     aspA.forEach(asp=>{
-      const exact=norm(pl+asp);
-      let fwd=norm(exact-mL);if(fwd>180)fwd-=360;
-      const absOrb=Math.abs(fwd);
-      if(absOrb<10){
-        const info={planet:pk,aspect:aspN[asp],nature:aspT[asp],orb:absOrb.toFixed(1),hours:(absOrb/0.549).toFixed(1)};
-        if(fwd<0)separating.push(info);else applying.push(info);
-      }
+      // Check both symmetric aspect positions (skip duplicate for 0° and 180°)
+      const checks=asp===0||asp===180?[asp]:[asp,360-asp];
+      checks.forEach(a=>{
+        const exact=norm(pl+a);
+        let fwd=norm(exact-mL);if(fwd>180)fwd-=360;
+        const absOrb=Math.abs(fwd);
+        if(absOrb<10){
+          const info={planet:pk,aspect:aspN[asp],nature:aspT[asp],orb:absOrb.toFixed(1),hours:(absOrb/0.549).toFixed(1)};
+          if(fwd<0)separating.push(info);else applying.push(info);
+        }
+      });
     });
   });
   applying.sort((a,b)=>a.orb-b.orb);separating.sort((a,b)=>a.orb-b.orb);
@@ -667,8 +733,8 @@ function checkProhibition(jd,targetPk){
   });
   return prohibitor;
 }
-function getStarConj(lon){
-  return FIXED_STARS.filter(s=>{let d=Math.abs(norm(s.lon-lon));if(d>180)d=360-d;return d<2.5;});
+function getStarConj(lon,jd){
+  return FIXED_STARS.filter(s=>{const sLon=jd?precessStar(s.lon,jd):s.lon;let d=Math.abs(norm(sLon-lon));if(d>180)d=360-d;return d<2.5;});
 }
 function getMoonSpeed(jd){const dm=Math.abs(dailyMotion("moon",jd));return{speed:dm.toFixed(2),fast:dm>13.2,slow:dm<12,label:dm>13.2?"Fast":"Slow"};}
 
@@ -724,7 +790,7 @@ function assessElection(date,pk,natalPos){
   const mApplyBad=moonAsp.applying.find(a=>["mars","saturn"].includes(a.planet)&&["Square","Opposition"].includes(a.aspect));
   const moonPh=norm(mPos.lon-positions.sun.lon),isWax=moonPh<180;
   const hour=getPlanetaryHour(date),dayMatch=DAY_RULERS[date.getDay()]===pk,hourMatch=hour.planet===pk;
-  const stars=getStarConj(wPos.lon);
+  const stars=getStarConj(wPos.lon,jd);
   const trans=checkTranslation(jd),prohib=checkProhibition(jd,pk);
   const moonRel=getMoonSignRelation(pk,mPos.zodiac.signIndex);
   const speed=getMoonSpeed(jd);
@@ -942,9 +1008,10 @@ function StarsScreen({eph,natalPos}){
   const [sel,setSel]=useState(null);
   const s=sel!==null?FIXED_STARS[sel]:null;
   const starActivity = FIXED_STARS.map((star,i)=>{
-    const nearTransit=Object.entries(eph.pos).filter(([pk,p])=>{let d=Math.abs(norm(star.lon-p.lon));if(d>180)d=360-d;return d<3;}).map(([pk])=>pk);
-    const nearNatal=natalPos?Object.entries(natalPos).filter(([pk,np])=>{let d=Math.abs(norm(star.lon-np.lon));if(d>180)d=360-d;return d<3;}).map(([pk])=>pk):[];
-    return{...star,idx:i,nearTransit,nearNatal,isActive:nearTransit.length>0||nearNatal.length>0};
+    const sLon=precessStar(star.lon,eph.jd);
+    const nearTransit=Object.entries(eph.pos).filter(([pk,p])=>{let d=Math.abs(norm(sLon-p.lon));if(d>180)d=360-d;return d<3;}).map(([pk])=>pk);
+    const nearNatal=natalPos?Object.entries(natalPos).filter(([pk,np])=>{let d=Math.abs(norm(sLon-np.lon));if(d>180)d=360-d;return d<3;}).map(([pk])=>pk):[];
+    return{...star,sLon,idx:i,nearTransit,nearNatal,isActive:nearTransit.length>0||nearNatal.length>0};
   }).sort((a,b)=>b.isActive-a.isActive);
   return (
     <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:20}}>
@@ -961,9 +1028,9 @@ function StarsScreen({eph,natalPos}){
             <line key={i} x1={10+i*20} y1={74} x2={10+i*20} y2={86} stroke="rgba(200,175,100,0.15)" strokeWidth={0.5}/>
           ))}
           {FIXED_STARS.map((star,i)=>{
-            const x=10+(star.lon/360)*260, y=80;
-            const size=Math.max(2.5,4.5-star.mag*0.5);
             const act=starActivity.find(s2=>s2.name===star.name);
+            const x=10+((act?.sLon??precessStar(star.lon,eph.jd))/360)*260, y=80;
+            const size=Math.max(2.5,4.5-star.mag*0.5);
             const isActive=act?.isActive;
             return (
               <g key={star.name} onClick={()=>setSel(i===sel?null:i)} style={{cursor:"pointer"}}>
