@@ -1249,20 +1249,64 @@ function ElectScreen({now,natalPos,eph}){
 // ═══════════════════════════════════════════════════════════════════════
 // WORK SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-function WorkScreen({eph,initPlanet,natalPos}){
+const TRADITION_STEPS={
+  "western-ceremonial":[
+    {t:"Purification",d:"Begin preparation the day before: fast lightly, avoid conflict, spend time with the planet's materia. Bathe before the working. Let preparation be the first act of invocation."},
+    {t:"Prepare the Space",d:"Arrange the altar with everything the sphere calls for: its seal at center, incense unlit, offerings arrayed, tools in their place. Face the classical direction. Readiness is devotion."},
+    {t:"Open the Hour",d:"At the exact start of the planetary hour, light the incense. Speak a declaration of intent aloud. Let rising smoke carry your opening to the sphere. The hour is a gate; greet it as one."},
+    {t:"Inscribe the Talisman",d:"Draw the planetary character, kamea seal, or image with full unhurried attention. Speak each character aloud as you form it. The inscription is a sustained act of attention — that attention is what consecrates."},
+    {t:"The Oration",d:"Deliver the planetary invocation three full times. Speak to the sphere as if it hears you — because it does. State your specific request once, precisely and completely."},
+    {t:"Consecration",d:"Pass the talisman through incense smoke three times. State the consecration aloud: name the planet, hour, day, and purpose. Let the work be sealed without reservation."},
+    {t:"Incubation",d:"Wrap the talisman in cloth of the planet's color. Set it aside for a full lunar cycle of 28 days, or until the Moon returns to the same sign. Patience is part of the craft."},
+  ],
+  "chaos":[
+    {t:"Statement of Intent",d:"Write your intent as a single clear sentence. Then reduce it to a sigilized form — remove repeating letters, rearrange what remains into an abstract symbol. This is your charge."},
+    {t:"Enter Gnosis",d:"Choose your method: sensory deprivation, breath work, intense physical exertion, or laughter. Drive the rational mind below the threshold. The sigil fires in the gap between thoughts."},
+    {t:"Charge the Sigil",d:"At peak gnosis, fix your full attention on the sigil. Hold it. Let it burn into the inner eye. Then release — completely. Do not linger. The moment of release is the moment of transmission."},
+    {t:"Destruction & Forgetting",d:"Burn or tear the physical sigil. Actively forget the intent. Do not check for results. Obsessive monitoring collapses the probability space you have opened."},
+    {t:"Statement of Banishing",d:"Laugh. Sincerely and hard. The Chaos current requires you to end with a dissolution of the working's heaviness. Everything is permitted; nothing is permanent."},
+  ],
+  "traditional-witchcraft":[
+    {t:"Timing & Place",d:"Choose the correct moon phase for your intent — waxing to draw, waning to banish. Work at a liminal hour: dawn, dusk, midnight, or noon. Find a liminal place if possible: threshold, crossroads, edge of water."},
+    {t:"Cast the Mill",d:"Turn widdershins three times to open the space between the worlds. Call the four winds or the ancestral dead. The arte requires witnesses, not commands."},
+    {t:"Prepare the Charm",d:"Gather your materia: herbs, stones, bones, earth. Speak over each piece as you add it, naming its nature and purpose. Your words bind the virtue in."},
+    {t:"The Working",d:"Speak or sing your intent directly to the spirit of the thing, to the Old Ones, or to the ancestor you have called. Repeat three times or nine. The repetition builds the current."},
+    {t:"Bind It In",d:"Tie the charm with red or black thread. Three knots for binding, nine for strong working. Each knot seals a layer of intent. Do not untie it until the work is complete or reversed."},
+    {t:"Release & Thanks",d:"Give back what you have asked for, in kind: pour milk, bury silver, leave bread at the crossroads. The art demands reciprocity."},
+  ],
+  "hellenism":[
+    {t:"Purification",d:"Khernips: prepare purified water (saltwater or water charged with a burning herb) and wash hands and face. Speak the formula: 'Be pure, be pure, be pure.' Ash and salt at the threshold."},
+    {t:"Invocation of the Agathos Daimon",d:"Call your personal daimon to witness and assist. This is the intermediary between you and the higher powers. Honor it first."},
+    {t:"Theurgic Prayer",d:"Address the planetary deity through the Orphic hymn. Do not command — beseech with beauty. The gods respond to beauty, not to coercion. Let the hymn be sung or chanted, not merely read."},
+    {t:"Offering",d:"Pour libations: wine and honey mixed with water. Burn barley grains and herbs appropriate to the deity. Name each offering aloud and name its purpose."},
+    {t:"Contemplative Union",d:"Sit in silence after the offering. The theurgic tradition expects you to receive — not just to transmit. Wait for the daimon's response: a thought, an image, a shift in the quality of the air."},
+    {t:"Closing Rite",d:"Thank the deity and the daimon. Release them with grace. Close with the final formula of the Orphic tradition: 'The work is complete. Return to your own realm with my thanks.'"},
+  ],
+  "folk":[
+    {t:"Moon Check",d:"Confirm the moon phase is correct for your working. Waxing for drawing in, full for power, waning for banishing, dark for hidden work. This is non-negotiable in the folk current."},
+    {t:"Prepare Your Space",d:"Sweep the space clean — physically. Set a glass of water in the corner for the ancestors. Light a white candle to invite the light. This is simple and sufficient."},
+    {t:"Name Your Petition",d:"Write your petition on paper in plain language. Add your name and date. Anoint with the appropriate oil — draw toward you for increase, away for removal."},
+    {t:"Dress the Candle",d:"Dress a candle in the appropriate color with your chosen oil. Roll toward you for attraction, away for banishing. Set it on or near your petition."},
+    {t:"Speak Your Intent",d:"Read your petition aloud three times. Pray — to a saint, an ancestor, or the Divine as you understand it. The folk tradition does not require elaborate theology."},
+    {t:"Let It Work",d:"Let the candle burn as long as it safely can. Dispose of remains at a crossroads, in moving water, or bury in your yard. Check the wax for signs. The work is done when it's done."},
+  ],
+  "custom":[
+    {t:"Set Your Frame",d:"Decide which paradigm you are working in for this operation. The eclectic practitioner's first act is choosing a coherent frame, even temporarily. Paradigm-shifting mid-ritual is rarely useful."},
+    {t:"Prepare",d:"Gather whatever materia your system calls for. The materials themselves are not magic — they are anchors for attention. Choose what has meaning to you."},
+    {t:"Open",d:"Perform whatever opening your practice uses. Cast, call quarters, light a candle, or simply state your intent clearly into the space. Open the working."},
+    {t:"Work",d:"Perform the core of your operation: invocation, inscription, prayer, sigil, or active imagination. Give it your full attention for its duration. Divided attention is wasted effort."},
+    {t:"Close",d:"Close your working with the same care you opened it. Thank whatever forces assisted. Return the energy of the space to neutral."},
+    {t:"Release",d:"Let the working go. Do not obsess over results. The working is complete when it is closed — the outcome operates in its own time and by its own logic."},
+  ],
+};
+
+function WorkScreen({eph,initPlanet,natalPos,profile}){
   const [planet,setPlanet]=useState(initPlanet);
   const [view,setView]=useState("op");
   const [step,setStep]=useState(0);
   useEffect(()=>{if(initPlanet){setPlanet(initPlanet);setView("op");setStep(0);}},[initPlanet]);
-  const STEPS=[
-    {t:"Purification",d:"Begin preparation the day before: fast lightly, avoid conflict, and spend time with the planet's materia — hold its stone, smell its incense, wear its color. Bathe before the working. Let the preparation itself be the first act of the invocation."},
-    {t:"Prepare the Space",d:"Arrange the altar with everything the sphere calls for: its seal or image at center, incense ready but unlit, offerings arrayed, tools in their place. Face the classical direction. Nothing should need adjusting once the hour begins — readiness is devotion."},
-    {t:"Open the Hour",d:"At the exact start of the planetary hour, light the incense. Speak a declaration of intent aloud — clearly and with full attention. Let the rising smoke carry your opening to the sphere above. The hour is a gate; greet it as one."},
-    {t:"Inscribe the Talisman",d:"Draw, engrave, or write the planetary character, kamea seal, or image with full, unhurried attention. Speak each name or character aloud as you form it. The inscription is not a product — it is a sustained act of attention, and that attention is what consecrates."},
-    {t:"The Oration",d:"Deliver the planetary invocation three full times. Speak to the sphere as if it hears you — because it does. Then state your specific request once, precisely and completely. Neither rush the invocation nor overburden the request with anxiety."},
-    {t:"Consecration",d:"Pass the talisman through the incense smoke three times, turning it as it passes. State the consecration aloud: name the planet, the hour, the day, and the purpose. Let the work be sealed in this moment — completely and without reservation."},
-    {t:"Incubation",d:"Wrap the talisman in cloth of the planet's color. Set it aside undisturbed — ideally for a full lunar cycle of 28 days, or at minimum until the Moon returns to the same sign. The great work continues after the ritual ends; the patience of the craftsman is part of the craft itself."}
-  ];
+  const primaryTrad=profile?.traditions?.[0]||"western-ceremonial";
+  const STEPS=TRADITION_STEPS[primaryTrad]||TRADITION_STEPS["western-ceremonial"];
   if(!planet){
     return (
       <div style={{flex:1,overflowY:"auto",paddingBottom:20}}>
@@ -1355,9 +1399,10 @@ function WorkScreen({eph,initPlanet,natalPos}){
           <div style={L(`${pl.col}60`)}>Ritual Preparation</div>
           <div style={{fontFamily:F,fontSize:11,color:"#9A8060",fontStyle:"italic",marginTop:9,lineHeight:2}}>{pl.ritual}</div>
         </div>
-        <button onClick={()=>{setStep(0);setView("ritual");}} style={{width:"100%",padding:"16px 0",borderRadius:14,background:`linear-gradient(135deg,${pl.col}22,${pl.col}10)`,border:`2px solid ${pl.col}45`,fontFamily:F,fontSize:12,color:pl.col,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",marginBottom:9}}>
+        <button onClick={()=>{setStep(0);setView("ritual");}} style={{width:"100%",padding:"16px 0",borderRadius:14,background:`linear-gradient(135deg,${pl.col}22,${pl.col}10)`,border:`2px solid ${pl.col}45`,fontFamily:F,fontSize:12,color:pl.col,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",marginBottom:4}}>
           ✦ Begin the Ritual
         </button>
+        <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)",letterSpacing:2,textAlign:"center",marginBottom:9}}>{TRADITIONS[primaryTrad]?.label||"Classical"} · {STEPS.length}-Step Framework</div>
       </div>
     </div>
   );
@@ -1673,6 +1718,101 @@ ${context}`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// CONTEXTUAL ORACLE
+// ═══════════════════════════════════════════════════════════════════════
+function buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile){
+  const dayName=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][now.getDay()];
+  const dateStr=now.toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"});
+  const hourPl=P[hour.planet].name;
+  const moonStr=eph?.pos?.moon?`Moon ${eph.pos.moon.zodiac.degree}° ${eph.pos.moon.zodiac.name} (${eph.moonPhase}${eph.voc?.isVoC?" — VOID OF COURSE":""})`:"";
+  const positions=eph?.pos?Object.entries(eph.pos).map(([pk,p])=>`${P[pk].name} ${p.zodiac.degree}° ${p.zodiac.name} (${p.dignity}${p.isRetro?" ℞":""}${p.combust?` ${p.combust.type}`:""}) score ${p.score}`).join("; "):"";
+  const tradition=profile?.traditions?.map(t=>TRADITIONS[t]?.label||t).join(" + ")||"Western Ceremonial";
+  const base=`${dayName} ${dateStr}, Hour of ${hourPl}. Tradition: ${tradition}. ${moonStr}. All planets: ${positions}.`;
+  const natalStr=natalPos?Object.entries(natalPos).map(([pk,np])=>`Natal ${P[pk].name}: ${np.decan.name} (${np.dignity})`).join(", "):"No natal chart.";
+  switch(tab){
+    case "sky": return `${base} Active decan: ${DECANS[eph.decanIdx].name} (${DECANS[eph.decanIdx].sign}, ruler ${DECANS[eph.decanIdx].ruler}). Fractal coherence: ${fractal.cosmicCoherence}%, active layers: ${fractal.levels.slice(0,2).map(l=>l.decan.name).join(", ")}. ${natalStr}\n\nAs my Oracle in the ${tradition} tradition: Analyze this celestial moment fully. What is the quality of this moment for magical work? What planetary conditions stand out — for good or ill? What would you recommend working with right now, and what would you avoid?`;
+    case "decans": return `${base} The Sun occupies the ${DECANS[eph.decanIdx].name} — the ${eph.decanIdx+1}th decan of ${DECANS[eph.decanIdx].sign}, ruled by ${DECANS[eph.decanIdx].ruler}. Its classical operations: ${DECANS[eph.decanIdx].magic}. ${natalStr}\n\nAs my Oracle in the ${tradition} tradition: Speak to this decan face. What does it offer the practitioner right now? What kinds of workings align with its nature? How do the current planetary conditions interact with this face?`;
+    case "fractal": return `${base} Fractal timing layers: ${fractal.levels.map(l=>`L${l.level}: ${l.decan.name} (${l.decan.sign})`).join(", ")}. Cosmic coherence: ${fractal.cosmicCoherence}%. ${natalStr}\n\nAs my Oracle in the ${tradition} tradition: Read this moment of nested time. Where are the alignments? What do these converging layers mean for magical operation? What timing window opens or closes here?`;
+    case "planets": return `${base} ${natalStr}\n\nAs my Oracle in the ${tradition} tradition: Survey the state of the seven spheres right now. Which are most empowered? Which are most afflicted? Rank them as channels for work. Which planet would you most and least recommend working with today, and why?`;
+    case "stars": const ns=eph.nearStars?.map(s=>`${s.name} conj ${P[s.planet]?.name||s.planet} (${s.orb?.toFixed(1)}° orb)`).join(", ")||"No notable star conjunctions active";return `${base} Active fixed star conjunctions: ${ns}. ${natalStr}\n\nAs my Oracle in the ${tradition} tradition: Interpret the fixed star influences currently active. What do these stars portend? How do they modify the planets they conjoin? What operations do they favor or forbid?`;
+    case "natal": return `${base} ${natalStr}\n\nAs my Oracle in the ${tradition} tradition: Analyze how the current sky relates to this practitioner's natal chart. Which natal positions are being activated by transit? What does the current sky promise for this practitioner specifically? What is their strongest channel right now?`;
+    case "elect": return `${base} ${natalStr}\n\nAs my Oracle in the ${tradition} tradition: Survey the quality of upcoming election windows. Given the current planetary state, what are the best and worst planets to elect for over the coming days? What's the single strongest opportunity in the next two weeks, and why?`;
+    case "work": return `${base} ${natalStr}\n\nAs my Oracle in the ${tradition} tradition: What planet should this practitioner work with right now? Assess all seven spheres — their dignity, condition, and the materia available in this season. Give a direct recommendation with full classical reasoning.`;
+    case "journal": return `${base} ${natalStr}\n\nAs my Oracle in the ${tradition} tradition: The practitioner is reviewing their magical journal. What timing wisdom applies right now? What would make for a valuable entry today — what celestial conditions are worth recording for future reference?`;
+    default: return `${base} ${natalStr}\n\nAs my Oracle in the ${tradition} tradition: What wisdom is most relevant to this practitioner right now?`;
+  }
+}
+
+function OraclePanel({open,onClose,context,profile}){
+  const [msgs,setMsgs]=useState([]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const bottomRef=useRef(null);
+  const sendMsg=async(userText,history)=>{
+    if(loading)return;
+    const apiKey=profile?.apiKey||"";
+    const newMsgs=[...history,{role:"user",content:userText}];
+    setMsgs(newMsgs);
+    setLoading(true);
+    if(!apiKey){setMsgs(m=>[...m,{role:"assistant",content:"Configure your Anthropic API key in Profile → API Key to activate the Oracle."}]);setLoading(false);return;}
+    const traditions=profile?.traditions||["western-ceremonial"];
+    const tPrompts=traditions.map(t=>TRADITIONS[t]?.prompt||"").filter(Boolean).join("\n\n");
+    const lvl=profile?.level||"intermediate";
+    const lvlNote=lvl==="beginner"?"Calibrate for a beginner — explain terms, keep it accessible.":lvl==="advanced"?"Calibrate for an adept — assume full doctrinal fluency, no basics.":"Calibrate for an intermediate practitioner — assume familiarity, focus on precision.";
+    const sys=`You are the Oracle — an embedded AI advisor in a magical practice app. Your role is to speak directly to what the practitioner is currently observing. ${lvlNote}\n\nTRADITION:\n${tPrompts}\n\nBe concise and specific (2-4 paragraphs for readings, shorter for follow-ups). Reference exact data given. No generalities — address the specific conditions described.`;
+    try{
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:800,system:sys,messages:newMsgs.map(m=>({role:m.role,content:m.content}))})});
+      const data=await resp.json();
+      const txt=data.content?.[0]?.text||data.error?.message||"An error occurred.";
+      setMsgs(m=>[...m,{role:"assistant",content:txt}]);
+    }catch(e){setMsgs(m=>[...m,{role:"assistant",content:"Oracle unavailable — check connection."}]);}
+    setLoading(false);
+    setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:"smooth"}),100);
+  };
+  const sendFollow=()=>{if(!input.trim()||loading)return;const t=input;setInput("");sendMsg(t,msgs);};
+  useEffect(()=>{if(open&&context){setMsgs([]);setInput("");setLoading(false);setTimeout(()=>sendMsg(context,[]),80);}},// eslint-disable-next-line
+  [open]);
+  if(!open)return null;
+  const tradLabel=profile?.traditions?.map(t=>TRADITIONS[t]?.label||t).join(" · ")||"Western Ceremonial";
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:500,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+      <div onClick={onClose} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(6px)"}}/>
+      <div style={{position:"relative",background:"rgba(4,4,18,0.98)",border:"1px solid rgba(200,175,100,0.13)",borderBottom:"none",borderRadius:"20px 20px 0 0",maxHeight:"74vh",display:"flex",flexDirection:"column",boxShadow:"0 -12px 56px rgba(0,0,0,0.75)"}}>
+        <div style={{padding:"14px 16px 10px",borderBottom:"1px solid rgba(200,175,100,0.08)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:9}}>
+            <div style={{width:28,height:28,borderRadius:14,background:"rgba(212,175,106,0.12)",border:"1px solid rgba(212,175,106,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:"#D4AF6A"}}>✧</div>
+            <div>
+              <div style={{fontFamily:F,fontSize:12,color:"#D4AF6A",letterSpacing:2}}>ORACLE</div>
+              <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)",letterSpacing:1,marginTop:1}}>{tradLabel}</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"rgba(200,175,100,0.4)",fontSize:18,cursor:"pointer",padding:"4px 8px",lineHeight:1}}>×</button>
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:"16px 16px 8px"}}>
+          {loading&&msgs.length<=1&&(
+            <div style={{display:"flex",gap:5,padding:"32px 0",justifyContent:"center"}}>
+              {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}
+            </div>
+          )}
+          {msgs.filter(m=>m.role==="assistant"||msgs.indexOf(m)>0).map((m,i)=>(
+            <div key={i} style={{marginBottom:14}}>
+              {m.role==="user"&&msgs.indexOf(m)>0&&<div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.35)",marginBottom:5,letterSpacing:1}}>YOUR QUESTION</div>}
+              <div style={{fontFamily:F,fontSize:11.5,color:m.role==="user"?"#9A8060":"#C4A870",lineHeight:1.95,whiteSpace:"pre-wrap"}}>{m.content}</div>
+            </div>
+          ))}
+          {loading&&msgs.length>1&&<div style={{display:"flex",gap:5,padding:"8px 0"}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}</div>}
+          <div ref={bottomRef}/>
+        </div>
+        <div style={{padding:"8px 12px 20px",borderTop:"1px solid rgba(200,175,100,0.06)",display:"flex",gap:8,flexShrink:0}}>
+          <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();sendFollow();}}} placeholder="Ask a follow-up question…" style={{flex:1,background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:11}}/>
+          <button onClick={sendFollow} disabled={!input.trim()||loading} style={{padding:"0 12px",borderRadius:10,background:input.trim()?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(input.trim()?"rgba(212,175,106,0.28)":"rgba(200,175,100,0.08)"),fontFamily:F,fontSize:9,color:input.trim()?"#D4AF6A":"#4A3020",letterSpacing:1,cursor:input.trim()?"pointer":"default",height:36}}>ASK</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // PROFILE / SETTINGS SCREEN
 // ═══════════════════════════════════════════════════════════════════════
 function ProfileScreen({profile,setProfile}){
@@ -1810,6 +1950,8 @@ export default function App(){
   const [natalPos,setNatalPos]=useState(null);
   const [sidebarOpen,setSidebarOpen]=useState(false);
   const [profile,setProfile]=useState(null);
+  const [oracleOpen,setOracleOpen]=useState(false);
+  const [oracleCtx,setOracleCtx]=useState("");
   useEffect(()=>{const t=setInterval(()=>setNow(new Date()),200);return()=>clearInterval(t);},[]);
   // Load profile (primary) and legacy natal data
   useEffect(()=>{(async()=>{
@@ -1827,6 +1969,11 @@ export default function App(){
   const eph=useEphemeris(now);
   const fractal=calcFractal(now,fractalMode);
   const openWork=useCallback(pk=>{setWork(pk);setTab("work");},[]);
+  const openOracle=useCallback(()=>{
+    if(!eph)return;
+    setOracleCtx(buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile));
+    setOracleOpen(true);
+  },[tab,now,eph,fractal,natalPos,hour,profile]);
   return (
     <div style={{minHeight:"100vh",background:"radial-gradient(ellipse at 20% 10%,rgba(60,40,120,0.25) 0%,transparent 50%),radial-gradient(ellipse at 80% 90%,rgba(160,120,30,0.15) 0%,transparent 50%),#04060F",display:"flex",justifyContent:"center",fontFamily:F,color:"#D4AF6A"}}>
       <style>{CSS}</style>
@@ -1861,10 +2008,19 @@ export default function App(){
           {tab==="natal"   &&<NatalScreen   natalData={natalData} setNatalData={setNatalData} eph={eph} fractal={fractal} natalPos={natalPos}/>}
           {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph}/>}
           {tab==="journal" &&<JournalScreen/>}
-          {tab==="work"    &&<WorkScreen    eph={eph} initPlanet={workPlanet} natalPos={natalPos}/>}
+          {tab==="work"    &&<WorkScreen    eph={eph} initPlanet={workPlanet} natalPos={natalPos} profile={profile}/>}
           {tab==="ai"      &&<AIScreen      now={now} eph={eph} fractal={fractal} natalPos={natalPos} hour={hour} profile={profile}/>}
           {tab==="profile" &&<ProfileScreen profile={profile} setProfile={setProfile}/>}
         </div>
+        {/* Floating Oracle Button — visible on all screens except ai+profile */}
+        {tab!=="ai"&&tab!=="profile"&&(
+          <button onClick={openOracle} style={{position:"fixed",bottom:24,right:24,width:46,height:46,borderRadius:23,background:"rgba(4,4,18,0.92)",border:"1px solid rgba(200,175,100,0.25)",backdropFilter:"blur(16px)",boxShadow:"0 4px 24px rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",zIndex:400,transition:"border-color 0.2s,transform 0.15s",fontSize:17,color:"#D4AF6A"}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(212,175,106,0.55)";e.currentTarget.style.transform="scale(1.08)";}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(200,175,100,0.25)";e.currentTarget.style.transform="scale(1)";}}>
+            ✧
+          </button>
+        )}
+        <OraclePanel open={oracleOpen} onClose={()=>setOracleOpen(false)} context={oracleCtx} profile={profile}/>
       </div>
     </div>
   );
