@@ -96,10 +96,69 @@ function dignityScore(d,r){return Math.max(15,Math.min(99,{domicile:92,exaltatio
 function getCombustion(planet,planetLon,sunL){
   if(planet==="sun")return null;
   let diff=Math.abs(norm(planetLon-sunL));if(diff>180)diff=360-diff;
+  if(diff<0.2834)return{type:"cazimi",diff:diff.toFixed(2),penalty:-20}; // within 17' = maximum dignity
   if(diff<8)return{type:"combust",diff:diff.toFixed(1),penalty:40};
   if(diff<17)return{type:"sunbeams",diff:diff.toFixed(1),penalty:15};
   return null;
 }
+
+// ── Egyptian (Ptolemaic) Bounds ──────────────────────────────────────
+// [sign0..11] each entry: array of {planet, from, to}
+const BOUNDS=[
+  [{p:"jupiter",f:0,t:6},{p:"venus",f:6,t:12},{p:"mercury",f:12,t:20},{p:"mars",f:20,t:25},{p:"saturn",f:25,t:30}],
+  [{p:"venus",f:0,t:8},{p:"mercury",f:8,t:14},{p:"jupiter",f:14,t:22},{p:"saturn",f:22,t:27},{p:"mars",f:27,t:30}],
+  [{p:"mercury",f:0,t:6},{p:"jupiter",f:6,t:12},{p:"venus",f:12,t:17},{p:"mars",f:17,t:24},{p:"saturn",f:24,t:30}],
+  [{p:"mars",f:0,t:7},{p:"venus",f:7,t:13},{p:"mercury",f:13,t:19},{p:"jupiter",f:19,t:26},{p:"saturn",f:26,t:30}],
+  [{p:"jupiter",f:0,t:6},{p:"venus",f:6,t:11},{p:"saturn",f:11,t:18},{p:"mercury",f:18,t:24},{p:"mars",f:24,t:30}],
+  [{p:"mercury",f:0,t:7},{p:"venus",f:7,t:17},{p:"jupiter",f:17,t:21},{p:"mars",f:21,t:28},{p:"saturn",f:28,t:30}],
+  [{p:"saturn",f:0,t:6},{p:"mercury",f:6,t:14},{p:"jupiter",f:14,t:21},{p:"venus",f:21,t:28},{p:"mars",f:28,t:30}],
+  [{p:"mars",f:0,t:7},{p:"venus",f:7,t:11},{p:"mercury",f:11,t:19},{p:"jupiter",f:19,t:24},{p:"saturn",f:24,t:30}],
+  [{p:"jupiter",f:0,t:12},{p:"venus",f:12,t:17},{p:"mercury",f:17,t:21},{p:"saturn",f:21,t:26},{p:"mars",f:26,t:30}],
+  [{p:"mercury",f:0,t:7},{p:"jupiter",f:7,t:14},{p:"venus",f:14,t:22},{p:"saturn",f:22,t:26},{p:"mars",f:26,t:30}],
+  [{p:"mercury",f:0,t:7},{p:"venus",f:7,t:13},{p:"jupiter",f:13,t:20},{p:"mars",f:20,t:25},{p:"saturn",f:25,t:30}],
+  [{p:"venus",f:0,t:12},{p:"jupiter",f:12,t:16},{p:"mercury",f:16,t:19},{p:"mars",f:19,t:28},{p:"saturn",f:28,t:30}],
+];
+function getBound(lon){
+  const l=norm(lon),si=Math.floor(l/30),deg=l%30;
+  const bs=BOUNDS[si]||[];
+  const b=bs.find(b=>deg>=b.f&&deg<b.t);
+  return b?b.p:null;
+}
+
+// ── Antiscia ─────────────────────────────────────────────────────────
+// Mirror around 0°Cancer/0°Capricorn (solstice axis): antiscion = norm(180 - L)
+// Contra-antiscia (equinox axis): contra = norm(-L)
+function antiscionOf(lon){return norm(180-lon);}
+function contraAntiscionOf(lon){return norm(-lon);}
+function getAntisciaAspects(pos){
+  const pks=Object.keys(pos),asps=[];
+  pks.forEach(pk=>{
+    const anti=antiscionOf(pos[pk].lon);
+    pks.forEach(pk2=>{
+      if(pk>=pk2)return;
+      let d=Math.abs(norm(anti-pos[pk2].lon));if(d>180)d=360-d;
+      if(d<2)asps.push({p1:pk,p2:pk2,type:"antiscion",orb:d.toFixed(1)});
+      const contra=contraAntiscionOf(pos[pk].lon);
+      let d2=Math.abs(norm(contra-pos[pk2].lon));if(d2>180)d2=360-d2;
+      if(d2<2)asps.push({p1:pk,p2:pk2,type:"contra-antiscion",orb:d2.toFixed(1)});
+    });
+  });
+  return asps;
+}
+
+// ── Inferior planet phase (Venus & Mercury) ───────────────────────────
+function getPlanetPhase(planet,planetLon,sunLon){
+  if(planet!=="venus"&&planet!=="mercury")return null;
+  const diff=norm(planetLon-sunLon); // 0-360
+  if(diff<1||diff>359)return"cazimi";
+  if(diff<180)return"evening-star"; // East of Sun: sets after Sun
+  return"morning-star"; // West of Sun: rises before Sun
+}
+
+// ── Arabic Lots (expanded) ────────────────────────────────────────────
+function calcLotEros(asc,venusL,fortuneL){return norm(asc+venusL-fortuneL);}
+function calcLotNecessity(asc,marsL,fortuneL){return norm(asc+fortuneL-marsL);}
+function calcLotCourage(asc,marsL,venusL){return norm(asc+marsL-venusL);}
 
 function checkVoC(jd){
   const moonL=moonLon(jd);
@@ -312,6 +371,22 @@ const FIXED_STARS = [
   {name:"Zubeneschamali",lon:229.3,col:"#90C890",mag:2.61,nature:"Jupiter/Mercury",sign:"Scorpio 19°",desc:"The Northern Scale. The only star in the sky with a greenish tint — associated with honours, riches, and good fortune. Fortunate for all matters.",magic:"All benefic works, increase of wealth and status, honours.",warning:"One of the more fortunate stars. No major cautions."},
   {name:"Vindemiatrix",lon:195.0,col:"#D0B0D0",mag:2.85,nature:"Saturn/Mercury",sign:"Libra 9°", desc:"The Grape Gatherer. Associated with widowhood, loss of a partner, grief — but also with harvesting the fruits of past work.",magic:"Completing old cycles, releasing partnerships, harvesting past efforts.",warning:"Traditionally associated with loss. Best for endings, not beginnings."},
   {name:"Achernar",  lon:15.3, col:"#C0D8FF",mag:0.46, nature:"Jupiter",      sign:"Aries 15°",  desc:"End of the River. Extreme good fortune, particularly in religious or philosophical matters. One of the most benefic stars.",magic:"Spiritual elevation, philosophical works, extreme good fortune.",warning:"Works best for those with genuine spiritual orientation."},
+  // Extended catalog
+  {name:"Rigel",     lon:78.5, col:"#B0D0FF",mag:0.13, nature:"Jupiter/Saturn",sign:"Gemini 18°", desc:"The left foot of Orion — the Hunter's step forward. Honour, renown, happiness, and particularly good fortune in matters of learning and mechanical skill.",magic:"Honour through skill, intellectual achievement, journeys undertaken with boldness.",warning:"The Saturnine quality asks for disciplined application; brilliance alone is insufficient."},
+  {name:"Betelgeuse",lon:88.8, col:"#FF9040",mag:0.42, nature:"Mars/Mercury", sign:"Gemini 28°", desc:"The shoulder of the Hunter — martial excellence, military honours, boldness in battle and debate. One of the most powerful stars for competitive endeavors.",magic:"Victory in open contest, martial excellence, bold action.",warning:"Mars/Mercury combined creates impulsivity — great power with poor timing brings destruction."},
+  {name:"Castor",    lon:113.0,col:"#E0F0FF",mag:1.58, nature:"Mercury",      sign:"Cancer 23°", desc:"The mortal twin of Gemini — eloquence, cleverness, dual nature, sudden fame and just as sudden reversal. The mind that sees all sides.",magic:"Communication mastery, writing, quick thought, eloquence in difficult matters.",warning:"Twin nature creates instability — the brilliance of Castor comes with its sudden dimming."},
+  {name:"Eltanin",   lon:271.4,col:"#A070C0",mag:2.24, nature:"Saturn/Mars",  sign:"Sagittarius 27°",desc:"Eye of the Dragon — the head of Draco. Deep wisdom, occult power, the dragon's knowing. Commands respect but also brings jealousy from rivals.",magic:"Occult mastery, commanding respect, protective dragon power, binding of enemies.",warning:"Heavy malefic quality — Saturn/Mars. Use with full protective measures."},
+  {name:"Hamal",     lon:37.8, col:"#F0C080",mag:2.0,  nature:"Mars/Saturn",  sign:"Taurus 7°",  desc:"The head of Aries — cruelty can be a shadow, but also the fierce protector. Violent when afflicted, powerful when channeled correctly.",magic:"Decisive action, cutting through obstacles, aggressive protection.",warning:"Mars/Saturn combination is inherently difficult — requires clear intent and ethical grounding."},
+  {name:"Menkar",    lon:53.1, col:"#A090A0",mag:2.54, nature:"Saturn",       sign:"Taurus 23°", desc:"The mouth of Cetus the Sea Monster. One of the more malefic stars — disease, scandal, dishonour, encounters with monstrous or destructive forces.",magic:"Binding monstrous or destructive forces, protective work against overwhelming enemies.",warning:"Strongly malefic. Approach only for defensive operations with full protections in place."},
+  {name:"Mirach",    lon:1.2,  col:"#E0C0E0",mag:2.07, nature:"Venus",        sign:"Aries 1°",   desc:"The girdle of Andromeda — pure Venusian beauty, friendship, love of harmony, benevolence, and artistic sensitivity.",magic:"Friendship and love spells, attracting beauty, harmony in relationships.",warning:"One of the most benefic stars for Venusian work. Avoid cold or harsh intentions."},
+  {name:"Alphecca",  lon:231.0,col:"#C0E0C0",mag:2.23, nature:"Venus/Mercury",sign:"Scorpio 11°",desc:"The Crown of the Northern Crown — honour and dignity gained through one's own merit. Artistic sensitivity combined with intellectual precision.",magic:"Merit-based honour, artistic refinement, rewards for genuine skill.",warning:"Honours fade if not sustained by continued excellence."},
+  {name:"Rasalhague",lon:261.9,col:"#90C0A0",mag:2.08, nature:"Saturn/Venus", sign:"Sagittarius 21°",desc:"Head of the Serpent Bearer. Medicine, healing, esoteric knowledge, dangerous dealings with serpentine wisdom. The healer who has faced the poison.",magic:"Healing work, medical operations, antidotes, esoteric wisdom.",warning:"Saturn tempers Venus — gains are possible but require careful, measured approach."},
+  {name:"Unukalhai", lon:220.3,col:"#906060",mag:2.65, nature:"Saturn/Mars",  sign:"Scorpio 10°",desc:"Heart of the Serpent — disease, poison, destructive forces made available to those who can command them. The venom that heals or kills.",magic:"Binding harmful forces, protective works, extreme cases of defensive magic.",warning:"One of the more malefic stars. Saturn/Mars combined is exceptionally destructive without care."},
+  {name:"Lesath",    lon:253.6,col:"#D04040",mag:2.69, nature:"Mars/Mercury", sign:"Sagittarius 23°",desc:"The sting of the Scorpion — danger, violence, toxic cleverness, the barb that strikes unexpectedly. Associated with poisons and dangerous wisdom.",magic:"Sharp and sudden action, swift binding, works against specific opponents.",warning:"Mars/Mercury is volatile and fast-moving. Works triggered here can escalate unpredictably."},
+  {name:"Sadalsuud", lon:323.9,col:"#8090C0",mag:2.91, nature:"Saturn/Mercury",sign:"Aquarius 23°",desc:"The luckiest of the lucky — Jupiter of the waters. The star of good fortune that comes through communities, organizations, and collective endeavor.",magic:"Group working, communal blessing, luck through networks and connections.",warning:"Saturn modifies Mercury here — the fortune requires organization and system, not luck alone."},
+  {name:"Deneb Adige",lon:355.1,col:"#C0D0F0",mag:1.25, nature:"Venus/Mercury",sign:"Pisces 5°", desc:"The tail of the Swan — the beauty of artistic completion, graceful endings, the swan song that transcends ordinary limits.",magic:"Artistic completion, graceful conclusions, beauty in transition and farewell.",warning:"Associated with endings — most powerful for concluding cycles, not initiating them."},
+  {name:"Markab",    lon:349.7,col:"#8080A0",mag:2.49, nature:"Saturn/Mars",  sign:"Pisces 29°", desc:"The saddle of Pegasus — honor gained and then destroyed, falls from great heights, the danger of being near success without the stability to hold it.",magic:"Works at the very end of a cycle or threshold, desperate measures before a turning point.",warning:"Strongly associated with falls from honour. Most dangerous for those in positions of power."},
+  {name:"Mirfak",    lon:41.6, col:"#F0D0A0",mag:1.79, nature:"Jupiter/Saturn",sign:"Taurus 11°",desc:"The hero Perseus — honours, boldness, the courage that comes from principle. Good for those who champion just causes and slay monstrous obstacles.",magic:"Heroic deeds, championing just causes, victory through courage and principle.",warning:"Requires genuine heroism — not bravado. Empty posturing under this star backfires."},
 ];
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -367,15 +442,18 @@ function getAspectsAll(pos){
 function useEphemeris(date,location){
   const jd=dateToJD(date);
   const pos={};
+  const sunLon0=planetLon("sun",jd);
   ["sun","moon","mercury","venus","mars","jupiter","saturn"].forEach(pk=>{
     const lon=planetLon(pk,jd),dm=dailyMotion(pk,jd);
     const isRetro=dm<0&&pk!=="sun"&&pk!=="moon";
     const zodiac=lonToZodiac(lon);
     const dignity=getDignity(pk,lon);
-    const combust=getCombustion(pk,lon,planetLon("sun",jd));
+    const bound=getBound(lon);
+    const combust=getCombustion(pk,lon,sunLon0);
+    const phase=getPlanetPhase(pk,lon,sunLon0);
     const baseScore=dignityScore(dignity,isRetro);
-    const combustPenalty=combust?combust.penalty:0;
-    pos[pk]={lon,dm,isRetro,zodiac,dignity,score:Math.max(10,baseScore-combustPenalty),combust};
+    const combustPenalty=combust&&combust.type!=="cazimi"?combust.penalty:0;
+    pos[pk]={lon,dm,isRetro,zodiac,dignity,bound,score:Math.max(10,baseScore-combustPenalty),combust,phase};
   });
   const mpDeg=norm(pos.moon.lon-pos.sun.lon);
   const phases=["New","Waxing Crescent","First Quarter","Waxing Gibbous","Full","Waning Gibbous","Last Quarter","Waning Crescent"];
@@ -388,8 +466,9 @@ function useEphemeris(date,location){
     return tp.some(p=>{let d=Math.abs(norm(sLon-p.lon));if(d>180)d=360-d;return d<3;});
   });
   const aspects=getAspectsAll(pos);
+  const antiscia=getAntisciaAspects(pos);
   // Location-based additions (Phase 1c)
-  let asc=null,mc=null,pof=null,pos2=null,isDayChart=null;
+  let asc=null,mc=null,pof=null,pos2=null,isDayChart=null,lotEros=null,lotNecessity=null,lotCourage=null;
   if(location?.lat&&location?.lon){
     asc=calcASC(jd,location.lat,location.lon);
     mc=calcMC(jd,location.lon);
@@ -397,8 +476,11 @@ function useEphemeris(date,location){
     isDayChart=ss?date>=ss.rise&&date<ss.set:pos.sun.lon>=0&&pos.sun.lon<=180;
     pof=calcPOF(asc,pos.moon.lon,pos.sun.lon,isDayChart);
     pos2=calcPOS(asc,pos.moon.lon,pos.sun.lon,isDayChart);
+    lotEros=calcLotEros(asc,pos.venus.lon,pof);
+    lotNecessity=calcLotNecessity(asc,pos.mars.lon,pof);
+    lotCourage=calcLotCourage(asc,pos.mars.lon,pos.venus.lon);
   }
-  return{pos,jd,moonPhase:phases[Math.floor(mpDeg/45)],moonPhaseDeg:mpDeg,voc,decanIdx,nearStars,aspects,northNode,southNode,asc,mc,pof,pos2,isDayChart};
+  return{pos,jd,moonPhase:phases[Math.floor(mpDeg/45)],moonPhaseDeg:mpDeg,voc,decanIdx,nearStars,aspects,antiscia,northNode,southNode,asc,mc,pof,pos2,isDayChart,lotEros,lotNecessity,lotCourage};
 }
 
 function calcNatal(bd,location){
@@ -648,9 +730,15 @@ function SkyScreen({now,hour,eph,fractal,natalPos,onWork}){
                   <div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>
                     {pos.zodiac.degree}°{String(pos.zodiac.minutes).padStart(2,"0")}' {pos.zodiac.sym}
                     {pos.isRetro&&<span style={{color:"#9B4040",marginLeft:3,fontSize:8}}>℞</span>}
-                    {pos.combust&&<span style={{color:"#F5C518",marginLeft:3,fontSize:8}}>{pos.combust.type==="combust"?"☌☉":"~☉"}</span>}
+                    {pos.combust&&pos.combust.type==="cazimi"&&<span style={{color:"#FFE060",marginLeft:3,fontSize:8}} title="Cazimi — In the Heart of the Sun">✦☉</span>}
+                    {pos.combust&&pos.combust.type==="combust"&&<span style={{color:"#F5C518",marginLeft:3,fontSize:8}}>☌☉</span>}
+                    {pos.combust&&pos.combust.type==="sunbeams"&&<span style={{color:"rgba(245,197,24,0.5)",marginLeft:3,fontSize:8}}>~☉</span>}
+                    {pos.phase&&<span style={{color:"rgba(200,175,100,0.45)",marginLeft:3,fontSize:7}}>{pos.phase==="morning-star"?"☽↑":"☽↓"}</span>}
                   </div>
-                  <div style={{fontFamily:F,fontSize:7.5,color:dc,letterSpacing:0.5}}>{DIGNITY_LBL[pos.dignity].split(" ")[0]}</div>
+                  <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.35)",letterSpacing:0.5}}>
+                    <span style={{color:dc}}>{DIGNITY_LBL[pos.dignity].split(" ")[0]}</span>
+                    {pos.bound&&<span style={{marginLeft:4,color:"rgba(200,175,100,0.3)"}}>· {P[pos.bound]?.sym} Bnd</span>}
+                  </div>
                 </div>
               </div>
             );
@@ -697,13 +785,55 @@ function SkyScreen({now,hour,eph,fractal,natalPos,onWork}){
         </div>
       );})()}
       {Object.entries(eph.pos).filter(([pk,p])=>p.combust).map(([pk,pos])=>(
-        <div key={pk} className="card" style={{margin:"0 14px 9px",background:"rgba(30,15,5,0.7)",borderColor:"rgba(245,197,24,0.2)"}}>
-          <div style={L("rgba(245,197,24,0.7)",8)}>⊙ {pos.combust?.type==="combust"?"COMBUST":"Under Sunbeams"} — {P[pk].name}</div>
-          <div style={{fontFamily:F,fontSize:10,color:"rgba(245,197,24,0.6)",fontStyle:"italic",marginTop:4,lineHeight:1.7}}>
-            {P[pk].name} is {pos.combust?.diff}° from the Sun — {pos.combust?.type==="combust"?"severely weakened, largely unusable for new talismanic work":"mildly weakened by proximity to the Sun's light"}. Score reduced by {pos.combust?.penalty} points.
+        <div key={pk} className="card" style={{margin:"0 14px 9px",background:pos.combust?.type==="cazimi"?"rgba(40,35,10,0.8)":"rgba(30,15,5,0.7)",borderColor:pos.combust?.type==="cazimi"?"rgba(255,224,96,0.4)":"rgba(245,197,24,0.2)"}}>
+          <div style={L(pos.combust?.type==="cazimi"?"rgba(255,224,96,0.9)":"rgba(245,197,24,0.7)",8)}>
+            {pos.combust?.type==="cazimi"?"✦ CAZIMI — In the Heart of the Sun":pos.combust?.type==="combust"?"⊙ COMBUST":"⊙ Under Sunbeams"} — {P[pk].name}
+          </div>
+          <div style={{fontFamily:F,fontSize:10,color:pos.combust?.type==="cazimi"?"rgba(255,224,96,0.8)":"rgba(245,197,24,0.6)",fontStyle:"italic",marginTop:4,lineHeight:1.7}}>
+            {pos.combust?.type==="cazimi"
+              ?`${P[pk].name} is ${pos.combust?.diff}° from the Sun's centre — CAZIMI, within 17 minutes of arc. The planet is purified and empowered by solar fire. This is a condition of maximum dignity and extraordinary potency.`
+              :pos.combust?.type==="combust"
+              ?`${P[pk].name} is ${pos.combust?.diff}° from the Sun — severely weakened, largely unusable for new talismanic work. Score reduced by ${pos.combust?.penalty} points.`
+              :`${P[pk].name} is ${pos.combust?.diff}° from the Sun — mildly weakened by proximity to the Sun's light. Score reduced by ${pos.combust?.penalty} points.`}
           </div>
         </div>
       ))}
+      {eph.antiscia?.length>0&&(
+        <div className="card" style={{margin:"0 14px 9px",borderColor:"rgba(160,175,200,0.12)"}}>
+          <div style={L("rgba(160,175,200,0.5)",8)}>Antiscia Active</div>
+          {eph.antiscia.map((a,i)=>(
+            <div key={i} style={{marginTop:6,display:"flex",alignItems:"center",gap:8}}>
+              <span style={{color:P[a.p1].col,fontSize:12}}>{P[a.p1].sym}</span>
+              <span style={{fontFamily:F,fontSize:9,color:"rgba(160,175,200,0.4)"}}>{a.type}</span>
+              <span style={{color:P[a.p2].col,fontSize:12}}>{P[a.p2].sym}</span>
+              <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)"}}>{a.orb}°</span>
+            </div>
+          ))}
+          <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.25)",marginTop:8,lineHeight:1.5}}>Antiscia are shadow conjunctions — planets mirrored across the solstice axis (0°Cancer/0°Capricorn) connect as if in conjunction.</div>
+        </div>
+      )}
+      {(eph.lotEros!=null||eph.lotNecessity!=null||eph.lotCourage!=null)&&(
+        <div className="card" style={{margin:"0 14px 9px"}}>
+          <div style={L("rgba(200,175,100,0.45)",8)}>Arabic Lots</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,marginTop:8}}>
+            {[
+              {sym:"⊕",label:"Fortune",lon:eph.pof,col:"#90C890"},
+              {sym:"⊗",label:"Spirit",lon:eph.pos2,col:"#C890C8"},
+              eph.lotEros!=null&&{sym:"♡",label:"Eros",lon:eph.lotEros,col:"#E890A8"},
+              eph.lotNecessity!=null&&{sym:"⊘",label:"Necessity",lon:eph.lotNecessity,col:"#90A8C8"},
+              eph.lotCourage!=null&&{sym:"⚔",label:"Courage",lon:eph.lotCourage,col:"#C89060"},
+            ].filter(Boolean).map(lot=>{
+              if(lot.lon==null)return null;
+              const z=lonToZodiac(lot.lon);
+              return<div key={lot.sym} style={{padding:"5px 6px",borderRadius:8,background:"rgba(0,0,0,0.3)",textAlign:"center"}}>
+                <div style={{fontSize:12,color:lot.col}}>{lot.sym}</div>
+                <div style={{fontFamily:F,fontSize:9,color:"#C4A870",marginTop:2}}>{z.degree}° {z.sym}</div>
+                <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.35)"}}>{lot.label}</div>
+              </div>;
+            })}
+          </div>
+        </div>
+      )}
       {eph.nearStars.length>0&&(
         <div className="card" style={{margin:"0 14px 9px",borderColor:"rgba(200,200,255,0.14)"}}>
           <div style={L("#7080B0",8)}>Fixed Star in Orb</div>
