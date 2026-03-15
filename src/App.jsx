@@ -156,13 +156,13 @@ function meanNode(jd){const T=(jd-2451545)/36525;return norm(125.04452-1934.1362
 // PLANETARY DATA
 // ═══════════════════════════════════════════════════════════════════════
 const P = {
-  sun:{sym:"☉",name:"Sun",col:"#F5C518",glow:"rgba(245,197,24,0.35)",day:"Sunday",metal:"Gold",stone:"Amber · Topaz · Diamond",incense:"Frankincense · Bay · Saffron",oils:"Frankincense · Myrrh · Orange · Bergamot · Cinnamon",herbs:"Bay Laurel · Chamomile · St. John's Wort · Sunflower",color:"Gold · Yellow · Orange",number:6,angel:"Michael",intelligence:"Nakhiel",spirit:"Sorath",domains:["vitality","fame","authority","healing","the HGA","true will","kingship"],rufusPrep:"Finest attire you own. Single malt whiskey or finest beverage. Sweet incense — frankincense, lignum aloes. Holst's Jupiter or Ode to Joy. Lamen of Michael worn at neck.",orphic:"Hear golden Titan, whose eternal eye with broad survey illumines all the sky. Self-born, unwearied in diffusing light, and to all eyes the mirror of delight.",vowel:"EE",vowelGreek:"Iota"},
-  moon:{sym:"☽",name:"Moon",col:"#C8DDED",glow:"rgba(200,221,237,0.25)",day:"Monday",metal:"Silver",stone:"Moonstone · Pearl · Selenite",incense:"Camphor · White Poppy · Jasmine",oils:"Jasmine · Clary Sage · Sandalwood · Ylang Ylang · Rose",herbs:"Mugwort · White Willow · Poppy · Lotus",color:"Silver · White · Pale Blue",number:9,angel:"Gabriel",intelligence:"Malkah be-Tarshisim",spirit:"Hasmodai",domains:["dreams","travel","fertility","divination","tides","the astral","memory"],rufusPrep:"White or silver robes. Sweet white wine or milk. Camphor or white poppy incense. Night work preferred. Lamen of Gabriel.",orphic:"Hear, goddess queen, diffusing silver light, bull-horned and wandering through the gloom of night. With stars surrounded, and with circuit wide night's torch extending, through the heavens you ride.",vowel:"AH",vowelGreek:"Alpha"},
-  mercury:{sym:"☿",name:"Mercury",col:"#7CB8E0",glow:"rgba(124,184,224,0.25)",day:"Wednesday",metal:"Quicksilver · Tin alloys",stone:"Agate · Malachite · Citrine",incense:"Lavender · Mastic · Fennel",oils:"Lavender · Peppermint · Lemon · Rosemary · Eucalyptus",herbs:"Lavender · Dill · Fennel · Clover · Valerian",color:"Yellow · Orange · Violet · Mixed",number:8,angel:"Raphael",intelligence:"Tiriel",spirit:"Taphtartharath",domains:["eloquence","learning","commerce","writing","travel","memory","science","theft"],rufusPrep:"Mercury hour on Wednesday. Whatever you feel comfortable working in — no dress code. Lavender, mastic, or mixed herb incense. Fast, sharp music or silence.",orphic:"Hermes, draw near, and to my prayer incline, angel of Jove, and Maia's son divine; president of contest, ruler of the pole, whose power the flight of words and thoughts control.",vowel:"EH",vowelGreek:"Epsilon"},
-  venus:{sym:"♀",name:"Venus",col:"#EFA0B8",glow:"rgba(239,160,184,0.3)",day:"Friday",metal:"Copper",stone:"Rose Quartz · Emerald · Malachite",incense:"Rose · Myrtle · Sandalwood",oils:"Rose · Geranium · Ylang Ylang · Patchouli · Jasmine · Vetiver",herbs:"Rose · Myrtle · Vervain · Yarrow · Strawberry",color:"Green · Pink · Copper · Rose",number:7,angel:"Anael",intelligence:"Hagiel",spirit:"Kedemel",domains:["love","beauty","friendship","art","pleasure","attraction","music","fertility"],rufusPrep:"Friday morning. Fine, beautiful clothing. Sweet wine — rose wine ideal. Rose and myrtle incense. Music that moves you. Lamen of Anael.",orphic:"Heavenly, illustrious, laughter-loving queen, sea-born, night-loving, of an awful mien; crafty, from whom necessity first came, producing, nightly, all-connecting dame.",vowel:"AY",vowelGreek:"Eta"},
-  mars:{sym:"♂",name:"Mars",col:"#D24B31",glow:"rgba(210,75,49,0.35)",day:"Tuesday",metal:"Iron · Steel",stone:"Bloodstone · Red Jasper · Garnet",incense:"Dragon's Blood · Rue · Pepper · Cinnamon",oils:"Black Pepper · Ginger · Clove · Cardamom · Cedarwood",herbs:"Rue · Nettle · Wormwood · Pepper · Garlic",color:"Red · Scarlet · Orange-Red",number:5,angel:"Camael",intelligence:"Graphiel",spirit:"Barzabel",domains:["courage","conflict","protection","surgery","victory","lust","competition","initiation"],rufusPrep:"Tuesday. Anything goes — armor, camouflage, formal, casual. Strong red wine or whiskey. Dragon's blood and cinnamon incense. Metal music, war drums, or Holst Mars.",orphic:"Magnanimous, unconquered, boisterous Mars, in darts rejoicing and in bloody wars; fierce and untamed, whose mighty power can make the strongest walls from their foundations shake.",vowel:"OH",vowelGreek:"Omicron"},
-  jupiter:{sym:"♃",name:"Jupiter",col:"#8B9FE0",glow:"rgba(139,159,224,0.3)",day:"Thursday",metal:"Tin",stone:"Sapphire · Lapis Lazuli · Amethyst",incense:"Cedar · Nutmeg · Hyssop · Lignum Aloes",oils:"Cedarwood · Nutmeg · Clary Sage · Frankincense · Orange",herbs:"Cedar · Hyssop · Agrimony · Sage · Borage",color:"Royal Blue · Purple · Violet",number:4,angel:"Sachiel",intelligence:"Iophiel",spirit:"Hismael",domains:["wealth","expansion","justice","wisdom","luck","sovereignty","grace","law"],rufusPrep:"Thursday. Finest suit or formal gown. Single malt Scotch or finest whiskey. Fine cigar — smooth, mellow. Cedar or nutmeg incense. Holst Jupiter or Ode to Joy. Lamen of Sachiel.",orphic:"O Jove much-honoured, Jove supremely great, to thee our holy rites we consecrate, our prayers and expiations, king divine, for all things round thine altered circle shine.",vowel:"EUW",vowelGreek:"Upsilon"},
-  saturn:{sym:"♄",name:"Saturn",col:"#C4A870",glow:"rgba(196,168,112,0.25)",day:"Saturday",metal:"Lead",stone:"Onyx · Jet · Black Tourmaline · Obsidian",incense:"Myrrh · Cypress · Asafoetida · Opoponax",oils:"Myrrh · Cypress · Vetiver · Patchouli · Cedarwood",herbs:"Myrrh · Cypress · Comfrey · Solomon's Seal · Mullein",color:"Black · Dark Brown · Indigo · Dark Purple",number:3,angel:"Cassiel",intelligence:"Agiel",spirit:"Zazel",domains:["binding","endings","time","discipline","agriculture","death","karma","the abyss"],rufusPrep:"Saturday. Somber, dark attire. Fast if possible. Strong black coffee or dark spirits. Myrrh, cypress, asafoetida incense. Work alone, in silence, preferably at night. No mood music.",orphic:"Thee I invoke, august, with boundless sway, over the world and its cold realms who sway; whose voice tremendous and immortal mind have fixed the boundaries of the earth refined.",vowel:"OHW",vowelGreek:"Omega"},
+  sun:{sym:"☉",name:"Sun",col:"#F5C518",glow:"rgba(245,197,24,0.35)",day:"Sunday",metal:"Gold",stone:"Amber · Topaz · Diamond",incense:"Frankincense · Bay · Saffron",oils:"Frankincense · Myrrh · Orange · Bergamot · Cinnamon",herbs:"Bay Laurel · Chamomile · St. John's Wort · Sunflower",color:"Gold · Yellow · Orange",number:6,angel:"Michael",intelligence:"Nakhiel",spirit:"Sorath",domains:["vitality","fame","authority","healing","the HGA","true will","kingship"],ritual:"Don your finest garments — the solar sphere receives only what honors it. Offer frankincense, saffron, or lignum aloes; the best wine or spirit you possess. Place the solar seal at the center of your altar. Work in the hour of the Sun on Sunday, facing east. Let the space be bright, warm, and ordered. The Sun rewards dignity: approach as a sovereign addressing another.",orphic:"Hear golden Titan, whose eternal eye with broad survey illumines all the sky. Self-born, unwearied in diffusing light, and to all eyes the mirror of delight.",vowelGreek:"Iota",vowel:"EE"},
+  moon:{sym:"☽",name:"Moon",col:"#C8DDED",glow:"rgba(200,221,237,0.25)",day:"Monday",metal:"Silver",stone:"Moonstone · Pearl · Selenite",incense:"Camphor · White Poppy · Jasmine",oils:"Jasmine · Clary Sage · Sandalwood · Ylang Ylang · Rose",herbs:"Mugwort · White Willow · Poppy · Lotus",color:"Silver · White · Pale Blue",number:9,angel:"Gabriel",intelligence:"Malkah be-Tarshisim",spirit:"Hasmodai",domains:["dreams","travel","fertility","divination","tides","the astral","memory"],ritual:"Dress in silver or white. The Moon works best at night, beginning precisely at the lunar hour. Offer camphor, white poppy, or jasmine incense; pure water or white wine. Keep the space cool and quiet. The Moon favors a soft, receptive state of awareness — yield rather than force. For strongest results, repeat the working over three consecutive nights near the full or new Moon.",orphic:"Hear, goddess queen, diffusing silver light, bull-horned and wandering through the gloom of night. With stars surrounded, and with circuit wide night's torch extending, through the heavens you ride.",vowelGreek:"Alpha",vowel:"AH"},
+  mercury:{sym:"☿",name:"Mercury",col:"#7CB8E0",glow:"rgba(124,184,224,0.25)",day:"Wednesday",metal:"Quicksilver · Tin alloys",stone:"Agate · Malachite · Citrine",incense:"Lavender · Mastic · Fennel",oils:"Lavender · Peppermint · Lemon · Rosemary · Eucalyptus",herbs:"Lavender · Dill · Fennel · Clover · Valerian",color:"Yellow · Orange · Violet · Mixed",number:8,angel:"Raphael",intelligence:"Tiriel",spirit:"Taphtartharath",domains:["eloquence","learning","commerce","writing","travel","memory","science","theft"],ritual:"Mercury accepts no particular dress — it is the quality of mind that matters, not the quality of garment. Work at the Mercury hour on Wednesday. Offer mixed aromatic incense: lavender, mastic, or a blend of communicating herbs. Mercury rewards cleverness; let the working be precise, elegant, and swift. Have everything prepared before the hour begins. Sharp, undivided attention is your greatest offering.",orphic:"Hermes, draw near, and to my prayer incline, angel of Jove, and Maia's son divine; president of contest, ruler of the pole, whose power the flight of words and thoughts control.",vowelGreek:"Epsilon",vowel:"EH"},
+  venus:{sym:"♀",name:"Venus",col:"#EFA0B8",glow:"rgba(239,160,184,0.3)",day:"Friday",metal:"Copper",stone:"Rose Quartz · Emerald · Malachite",incense:"Rose · Myrtle · Sandalwood",oils:"Rose · Geranium · Ylang Ylang · Patchouli · Jasmine · Vetiver",herbs:"Rose · Myrtle · Vervain · Yarrow · Strawberry",color:"Green · Pink · Copper · Rose",number:7,angel:"Anael",intelligence:"Hagiel",spirit:"Kedemel",domains:["love","beauty","friendship","art","pleasure","attraction","music","fertility"],ritual:"Dress beautifully — let your appearance honor the sphere. Work on Friday, in the Venus hour. Rose, myrtle, or sandalwood incense; rose wine, honey, or sweetened water as offering. Make the space pleasing to the senses: flowers, soft light, beautiful objects arranged with care. The key to Venus is genuine pleasure — your delight in the working is itself an invocation. Let music move you before you begin.",orphic:"Heavenly, illustrious, laughter-loving queen, sea-born, night-loving, of an awful mien; crafty, from whom necessity first came, producing, nightly, all-connecting dame.",vowelGreek:"Eta",vowel:"AY"},
+  mars:{sym:"♂",name:"Mars",col:"#D24B31",glow:"rgba(210,75,49,0.35)",day:"Tuesday",metal:"Iron · Steel",stone:"Bloodstone · Red Jasper · Garnet",incense:"Dragon's Blood · Rue · Pepper · Cinnamon",oils:"Black Pepper · Ginger · Clove · Cardamom · Cedarwood",herbs:"Rue · Nettle · Wormwood · Pepper · Garlic",color:"Red · Scarlet · Orange-Red",number:5,angel:"Camael",intelligence:"Graphiel",spirit:"Barzabel",domains:["courage","conflict","protection","surgery","victory","lust","competition","initiation"],ritual:"Mars is not fastidious about appearance — it cares about will and readiness. Strong offerings: dragon's blood incense, red wine or strong spirits, iron upon the altar. Work Tuesday in the Mars hour — near midnight for works of binding and severance, at dawn for works of conquest and victory. Bring intensity: Mars receives what is charged with genuine force. Drums, martial music, or absolute silence with iron in your spine.",orphic:"Magnanimous, unconquered, boisterous Mars, in darts rejoicing and in bloody wars; fierce and untamed, whose mighty power can make the strongest walls from their foundations shake.",vowelGreek:"Omicron",vowel:"OH"},
+  jupiter:{sym:"♃",name:"Jupiter",col:"#8B9FE0",glow:"rgba(139,159,224,0.3)",day:"Thursday",metal:"Tin",stone:"Sapphire · Lapis Lazuli · Amethyst",incense:"Cedar · Nutmeg · Hyssop · Lignum Aloes",oils:"Cedarwood · Nutmeg · Clary Sage · Frankincense · Orange",herbs:"Cedar · Hyssop · Agrimony · Sage · Borage",color:"Royal Blue · Purple · Violet",number:4,angel:"Sachiel",intelligence:"Iophiel",spirit:"Hismael",domains:["wealth","expansion","justice","wisdom","luck","sovereignty","grace","law"],ritual:"Dress with the full dignity Jupiter expects — your finest and most ordered. Thursday, Jupiter hour. Cedar or nutmeg incense; the finest spirit or wine your house contains. The altar should be abundant: multiple offerings, multiple lights. Jupiter responds to generosity — offer more than seems necessary. Speak your petition as if already received. Thanksgiving opens the Jovian current more readily than supplication.",orphic:"O Jove much-honoured, Jove supremely great, to thee our holy rites we consecrate, our prayers and expiations, king divine, for all things round thine altered circle shine.",vowelGreek:"Upsilon",vowel:"EUW"},
+  saturn:{sym:"♄",name:"Saturn",col:"#C4A870",glow:"rgba(196,168,112,0.25)",day:"Saturday",metal:"Lead",stone:"Onyx · Jet · Black Tourmaline · Obsidian",incense:"Myrrh · Cypress · Asafoetida · Opoponax",oils:"Myrrh · Cypress · Vetiver · Patchouli · Cedarwood",herbs:"Myrrh · Cypress · Comfrey · Solomon's Seal · Mullein",color:"Black · Dark Brown · Indigo · Dark Purple",number:3,angel:"Cassiel",intelligence:"Agiel",spirit:"Zazel",domains:["binding","endings","time","discipline","agriculture","death","karma","the abyss"],ritual:"Saturn demands austerity. Dark attire. Fast from the prior evening if your body allows. Myrrh, cypress, or asafoetida incense — the heavy, serious aromatics that belong to the sphere of time. Work alone, in silence, after midnight on Saturday. Saturn is the boundary between the known and unknown — approach without self-deception or pretense. A single candle in surrounding darkness, and complete honesty of intention, are your most powerful tools.",orphic:"Thee I invoke, august, with boundless sway, over the world and its cold realms who sway; whose voice tremendous and immortal mind have fixed the boundaries of the earth refined.",vowelGreek:"Omega",vowel:"OHW"},
 };
 
 const DIGNITY_COL={domicile:"#5CA85C",exaltation:"#D4AF6A",peregrine:"#6A5030",detriment:"#8B4040",fall:"#8B4040"};
@@ -170,45 +170,47 @@ const DIGNITY_LBL={domicile:"Domicile ✦",exaltation:"Exaltation ✦✦",peregr
 const VOWELS={sun:{l:"Ι",p:"EE"},moon:{l:"Α",p:"AH"},mercury:{l:"Ε",p:"EH"},venus:{l:"Η",p:"AY"},mars:{l:"Ο",p:"OH"},jupiter:{l:"Υ",p:"EUW"},saturn:{l:"Ω",p:"OHW"}};
 
 // ═══════════════════════════════════════════════════════════════════════
-// 36 FACES — Austin Coppock (2014)
+// THE THIRTY-SIX FACES — Chaldean decan order, classical Picatrix imagery
+// Names and magic descriptions are original, grounded in Picatrix Book II
+// Ch.11, Agrippa Three Books II.37, and Abu Ma'shar's decan faces.
 // ═══════════════════════════════════════════════════════════════════════
 const DECANS=[
-  {n:1, sign:"Aries",sym:"♈",ruler:"mars",  name:"The Axe",                              tarot:"2 of Wands",  magic:"Initiation, severing constraints, victory in contest, raw assertion of will."},
-  {n:2, sign:"Aries",sym:"♈",ruler:"sun",   name:"The Crown",                            tarot:"3 of Wands",  magic:"Sovereignty, generating the world of your choosing, works of royal power."},
-  {n:3, sign:"Aries",sym:"♈",ruler:"venus", name:"The Burning Rose",                     tarot:"4 of Wands",  magic:"Art as weapon, charm over hostility, glamour and performance magic."},
-  {n:4, sign:"Taurus",sym:"♉",ruler:"mercury",name:"The Plow",                           tarot:"5 of Pents",  magic:"Beginning great works requiring sustained effort, the civilizing of raw potential."},
-  {n:5, sign:"Taurus",sym:"♉",ruler:"moon",  name:"A Linga-Yoni",                        tarot:"6 of Pents",  magic:"Material increase, fertility, sacred union, attraction of wealth."},
-  {n:6, sign:"Taurus",sym:"♉",ruler:"saturn",name:"A String of Prayer Beads",            tarot:"7 of Pents",  magic:"Patient endurance, protective warding, the wisdom that comes through loss."},
-  {n:7, sign:"Gemini",sym:"♊",ruler:"jupiter",name:"The Apple of Eden",                  tarot:"8 of Swords", magic:"Initiating dual awareness, philosophical study, opening the mind to paradox."},
-  {n:8, sign:"Gemini",sym:"♊",ruler:"mars",  name:"The Hermaphrodite",                   tarot:"9 of Swords", magic:"Integration of opposing forces, works of inner reconciliation."},
-  {n:9, sign:"Gemini",sym:"♊",ruler:"sun",   name:"An Executioner's Sword",              tarot:"10 of Swords",magic:"Decisive severance, ending ambivalence, the necessary sacrifice of one path."},
-  {n:10,sign:"Cancer",sym:"♋",ruler:"venus", name:"A Mother and Child",                  tarot:"2 of Cups",   magic:"Mutually nurturing relationships, drawing love and nourishment, tender alliance."},
-  {n:11,sign:"Cancer",sym:"♋",ruler:"mercury",name:"A Walled Garden",                    tarot:"3 of Cups",   magic:"Protecting fragile projects, incubating potential, a greenhouse of development."},
-  {n:12,sign:"Cancer",sym:"♋",ruler:"moon",  name:"The Overflowing Cup",                 tarot:"4 of Cups",   magic:"Petitioning Hekate for material provision, navigating excess and scarcity."},
-  {n:13,sign:"Leo",sym:"♌",ruler:"saturn",  name:"The Spotlight",                        tarot:"5 of Wands",  magic:"Persona creation, the mask, works of public performance and recognition."},
-  {n:14,sign:"Leo",sym:"♌",ruler:"jupiter", name:"A Crown of Laurels",                   tarot:"6 of Wands",  magic:"Authentic glory, harmonizing inner and outer self, genuine public recognition."},
-  {n:15,sign:"Leo",sym:"♌",ruler:"mars",    name:"The Banner",                           tarot:"7 of Wands",  magic:"Defending earned ground, rallying forces, righteous defense of legitimate authority."},
-  {n:16,sign:"Virgo",sym:"♍",ruler:"sun",   name:"A Tree Bearing Fruit",                 tarot:"8 of Pents",  magic:"Devotional craft, humble mastery, the patient perfection of art and skill."},
-  {n:17,sign:"Virgo",sym:"♍",ruler:"venus", name:"The Hammer and the Anvil",             tarot:"9 of Pents",  magic:"Shaping and refining the material self, building the protective form."},
-  {n:18,sign:"Virgo",sym:"♍",ruler:"mercury",name:"The Sarcophagus",                     tarot:"10 of Pents", magic:"Initiatory confrontation with mortality, releasing attachment to the material."},
-  {n:19,sign:"Libra",sym:"♎",ruler:"moon",  name:"A Blind Fold and a Sword",             tarot:"2 of Swords", magic:"Justice workings, legal matters, awakening the world to imbalance."},
-  {n:20,sign:"Libra",sym:"♎",ruler:"saturn",name:"Two Links of a Chain",                 tarot:"3 of Swords", magic:"Sacred covenants, binding unions, protection of agreements and oaths."},
-  {n:21,sign:"Libra",sym:"♎",ruler:"jupiter",name:"A Gyroscope",                         tarot:"4 of Swords", magic:"Restoring dynamic equilibrium, expanding capacity for right proportion."},
-  {n:22,sign:"Scorpio",sym:"♏",ruler:"mars", name:"A Jawbone",                           tarot:"5 of Cups",   magic:"Awakening to genuine needs, accessing hidden depths, works of primal desire."},
-  {n:23,sign:"Scorpio",sym:"♏",ruler:"sun",  name:"An Apparatus for Mutual Distillation",tarot:"6 of Cups",   magic:"Alchemical partnership, transformative exchange, purification through intimacy."},
-  {n:24,sign:"Scorpio",sym:"♏",ruler:"venus",name:"A Crow",                              tarot:"7 of Cups",   magic:"Radical disillusionment, underworld retrieval, protection in toxic encounters."},
-  {n:25,sign:"Sagittarius",sym:"♐",ruler:"mercury",name:"The Poisoned Arrow",            tarot:"8 of Wands",  magic:"Single-pointed force, swift movement toward goals, motivating self and others."},
-  {n:26,sign:"Sagittarius",sym:"♐",ruler:"moon",name:"The Bridle",                       tarot:"9 of Wands",  magic:"Maintaining unity under adversity, strength through friction, patient endurance."},
-  {n:27,sign:"Sagittarius",sym:"♐",ruler:"saturn",name:"A Horse's Skull",                tarot:"10 of Wands", magic:"Honorable sacrifice, releasing what has served its purpose, noble completion."},
-  {n:28,sign:"Capricorn",sym:"♑",ruler:"jupiter",name:"A Headless Body",                 tarot:"2 of Pents",  magic:"Full identification with material purpose, the Headless One rite, pure enfleshment."},
-  {n:29,sign:"Capricorn",sym:"♑",ruler:"mars", name:"The Pyramid",                       tarot:"3 of Pents",  magic:"Blueprint as revelation, ambitious building, gathering resources for great works."},
-  {n:30,sign:"Capricorn",sym:"♑",ruler:"sun",  name:"The Throne",                        tarot:"4 of Pents",  magic:"Claiming earned authority, administering power, the apex of material accomplishment."},
-  {n:31,sign:"Aquarius",sym:"♒",ruler:"venus", name:"The Mark of Exile",                 tarot:"5 of Swords", magic:"Works of the heretic and pioneer, radical self-determination, intentional departure."},
-  {n:32,sign:"Aquarius",sym:"♒",ruler:"mercury",name:"Heaven and Earth",                 tarot:"6 of Swords", magic:"Bridging worlds, diplomatic navigation, the liminal traveler's talisman."},
-  {n:33,sign:"Aquarius",sym:"♒",ruler:"moon",  name:"The Knot",                          tarot:"7 of Swords", magic:"Binding to principles, warding against karmic entrapment, complex durable patterns."},
-  {n:34,sign:"Pisces",sym:"♓",ruler:"saturn", name:"The Labyrinth",                      tarot:"8 of Cups",   magic:"Navigating inner terrain, confronting the unconscious, preparing for dissolution."},
-  {n:35,sign:"Pisces",sym:"♓",ruler:"jupiter",name:"The Net",                            tarot:"9 of Cups",   magic:"Manifesting through surrender, binding visible and invisible success together."},
-  {n:36,sign:"Pisces",sym:"♓",ruler:"mars",   name:"A Cup of Blood",                     tarot:"10 of Cups",  magic:"The mad quest for the ideal, final passionate commitment, the last complete offering."},
+  {n:1, sign:"Aries",sym:"♈",ruler:"mars",   name:"The Iron Gate",              tarot:"2 of Wands",  magic:"Forced passage and initiation; claiming the right to enter by force of will; works of decisive beginning and contest."},
+  {n:2, sign:"Aries",sym:"♈",ruler:"sun",    name:"The Golden Helm",            tarot:"3 of Wands",  magic:"Command of one's domain; solar authority and sovereignty; works of public standing and rightful kingship."},
+  {n:3, sign:"Aries",sym:"♈",ruler:"venus",  name:"The Adornment",              tarot:"4 of Wands",  magic:"Desire made visible; charm over hostility; works of beauty, attraction, and winning favor through presence."},
+  {n:4, sign:"Taurus",sym:"♉",ruler:"mercury",name:"The Turning Furrow",        tarot:"5 of Pents",  magic:"Sustained intelligent labor; civilizing raw potential; works requiring methodical effort sustained over time."},
+  {n:5, sign:"Taurus",sym:"♉",ruler:"moon",  name:"The Sacred Union",           tarot:"6 of Pents",  magic:"Material fertility and abundance through sacred joining; drawing wealth through natural attraction and increase."},
+  {n:6, sign:"Taurus",sym:"♉",ruler:"saturn",name:"The Slow Lesson",            tarot:"7 of Pents",  magic:"Wisdom earned through patience and privation; protective endurance; works of threshold guardianship and long waiting."},
+  {n:7, sign:"Gemini",sym:"♊",ruler:"jupiter",name:"The Philosopher's Aim",     tarot:"8 of Swords", magic:"Opening the mind to paradox; works of philosophical study, cosmic inquiry, and the pursuit of hidden knowledge."},
+  {n:8, sign:"Gemini",sym:"♊",ruler:"mars",  name:"The Divided One",            tarot:"9 of Swords", magic:"Integration of opposing forces; reconciling inner war; works at the threshold between contrary natures."},
+  {n:9, sign:"Gemini",sym:"♊",ruler:"sun",   name:"The Serpent Wisdom",         tarot:"10 of Swords",magic:"Authority gained through knowledge of hidden things; decisive mastery over dual natures; the sword of discernment."},
+  {n:10,sign:"Cancer",sym:"♋",ruler:"venus", name:"The Nursing Bond",           tarot:"2 of Cups",   magic:"Tender and nurturing alliance; love that feeds and protects; works of maternal care and sustaining attachment."},
+  {n:11,sign:"Cancer",sym:"♋",ruler:"mercury",name:"The Shielded Hearth",       tarot:"3 of Cups",   magic:"Protection of what is growing and fragile; incubating potential; warding the inner sanctuary of development."},
+  {n:12,sign:"Cancer",sym:"♋",ruler:"moon",  name:"The Deep Well",              tarot:"4 of Cups",   magic:"Accessing what lies beneath surface; works of tidal provision and abundance drawn from the depths below."},
+  {n:13,sign:"Leo",sym:"♌",ruler:"saturn",   name:"The Hidden Face",            tarot:"5 of Wands",  magic:"Works of public persona and the crafted mask; projecting authority convincingly; the face that becomes the man."},
+  {n:14,sign:"Leo",sym:"♌",ruler:"jupiter",  name:"The Laureled Brow",          tarot:"6 of Wands",  magic:"Genuine honor earned through merit; harmonious elevation; works of authentic recognition and beneficent glory."},
+  {n:15,sign:"Leo",sym:"♌",ruler:"mars",     name:"The Raised Standard",        tarot:"7 of Wands",  magic:"Defense of rightful authority; rallying forces to a just cause; works of martial protection and legitimate standing."},
+  {n:16,sign:"Virgo",sym:"♍",ruler:"sun",    name:"The Devoted Craft",          tarot:"8 of Pents",  magic:"Patient mastery through humble service; devotional work; perfection achieved through uncounted repetitions."},
+  {n:17,sign:"Virgo",sym:"♍",ruler:"venus",  name:"The Refining Fire",          tarot:"9 of Pents",  magic:"Shaping and improving the material self; works of artistic refinement; building the form that reflects the soul."},
+  {n:18,sign:"Virgo",sym:"♍",ruler:"mercury",name:"The Sealed Vessel",          tarot:"10 of Pents", magic:"Confrontation with limitation and ending; releasing attachment to the material; works at the threshold of dissolution."},
+  {n:19,sign:"Libra",sym:"♎",ruler:"moon",   name:"The Scale and Veil",         tarot:"2 of Swords", magic:"Works of impartial justice; legal matters; restoring balance to what has tilted; lifting the blindfold of prejudice."},
+  {n:20,sign:"Libra",sym:"♎",ruler:"saturn", name:"The Sealed Covenant",        tarot:"3 of Swords", magic:"Binding agreements and sacred oaths; protection of contracts; works that hold two parties in inviolable relation."},
+  {n:21,sign:"Libra",sym:"♎",ruler:"jupiter",name:"The Balanced Sphere",        tarot:"4 of Swords", magic:"Restoring dynamic equilibrium; expanding capacity for right proportion; works that find the center between extremes."},
+  {n:22,sign:"Scorpio",sym:"♏",ruler:"mars", name:"The Primal Wound",           tarot:"5 of Cups",   magic:"Works of deep desire and primal necessity; accessing what lies buried; confronting what cannot be avoided."},
+  {n:23,sign:"Scorpio",sym:"♏",ruler:"sun",  name:"The Alchemical Marriage",    tarot:"6 of Cups",   magic:"Transformative union; purification through intimate exchange; works of regeneration and mutual transmutation."},
+  {n:24,sign:"Scorpio",sym:"♏",ruler:"venus",name:"The Poison and the Cure",    tarot:"7 of Cups",   magic:"Hidden wisdom in dangerous form; works of disillusionment; protection and navigation through perilous encounters."},
+  {n:25,sign:"Sagittarius",sym:"♐",ruler:"mercury",name:"The Sure Arrow",       tarot:"8 of Wands",  magic:"Single-pointed force directed at a goal; swift communication and transit; works of precise directed momentum."},
+  {n:26,sign:"Sagittarius",sym:"♐",ruler:"moon",name:"The Held Rein",           tarot:"9 of Wands",  magic:"Maintaining direction under pressure; strength through endurance; works of patient unity held against resistance."},
+  {n:27,sign:"Sagittarius",sym:"♐",ruler:"saturn",name:"The Returned Gift",     tarot:"10 of Wands", magic:"Honorable completion; releasing what has run its course; dignified endings and the laying down of burdens."},
+  {n:28,sign:"Capricorn",sym:"♑",ruler:"jupiter",name:"The Embodied Will",      tarot:"2 of Pents",  magic:"Full identification with material purpose; works of incarnated authority; purpose made flesh in the world."},
+  {n:29,sign:"Capricorn",sym:"♑",ruler:"mars",name:"The Rising Pyramid",        tarot:"3 of Pents",  magic:"Ambitious construction; gathering and organizing resources; blueprint made manifest through disciplined effort."},
+  {n:30,sign:"Capricorn",sym:"♑",ruler:"sun",name:"The Enduring Throne",        tarot:"4 of Pents",  magic:"Claiming legitimate authority; administering power at its apex; works of consolidation and lasting governance."},
+  {n:31,sign:"Aquarius",sym:"♒",ruler:"venus",name:"The Voluntary Exile",       tarot:"5 of Swords", magic:"Works of the innovator and heretic; radical self-determination; deliberate departure from the given order."},
+  {n:32,sign:"Aquarius",sym:"♒",ruler:"mercury",name:"The Bridge Between Worlds",tarot:"6 of Swords",magic:"Diplomatic navigation of threshold states; liminal transit; talisman for travelers between different orders of being."},
+  {n:33,sign:"Aquarius",sym:"♒",ruler:"moon",name:"The Binding Knot",           tarot:"7 of Swords", magic:"Durable complex patterns; warding against entrapment; works of principled holding and principled release."},
+  {n:34,sign:"Pisces",sym:"♓",ruler:"saturn",name:"The Labyrinthine Deep",      tarot:"8 of Cups",   magic:"Navigation of inner terrain; confronting the unconscious; deliberate preparation for the great dissolution."},
+  {n:35,sign:"Pisces",sym:"♓",ruler:"jupiter",name:"The Net of Grace",          tarot:"9 of Cups",   magic:"Abundance received through surrender; catching what flows of itself; manifestation through yielding and trust."},
+  {n:36,sign:"Pisces",sym:"♓",ruler:"mars",  name:"The Final Offering",         tarot:"10 of Cups",  magic:"The last complete commitment; the passionate act of surrender to the quest; the great work's consummate end."},
 ];
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -590,7 +592,7 @@ function DecansScreen({eph,fractal,natalPos,mode,setMode}){
   return (
     <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:20}}>
       <div style={{padding:"16px 18px 10px"}}>
-        <div style={L()}>Austin Coppock · 36 Faces</div>
+        <div style={L()}>Classical Tradition · 36 Faces</div>
         <div style={T(20)}>The Thirty-Six Faces</div>
       </div>
       <div className="card" style={{margin:"0 14px 10px",background:`linear-gradient(135deg,rgba(8,5,22,0.8),${col}09)`,borderColor:`${col}28`}}>
@@ -975,10 +977,10 @@ function PlanetsScreen({eph,natalPos,now}){
         )}
         {tab==="ritual"&&(
           <div className="card">
-            <div style={L(`${pl.col}70`)}>Preparation — Rufus Opus Method</div>
-            <div style={{fontFamily:F,fontSize:11,color:"#9A8060",fontStyle:"italic",marginTop:9,lineHeight:2}}>{pl.rufusPrep}</div>
+            <div style={L(`${pl.col}70`)}>Classical Ritual Preparation</div>
+            <div style={{fontFamily:F,fontSize:11,color:"#9A8060",fontStyle:"italic",marginTop:9,lineHeight:2}}>{pl.ritual}</div>
             <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${pl.col}18`}}>
-              <div style={L(`${pl.col}60`,8)}>Greek Vowel — Jason Miller</div>
+              <div style={L(`${pl.col}60`,8)}>Sacred Vowel — Hermetic Tradition</div>
               <div style={{display:"flex",alignItems:"center",gap:14,marginTop:9,padding:"10px 12px",borderRadius:10,background:"rgba(0,0,0,0.3)"}}>
                 <div style={{textAlign:"center"}}>
                   <div style={{fontSize:38,color:pl.col,fontFamily:"serif",lineHeight:1}}>{VOWELS[sel]?.l}</div>
@@ -1149,7 +1151,7 @@ function ElectScreen({now,natalPos,eph}){
   return(
     <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:20}}>
       <div style={{padding:"16px 18px 8px"}}>
-        <div style={{fontFamily:F,fontSize:9,color:"#8A7040",letterSpacing:3.5,textTransform:"uppercase"}}>Dorotheus · Bonatti · Lilly · Warnock</div>
+        <div style={{fontFamily:F,fontSize:9,color:"#8A7040",letterSpacing:3.5,textTransform:"uppercase"}}>Dorotheus · Bonatti · Lilly · Classical Tradition</div>
         <div style={T(20)}>Election Astrology</div>
       </div>
       <div style={{padding:"0 14px 8px",display:"flex",gap:5}}>
@@ -1239,13 +1241,13 @@ function WorkScreen({eph,initPlanet,natalPos}){
   const [step,setStep]=useState(0);
   useEffect(()=>{if(initPlanet){setPlanet(initPlanet);setView("op");setStep(0);}},[initPlanet]);
   const STEPS=[
-    {t:"Purification",d:"Fast from the prior evening if possible. Bathe with the planet's herbs. Dress in the planet's colors. Spend time with its correspondences — hold its stone, smell its incense."},
-    {t:"Open the Space",d:"Face the appropriate direction. Arrange the altar with the planet's materia. Have incense ready. Place the Lamen or seal at center."},
-    {t:"Light the Fire",d:"As the planetary hour begins, light the incense. Speak the opening declaration aloud. Let the smoke carry your intention upward."},
-    {t:"Inscribe the Image",d:"Draw or engrave the talisman image with full attention. Speak each character or name aloud as you trace it. Your attention is the flame that consecrates."},
-    {t:"The Oration",d:"Deliver the Orphic Hymn three times with complete sincerity. Then deliver your specific request once, clearly and specifically. Do not rush."},
-    {t:"Consecration",d:"Pass through incense smoke three times. Say: 'Be thou sealed in the name of [planet], in this hour, on this day, for this purpose.'"},
-    {t:"Incubation",d:"Wrap in the planet's color cloth. Set aside undisturbed for 28 days — one full lunar cycle. Per Sphere+Sundry: patience after the operation is as essential as the operation itself."}
+    {t:"Purification",d:"Begin preparation the day before: fast lightly, avoid conflict, and spend time with the planet's materia — hold its stone, smell its incense, wear its color. Bathe before the working. Let the preparation itself be the first act of the invocation."},
+    {t:"Prepare the Space",d:"Arrange the altar with everything the sphere calls for: its seal or image at center, incense ready but unlit, offerings arrayed, tools in their place. Face the classical direction. Nothing should need adjusting once the hour begins — readiness is devotion."},
+    {t:"Open the Hour",d:"At the exact start of the planetary hour, light the incense. Speak a declaration of intent aloud — clearly and with full attention. Let the rising smoke carry your opening to the sphere above. The hour is a gate; greet it as one."},
+    {t:"Inscribe the Talisman",d:"Draw, engrave, or write the planetary character, kamea seal, or image with full, unhurried attention. Speak each name or character aloud as you form it. The inscription is not a product — it is a sustained act of attention, and that attention is what consecrates."},
+    {t:"The Oration",d:"Deliver the planetary invocation three full times. Speak to the sphere as if it hears you — because it does. Then state your specific request once, precisely and completely. Neither rush the invocation nor overburden the request with anxiety."},
+    {t:"Consecration",d:"Pass the talisman through the incense smoke three times, turning it as it passes. State the consecration aloud: name the planet, the hour, the day, and the purpose. Let the work be sealed in this moment — completely and without reservation."},
+    {t:"Incubation",d:"Wrap the talisman in cloth of the planet's color. Set it aside undisturbed — ideally for a full lunar cycle of 28 days, or at minimum until the Moon returns to the same sign. The great work continues after the ritual ends; the patience of the craftsman is part of the craft itself."}
   ];
   if(!planet){
     return (
@@ -1337,7 +1339,7 @@ function WorkScreen({eph,initPlanet,natalPos}){
         </div>
         <div className="card">
           <div style={L(`${pl.col}60`)}>Ritual Preparation</div>
-          <div style={{fontFamily:F,fontSize:11,color:"#9A8060",fontStyle:"italic",marginTop:9,lineHeight:2}}>{pl.rufusPrep}</div>
+          <div style={{fontFamily:F,fontSize:11,color:"#9A8060",fontStyle:"italic",marginTop:9,lineHeight:2}}>{pl.ritual}</div>
         </div>
         <button onClick={()=>{setStep(0);setView("ritual");}} style={{width:"100%",padding:"16px 0",borderRadius:14,background:`linear-gradient(135deg,${pl.col}22,${pl.col}10)`,border:`2px solid ${pl.col}45`,fontFamily:F,fontSize:12,color:pl.col,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",marginBottom:9}}>
           ✦ Begin the Ritual
@@ -1550,7 +1552,7 @@ function JournalScreen(){
 // AI WORKING PLANNER
 // ═══════════════════════════════════════════════════════════════════════
 function AIScreen({now,eph,fractal,natalPos,hour}){
-  const [messages,setMessages]=useState([{role:"assistant",content:"Greetings. I am your astrological magic advisor, drawing on the traditions of Agrippa, Warnock, Coppock, Rufus Opus, and Jason Miller.\n\nTell me what you wish to accomplish and when you need it done. I will build you a complete working plan — optimal timing windows, materia requirements, ritual structure, relevant invocations, and follow-up maintenance schedule.\n\nExample: \"I need to find a new job within 6 weeks\" or \"I want to begin a Venus talisman working for an important relationship\" or \"Help me plan a full Jupiter prosperity campaign\""}]);
+  const [messages,setMessages]=useState([{role:"assistant",content:"Greetings. I am your advisor in the classical tradition of celestial and talismanic magic — Picatrix, Agrippa, Ficino, Lilly, and the Hermetic corpus.\n\nTell me what you wish to accomplish and when you need it done. I will build you a complete working plan: optimal election windows, full materia requirements, a ritual structure rooted in the grimoire tradition, the relevant invocations, and a follow-up maintenance schedule.\n\nExample: \"I need to find a new position within 6 weeks\" or \"I want to begin a Venus talisman for an important relationship\" or \"Help me plan a Jupiter prosperity campaign.\""}]);
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
   const bottomRef=useRef(null);
@@ -1581,22 +1583,22 @@ function AIScreen({now,eph,fractal,natalPos,hour}){
     setMessages(m=>[...m,userMsg]);
     setInput("");setLoading(true);
     const context=buildContext();
-    const systemPrompt=`You are an expert astrological magician combining the traditions of Christopher Warnock (Renaissance Astrology), Austin Coppock (36 Faces), Jason Miller (Advanced Planetary Magic, 49 Calls), Rufus Opus (Seven Spheres), and Sphere+Sundry (Kaitlin Coppock's talismanic materia philosophy).
+    const systemPrompt=`You are a masterful advisor in the living tradition of Western celestial and talismanic magic, drawing on the deep wells of classical knowledge: the Picatrix (Ghayat al-Hakim), Agrippa's Three Books of Occult Philosophy, Ficino's De Vita Coelitus Comparanda, the Greek Magical Papyri, William Lilly's Christian Astrology, and the broader Hermetic corpus. You speak from the tradition itself — not as a commentator, but as a practitioner steeped in its living logic.
 
-Your role is to help practitioners plan magical workings with precision and depth. When a user describes their goal, you:
+Your role is to help this practitioner plan, time, and execute magical workings with precision and depth. When they describe their goal, you:
 
-1. IDENTIFY the planetary force(s) most appropriate (include reasoning)
-2. EVALUATE the current sky conditions for this working
-3. FIND the best election windows from the upcoming elections provided
-4. IDENTIFY the relevant Austin Coppock decan(s) for this working
-5. PRESCRIBE the specific Jason Miller Call (day x hour combination) and vowels
-6. PROVIDE a complete materia list: incense, oils, herbs, metals, stones, colors
-7. OUTLINE the ritual structure (Rufus Opus style: attire, offerings, lamen, oration, consecration)
-8. SCHEDULE follow-up maintenance (weekly planetary devotions per Rufus Opus)
-9. WARN about any obstacles: retrograde, combust, void of course, detriment/fall periods
-10. ADDRESS the natal chart if provided
+1. IDENTIFY the most appropriate planetary force(s), with classical reasoning from essential dignities, natural rulerships, and doctrinal sources
+2. EVALUATE the current sky conditions: dignities, direct/retrograde motion, combustion, phase, void of course, via combusta, besiegement
+3. RECOMMEND the best available election window from the options provided, explaining what makes it suitable
+4. IDENTIFY the active decan face for this working, its planetary ruler, and its classical significance for the intention
+5. PRESCRIBE the sacred vowel of the ruling sphere and how to deploy it in invocation
+6. PROVIDE a complete classical materia list: incense, oils, herbs, metals, stones, colors, day and hour
+7. OUTLINE a ritual structure rooted in the grimoire tradition: purification, altar arrangement, inscription, invocation, consecration, incubation
+8. SCHEDULE appropriate follow-up: maintenance timing, talisman care, review at the next favorable moment
+9. WARN of any obstacles and what can be done to mitigate or wait them out
+10. RELATE the working to the natal chart if one is provided — natal dignities, activated decans, angular planets
 
-Be specific, practical, and authoritative. Draw from all traditions simultaneously. Format your response clearly with sections. Keep it actionable. Mention specific dates and times when you can.
+Speak with authority and precision. Give specific dates and times. Format responses clearly with labeled sections. Be practical: the tradition is not an abstraction — it is a set of working instructions.
 
 ${context}`;
     try{
