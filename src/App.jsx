@@ -153,6 +153,81 @@ function precessStar(lon0,jd){return norm(lon0+1.396971*(jd-2451545)/36525);}
 function meanNode(jd){const T=(jd-2451545)/36525;return norm(125.04452-1934.136261*T+0.0020708*T*T+T*T*T/450000);}
 
 // ═══════════════════════════════════════════════════════════════════════
+// LOCATION-BASED ASTRONOMY (Phase 1c)
+// ═══════════════════════════════════════════════════════════════════════
+// Sunrise/Sunset in UTC — USNO algorithm, ~5 min accuracy for 0°-60° lat
+function sunriseSetUTC(date,lat,lon){
+  const start=new Date(Date.UTC(date.getUTCFullYear(),0,0));
+  const N=Math.ceil((date-start)/86400000);
+  const dec=-23.45*Math.cos((360/365*(N+10))*D2R);
+  const cosH=(-Math.sin(-0.833*D2R)-Math.sin(lat*D2R)*Math.sin(dec*D2R))/(Math.cos(lat*D2R)*Math.cos(dec*D2R));
+  if(cosH<-1||cosH>1)return null; // midnight sun / polar night
+  const H=Math.acos(cosH)*R2D;
+  const noon=12-lon/15; // approximate solar noon in UT
+  const riseUT=noon-H/15, setUT=noon+H/15;
+  const y=date.getUTCFullYear(),mo=date.getUTCMonth(),d=date.getUTCDate();
+  return{rise:new Date(Date.UTC(y,mo,d,Math.floor(riseUT),Math.round((riseUT%1)*60))),set:new Date(Date.UTC(y,mo,d,Math.floor(setUT),Math.round((setUT%1)*60)))};
+}
+// Greenwich Sidereal Time in degrees (Meeus Ch.12)
+function gstDeg(jd){
+  const jd0=Math.floor(jd-0.5)+0.5,t=(jd0-2451545)/36525;
+  const th0=norm(100.4606184+36000.770004*t+0.000387933*t*t);
+  return norm(th0+360.985647*(jd-jd0)*24/24);
+}
+// Local Sidereal Time in degrees
+function lstDeg(jd,lon){return norm(gstDeg(jd)+lon);}
+// Obliquity of ecliptic (Meeus Ch.22)
+function obliquity(jd){const T=(jd-2451545)/36525;return 23.4392911-0.0130042*T-0.00000164*T*T+0.000000504*T*T*T;}
+// True Ascendant (Meeus Ch.24)
+function calcASC(jd,lat,lon){
+  const RAMC=lstDeg(jd,lon)*D2R,e=obliquity(jd)*D2R,phi=lat*D2R;
+  return norm(Math.atan2(-Math.cos(RAMC),Math.sin(RAMC)*Math.cos(e)+Math.tan(phi)*Math.sin(e))*R2D);
+}
+// Midheaven (MC)
+function calcMC(jd,lon){
+  const RAMC=lstDeg(jd,lon)*D2R,e=obliquity(jd)*D2R;
+  return norm(Math.atan2(Math.sin(RAMC),Math.cos(RAMC)*Math.cos(e))*R2D);
+}
+// Part of Fortune: day chart = ASC + Moon - Sun; night chart = ASC + Sun - Moon
+function calcPOF(asc,moonL,sunL,isDayChart){return norm(isDayChart?asc+moonL-sunL:asc+sunL-moonL);}
+// Part of Spirit: day chart = ASC + Sun - Moon; night chart = ASC + Moon - Sun
+function calcPOS(asc,moonL,sunL,isDayChart){return norm(isDayChart?asc+sunL-moonL:asc+moonL-sunL);}
+// True unequal planetary hours using local sunrise/sunset
+function getPlanetaryHourUnequal(now,lat,lon){
+  const dow=now.getDay(),dr=DAY_RULERS[dow],ri=HOUR_ORDER.indexOf(dr);
+  const todaySS=sunriseSetUTC(now,lat,lon);
+  if(!todaySS)return getPlanetaryHour(now); // fallback for polar regions
+  const{rise,set}=todaySS;
+  const afterSunrise=now>=rise;
+  if(afterSunrise&&now<set){
+    // Day hour
+    const dayLen=(set-rise)/12;
+    const hn=Math.min(11,Math.floor((now-rise)/dayLen));
+    const pi=(ri+hn)%7;
+    return{planet:HOUR_ORDER[pi],hourNum:hn+1,msRemaining:dayLen-(now-rise)%dayLen,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:dr,isDayHour:true,rise,set};
+  } else if(afterSunrise){
+    // Night hour (after sunset, before midnight/next sunrise)
+    const tomorrow=new Date(now.getTime()+86400000);
+    const tomSS=sunriseSetUTC(tomorrow,lat,lon);
+    const nextRise=tomSS?.rise||new Date(rise.getTime()+86400000);
+    const nightLen=(nextRise-set)/12;
+    const hn=Math.min(11,Math.floor((now-set)/nightLen));
+    const pi=(ri+12+hn)%7;
+    return{planet:HOUR_ORDER[pi],hourNum:hn+13,msRemaining:nightLen-(now-set)%nightLen,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:dr,isDayHour:false,rise,set};
+  } else {
+    // Before sunrise — in previous astrological day's night hours
+    const yesterday=new Date(now.getTime()-86400000);
+    const ydSS=sunriseSetUTC(yesterday,lat,lon);
+    if(!ydSS)return getPlanetaryHour(now);
+    const ydDr=DAY_RULERS[yesterday.getDay()],ydRi=HOUR_ORDER.indexOf(ydDr);
+    const nightLen=(rise-ydSS.set)/12;
+    const hn=Math.min(11,Math.floor((now-ydSS.set)/nightLen));
+    const pi=(ydRi+12+hn)%7;
+    return{planet:HOUR_ORDER[pi],hourNum:hn+13,msRemaining:nightLen-(now-ydSS.set)%nightLen,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:ydDr,isDayHour:false,rise,set};
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // PLANETARY DATA
 // ═══════════════════════════════════════════════════════════════════════
 const P = {
@@ -289,7 +364,7 @@ function getAspectsAll(pos){
   return asps.sort((a,b)=>a.orb-b.orb);
 }
 
-function useEphemeris(date){
+function useEphemeris(date,location){
   const jd=dateToJD(date);
   const pos={};
   ["sun","moon","mercury","venus","mars","jupiter","saturn"].forEach(pk=>{
@@ -313,10 +388,20 @@ function useEphemeris(date){
     return tp.some(p=>{let d=Math.abs(norm(sLon-p.lon));if(d>180)d=360-d;return d<3;});
   });
   const aspects=getAspectsAll(pos);
-  return{pos,jd,moonPhase:phases[Math.floor(mpDeg/45)],moonPhaseDeg:mpDeg,voc,decanIdx,nearStars,aspects,northNode,southNode};
+  // Location-based additions (Phase 1c)
+  let asc=null,mc=null,pof=null,pos2=null,isDayChart=null;
+  if(location?.lat&&location?.lon){
+    asc=calcASC(jd,location.lat,location.lon);
+    mc=calcMC(jd,location.lon);
+    const ss=sunriseSetUTC(date,location.lat,location.lon);
+    isDayChart=ss?date>=ss.rise&&date<ss.set:pos.sun.lon>=0&&pos.sun.lon<=180;
+    pof=calcPOF(asc,pos.moon.lon,pos.sun.lon,isDayChart);
+    pos2=calcPOS(asc,pos.moon.lon,pos.sun.lon,isDayChart);
+  }
+  return{pos,jd,moonPhase:phases[Math.floor(mpDeg/45)],moonPhaseDeg:mpDeg,voc,decanIdx,nearStars,aspects,northNode,southNode,asc,mc,pof,pos2,isDayChart};
 }
 
-function calcNatal(bd){
+function calcNatal(bd,location){
   const jd=dateToJD(bd);const pos={};
   ["sun","moon","mercury","venus","mars","jupiter","saturn"].forEach(pk=>{
     const lon=planetLon(pk,jd),dm=dailyMotion(pk,jd);
@@ -325,7 +410,16 @@ function calcNatal(bd){
     const decanIdx=Math.min(35,Math.floor(norm(lon)/10));
     pos[pk]={lon,zodiac,dignity,isRetro,decanIdx,decan:DECANS[decanIdx],score:dignityScore(dignity,isRetro)};
   });
-  return pos;
+  // Location-based natal points
+  let asc=null,mc=null,pof=null,isDayChart=null;
+  if(location?.lat&&location?.lon){
+    asc=calcASC(jd,location.lat,location.lon);
+    mc=calcMC(jd,location.lon);
+    const ss=sunriseSetUTC(bd,location.lat,location.lon);
+    isDayChart=ss?bd>=ss.rise&&bd<ss.set:pos.sun.lon>=0&&pos.sun.lon<=180;
+    pof=calcPOF(asc,pos.moon.lon,pos.sun.lon,isDayChart);
+  }
+  return{...pos,asc,mc,pof,isDayChart};
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -469,7 +563,9 @@ function Orrery({eph,hour,natalPos,onPlanetClick}){
 // ═══════════════════════════════════════════════════════════════════════
 function HourRing({hour,now}){
   const p=P[hour.planet],dr=P[hour.dayRuler];
-  const prog=1-hour.msRemaining/3600000;
+  // Use actual hour length for unequal hours, otherwise assume 60 min
+  const hourLenMs=hour.isDayHour!=null?(hour.isDayHour&&hour.rise&&hour.set?(hour.set-hour.rise)/12:(hour.rise&&hour.set?(86400000-(hour.set-hour.rise))/12:3600000)):3600000;
+  const prog=1-hour.msRemaining/hourLenMs;
   const mins=Math.floor(hour.msRemaining/60000),secs=Math.floor((hour.msRemaining%60000)/1000);
   const cx=60,cy=60,r=50,c=2*Math.PI*r;
   const secAngle=-90+(now.getSeconds()/60)*360;
@@ -499,6 +595,10 @@ function HourRing({hour,now}){
         <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.35)",marginTop:2,fontStyle:"italic"}}>
           {hour.dayRuler===hour.planet?"Pure planetary · Day and hour aligned":`${P[hour.dayRuler].name} of ${P[hour.planet].name}`}
         </div>
+        {hour.isDayHour!=null&&<div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.25)",marginTop:4,letterSpacing:1}}>{hour.isDayHour?"DAY HOUR":"NIGHT HOUR"} · TRUE UNEQUAL</div>}
+        {hour.isDayHour!=null&&hour.rise&&<div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.2)",letterSpacing:0.5,marginTop:1}}>
+          ☀ {hour.rise.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",timeZone:"UTC"})} — {hour.set?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",timeZone:"UTC"})} UTC
+        </div>}
       </div>
     </div>
   );
@@ -561,6 +661,27 @@ function SkyScreen({now,hour,eph,fractal,natalPos,onWork}){
               </div>;
             })}
           </div>
+          {(eph.asc!=null||eph.mc!=null)&&(
+            <div style={{gridColumn:"1/-1",borderTop:"1px solid rgba(200,175,100,0.06)",marginTop:4,paddingTop:6,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4}}>
+              {[
+                eph.asc!=null&&{sym:"AC",label:"Ascendant",lon:eph.asc,col:"#D4AF6A"},
+                eph.mc!=null&&{sym:"MC",label:"Midheaven",lon:eph.mc,col:"#D4AF6A"},
+                eph.pof!=null&&{sym:"⊕",label:"Pt Fortune",lon:eph.pof,col:"#90C890"},
+              ].filter(Boolean).map(nd=>{
+                const z=lonToZodiac(nd.lon);
+                return<div key={nd.sym} style={{padding:"5px 8px",borderRadius:10,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",gap:6}}>
+                  <span style={{fontSize:11,color:nd.col}}>{nd.sym}</span>
+                  <div><div style={{fontFamily:F,fontSize:9,color:"#C4A870"}}>{z.degree}° {z.sym}</div>
+                  <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.4)",letterSpacing:0.5}}>{nd.label}</div></div>
+                </div>;
+              })}
+            </div>
+          )}
+          {eph.isDayChart!=null&&(
+            <div style={{gridColumn:"1/-1",borderTop:"1px solid rgba(200,175,100,0.04)",marginTop:4,paddingTop:4,fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",letterSpacing:1}}>
+              {eph.isDayChart?"☉ DAY CHART · Diurnal sect":"☽ NIGHT CHART · Nocturnal sect"} {hour.isDayHour!=null&&(hour.isDayHour?"· Unequal Hours":"· Unequal Hours")}
+            </div>
+          )}
         </div>
       </div>
       {(() => {const d=DECANS[eph.decanIdx],col=P[d.ruler].col;return (
@@ -602,7 +723,7 @@ function DecansScreen({eph,fractal,natalPos,mode,setMode}){
   const d=DECANS[sel],col=P[d.ruler].col;
   const isCurrentSolar=sel===eph.decanIdx;
   const isFractalActive=fractal.levels.some(l=>l.idx===sel);
-  const isNatal=natalPos&&Object.values(natalPos).some(np=>np.decanIdx===sel);
+  const isNatal=natalPos&&Object.entries(natalPos).filter(([pk])=>P[pk]).some(([,np])=>np.decanIdx===sel);
   return (
     <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:20}}>
       <div style={{padding:"16px 18px 10px"}}>
@@ -637,7 +758,7 @@ function DecansScreen({eph,fractal,natalPos,mode,setMode}){
         <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:3,marginTop:9}}>
           {DECANS.map(dec=>{
             const rc=P[dec.ruler].col, isSel=dec.n-1===sel, isSolar=dec.n-1===eph.decanIdx;
-            const isNat=natalPos&&Object.values(natalPos).some(np=>np.decanIdx===dec.n-1);
+            const isNat=natalPos&&Object.entries(natalPos).filter(([pk])=>P[pk]).some(([,np])=>np.decanIdx===dec.n-1);
             return (
               <div key={dec.n} onClick={()=>setSel(dec.n-1)} style={{aspectRatio:"1",borderRadius:8,background:isSel?`${rc}20`:isSolar?`${rc}10`:"rgba(0,0,0,0.3)",border:`1px solid ${isSel?rc+"60":isSolar?rc+"30":"rgba(200,175,100,0.08)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",position:"relative"}}>
                 <div style={{fontSize:10,color:rc}}>{P[dec.ruler].sym}</div>
@@ -652,7 +773,7 @@ function DecansScreen({eph,fractal,natalPos,mode,setMode}){
         <div className="card" style={{margin:"0 14px 10px"}}>
           <div style={L()}>Your Natal Faces</div>
           <div style={{marginTop:8}}>
-            {Object.entries(natalPos).map(([pk,np])=>(
+            {Object.entries(natalPos).filter(([pk])=>P[pk]).map(([pk,np])=>(
               <button key={pk} className="row-btn" onClick={()=>setSel(np.decanIdx)} style={{cursor:"pointer"}}>
                 <span style={{fontSize:13,color:P[pk].col,width:20}}>{P[pk].sym}</span>
                 <div style={{flex:1}}>
@@ -1026,7 +1147,7 @@ function StarsScreen({eph,natalPos}){
   const starActivity = FIXED_STARS.map((star,i)=>{
     const sLon=precessStar(star.lon,eph.jd);
     const nearTransit=Object.entries(eph.pos).filter(([pk,p])=>{let d=Math.abs(norm(sLon-p.lon));if(d>180)d=360-d;return d<3;}).map(([pk])=>pk);
-    const nearNatal=natalPos?Object.entries(natalPos).filter(([pk,np])=>{let d=Math.abs(norm(sLon-np.lon));if(d>180)d=360-d;return d<3;}).map(([pk])=>pk):[];
+    const nearNatal=natalPos?Object.entries(natalPos).filter(([pk,np])=>P[pk]&&np?.lon!=null&&(()=>{let d=Math.abs(norm(sLon-np.lon));if(d>180)d=360-d;return d<3;})()).map(([pk])=>pk):[];
     return{...star,sLon,idx:i,nearTransit,nearNatal,isActive:nearTransit.length>0||nearNatal.length>0};
   }).sort((a,b)=>b.isActive-a.isActive);
   return (
@@ -1439,7 +1560,7 @@ function NatalScreen({natalData,setNatalData,eph,fractal,natalPos}){
           <div className="card" style={{margin:"0 14px 10px"}}>
             <div style={L()}>Natal Decan Signatures</div>
             <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,marginBottom:10,lineHeight:1.6}}>These are the seven faces your planets occupied at birth. When the fractal system lands on these faces, or when transiting planets enter these decans, your personal frequency is activated.</div>
-            {Object.entries(natalPos).map(([pk,np])=>{
+            {Object.entries(natalPos).filter(([pk])=>P[pk]).map(([pk,np])=>{
               const pl=P[pk],dc=DIGNITY_COL[np.dignity];
               const fractalActive=fractal.levels.some(l=>l.idx===np.decanIdx);
               const transitIn=eph.pos[pk]&&Math.floor(norm(eph.pos[pk].lon)/10)===np.decanIdx;
@@ -1463,7 +1584,7 @@ function NatalScreen({natalData,setNatalData,eph,fractal,natalPos}){
           <div className="card" style={{margin:"0 14px 10px"}}>
             <div style={L()}>Your Strong Channels</div>
             <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Planets in dignity at birth are your natural strong channels. Working with them in their day and hour produces amplified results specifically for you.</div>
-            {Object.entries(natalPos).sort((a,b)=>b[1].score-a[1].score).slice(0,4).map(([pk,np])=>{
+            {Object.entries(natalPos).filter(([pk])=>P[pk]).sort((a,b)=>b[1].score-a[1].score).slice(0,4).map(([pk,np])=>{
               const pl=P[pk],transit=eph.pos[pk];
               return (
                 <div key={pk} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
@@ -1478,6 +1599,37 @@ function NatalScreen({natalData,setNatalData,eph,fractal,natalPos}){
               );
             })}
           </div>
+          {(natalPos?.asc!=null||natalPos?.mc!=null)&&(
+            <div className="card" style={{margin:"0 14px 10px"}}>
+              <div style={L()}>Angles & Parts</div>
+              <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6,marginBottom:10}}>Calculated from birth time and location. The Ascendant is the mask and body; the MC is the social calling; the Part of Fortune is the body of luck.</div>
+              {[
+                natalPos.asc!=null&&{label:"Ascendant (ASC)",lon:natalPos.asc,sym:"AC",desc:"Rising sign — the bodily self and life orientation"},
+                natalPos.mc!=null&&{label:"Midheaven (MC)",lon:natalPos.mc,sym:"MC",desc:"Career, public role, worldly calling"},
+                natalPos.pof!=null&&{label:"Part of Fortune",lon:natalPos.pof,sym:"⊕",desc:natalPos.isDayChart?"Day chart: ASC + Moon − Sun":"Night chart: ASC + Sun − Moon"},
+              ].filter(Boolean).map(({label,lon,sym,desc})=>{
+                const z=lonToZodiac(lon);
+                return(
+                  <div key={sym} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
+                    <div style={{width:32,height:32,borderRadius:16,background:"rgba(200,175,100,0.08)",border:"1px solid rgba(200,175,100,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#D4AF6A",flexShrink:0}}>{sym}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontFamily:F,fontSize:12,color:"#C4A870"}}>{label}</div>
+                      <div style={{fontFamily:F,fontSize:9,color:"#5A4020"}}>{z.degree}° {z.name} · {desc}</div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.2)",marginTop:8}}>
+                {natalPos.isDayChart!=null&&`Sect: ${natalPos.isDayChart?"Day":"Night"} chart`}
+                {natalPos.asc==null&&" · Enter birth location in Profile for angle calculations"}
+              </div>
+            </div>
+          )}
+          {natalPos?.asc==null&&(
+            <div style={{margin:"0 14px 10px",padding:"12px 14px",borderRadius:12,background:"rgba(0,0,0,0.3)",border:"1px solid rgba(200,175,100,0.08)"}}>
+              <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",lineHeight:1.6}}>✦ Enter your birth city in Profile to unlock Ascendant, MC, Part of Fortune, and true sect determination.</div>
+            </div>
+          )}
         </>
       )}
       {!natalPos&&<div style={{margin:"0 14px",padding:"40px 20px",textAlign:"center"}}><div style={{fontSize:40,marginBottom:14,opacity:0.2}}>☽ ☉ ♄</div><div style={{fontFamily:F,fontSize:13,color:"#5A4020",fontStyle:"italic",lineHeight:1.9}}>Enter your birth date to unlock personal resonance — the layer where every timing system in this app is calibrated to your natal frequency.</div></div>}
@@ -1491,7 +1643,7 @@ function NatalScreen({natalData,setNatalData,eph,fractal,natalPos}){
 function FractalScreen({fractal,natalPos,mode,setMode}){
   const [selLevel,setSelLevel]=useState(null);
   const {levels,cosmicCoherence,secToThreshold}=fractal;
-  const personalDecans=natalPos?Object.values(natalPos).map(np=>np.decanIdx):[];
+  const personalDecans=natalPos?Object.entries(natalPos).filter(([pk])=>P[pk]).map(([,np])=>np.decanIdx):[];
   const L_META=[
     {w:"Atziluth",p:"Election · Talismanic harvest"},
     {w:"Beriah",p:"Ritual design · Working day"},
@@ -1618,7 +1770,7 @@ function AIScreen({now,eph,fractal,natalPos,hour,profile}){
   const buildContext=()=>{
     const positions=Object.entries(eph.pos).map(([pk,p])=>`${P[pk].name}: ${p.zodiac.degree}° ${p.zodiac.name} (${p.dignity}${p.isRetro?" retrograde":""}${p.combust?` ${p.combust.type}`:""}, score ${p.score})`).join(", ");
     const fd=fractal.levels.map(l=>`L${l.level}: ${l.decan.name} (${l.decan.sign}, ${l.decan.ruler})`).join(", ");
-    const nd=natalPos?Object.entries(natalPos).map(([pk,np])=>`Natal ${P[pk].name}: ${np.decan.name} (${np.dignity})`).join(", "):"No natal chart entered";
+    const nd=natalPos?Object.entries(natalPos).filter(([pk])=>P[pk]).map(([pk,np])=>`Natal ${P[pk].name}: ${np.decan.name} (${np.dignity})`).join(", "):"No natal chart entered";
     const nextElections=[];
     for(let d=0;d<30;d++){
       const date=new Date(now.getTime()+d*86400000);
@@ -1728,7 +1880,7 @@ function buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile){
   const positions=eph?.pos?Object.entries(eph.pos).map(([pk,p])=>`${P[pk].name} ${p.zodiac.degree}° ${p.zodiac.name} (${p.dignity}${p.isRetro?" ℞":""}${p.combust?` ${p.combust.type}`:""}) score ${p.score}`).join("; "):"";
   const tradition=profile?.traditions?.map(t=>TRADITIONS[t]?.label||t).join(" + ")||"Western Ceremonial";
   const base=`${dayName} ${dateStr}, Hour of ${hourPl}. Tradition: ${tradition}. ${moonStr}. All planets: ${positions}.`;
-  const natalStr=natalPos?Object.entries(natalPos).map(([pk,np])=>`Natal ${P[pk].name}: ${np.decan.name} (${np.dignity})`).join(", "):"No natal chart.";
+  const natalStr=natalPos?Object.entries(natalPos).filter(([pk])=>P[pk]).map(([pk,np])=>`Natal ${P[pk].name}: ${np.decan.name} (${np.dignity})`).join(", "):"No natal chart.";
   switch(tab){
     case "sky": return `${base} Active decan: ${DECANS[eph.decanIdx].name} (${DECANS[eph.decanIdx].sign}, ruler ${DECANS[eph.decanIdx].ruler}). Fractal coherence: ${fractal.cosmicCoherence}%, active layers: ${fractal.levels.slice(0,2).map(l=>l.decan.name).join(", ")}. ${natalStr}\n\nAs my Oracle in the ${tradition} tradition: Analyze this celestial moment fully. What is the quality of this moment for magical work? What planetary conditions stand out — for good or ill? What would you recommend working with right now, and what would you avoid?`;
     case "decans": return `${base} The Sun occupies the ${DECANS[eph.decanIdx].name} — the ${eph.decanIdx+1}th decan of ${DECANS[eph.decanIdx].sign}, ruled by ${DECANS[eph.decanIdx].ruler}. Its classical operations: ${DECANS[eph.decanIdx].magic}. ${natalStr}\n\nAs my Oracle in the ${tradition} tradition: Speak to this decan face. What does it offer the practitioner right now? What kinds of workings align with its nature? How do the current planetary conditions interact with this face?`;
@@ -1963,10 +2115,15 @@ export default function App(){
   // Compute natal positions from profile (or legacy natal data)
   useEffect(()=>{
     const nd=profile?.natal?.date?profile.natal:natalData;
-    if(nd?.date){const bd=nd.time?new Date(`${nd.date}T${nd.time}:00`):new Date(`${nd.date}T12:00:00`);if(!isNaN(bd.getTime()))setNatalPos(calcNatal(bd));else setNatalPos(null);}else setNatalPos(null);
+    if(nd?.date){
+      const bd=nd.time?new Date(`${nd.date}T${nd.time}:00`):new Date(`${nd.date}T12:00:00`);
+      const loc=nd.lat&&nd.lon?{lat:nd.lat,lon:nd.lon}:null;
+      if(!isNaN(bd.getTime()))setNatalPos(calcNatal(bd,loc));else setNatalPos(null);
+    }else setNatalPos(null);
   },[natalData,profile]);
-  const hour=getPlanetaryHour(now);
-  const eph=useEphemeris(now);
+  const location=profile?.natal?.lat&&profile?.natal?.lon?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
+  const hour=location?getPlanetaryHourUnequal(now,location.lat,location.lon):getPlanetaryHour(now);
+  const eph=useEphemeris(now,location);
   const fractal=calcFractal(now,fractalMode);
   const openWork=useCallback(pk=>{setWork(pk);setTab("work");},[]);
   const openOracle=useCallback(()=>{
