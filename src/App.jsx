@@ -445,6 +445,7 @@ const NAV_SECTIONS = [
   {id:"elect",   icon:"◈", label:"Elections",  desc:"Optimal windows"},
   {id:"work",    icon:"⚗", label:"Work",       desc:"Build a ritual"},
   {id:"journal", icon:"✎", label:"Journal",    desc:"Practice record"},
+  {id:"learn",   icon:"⬡", label:"Learn",      desc:"AI magical education"},
   {id:"ai",      icon:"✧", label:"Planner",    desc:"AI working builder"},
   {id:"profile", icon:"◉", label:"Profile",    desc:"Practitioner settings"},
 ];
@@ -1710,10 +1711,12 @@ function FractalScreen({fractal,natalPos,mode,setMode}){
 // ═══════════════════════════════════════════════════════════════════════
 // JOURNAL SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-function JournalScreen(){
+function JournalScreen({profile}){
   const [entries,setEntries]=useState([]);
   const [showNew,setShowNew]=useState(false);
   const [form,setForm]=useState({planet:"jupiter",intent:"",outcome:"",date:new Date().toISOString().split("T")[0]});
+  const [reflection,setReflection]=useState(null);
+  const [reflecting,setReflecting]=useState(false);
   useEffect(()=>{(async()=>{try{const r=await window.storage.get("astrum_journal");if(r?.value)setEntries(JSON.parse(r.value));}catch(e){}})();},[]);
   const save=async()=>{
     const e={id:Date.now(),...form};const ne=[e,...entries];setEntries(ne);setShowNew(false);
@@ -1721,12 +1724,37 @@ function JournalScreen(){
     try{await window.storage.set("astrum_journal",JSON.stringify(ne));}catch(e){}
   };
   const del=async(id)=>{const ne=entries.filter(e=>e.id!==id);setEntries(ne);try{await window.storage.set("astrum_journal",JSON.stringify(ne));}catch(e){}};
+  const reflect=async()=>{
+    const apiKey=profile?.apiKey||"";
+    if(!apiKey){setReflection("Configure your Anthropic API key in Profile to use AI reflection.");return;}
+    setReflecting(true);setReflection(null);
+    const trad=profile?.traditions?.map(t=>TRADITIONS[t]?.label||t).join(", ")||"Western Ceremonial";
+    const entrySummary=entries.slice(0,20).map(e=>`[${e.date}] ${P[e.planet]?.name||e.planet}: ${e.intent}${e.outcome?` → ${e.outcome}`:""}`).join("\n");
+    const sys=`You are an analytical magical advisor reviewing a practitioner's journal. Look for patterns: which planets appear most often, success vs. failure patterns, timing observations, seasonal patterns, repeating intentions. Be specific — cite exact data from the journal. Give actionable recommendations. Tradition: ${trad}.`;
+    const userMsg=`Here is my magical practice journal (${entries.length} entries). Analyze it for patterns and give me your honest assessment and recommendations:\n\n${entrySummary}`;
+    try{
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:900,system:sys,messages:[{role:"user",content:userMsg}]})});
+      const data=await resp.json();
+      setReflection(data.content?.[0]?.text||data.error?.message||"An error occurred.");
+    }catch(e){setReflection("Reflection unavailable — check connection.");}
+    setReflecting(false);
+  };
   return(
     <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:20}}>
       <div style={{padding:"16px 18px 10px",display:"flex",justifyContent:"space-between",alignItems:"flex-end"}}>
-        <div><div style={L()}>Practice Journal</div><div style={T(20)}>Record & Learn</div></div>
-        <button onClick={()=>setShowNew(!showNew)} style={{padding:"8px 14px",borderRadius:10,background:"rgba(212,175,106,0.1)",border:"1px solid rgba(212,175,106,0.28)",fontFamily:F,fontSize:9,color:"#D4AF6A",letterSpacing:2,cursor:"pointer"}}>{showNew?"CANCEL":"+ LOG"}</button>
+        <div><div style={L()}>Practice Journal</div><div style={T(20)}>Record & Reflect</div></div>
+        <div style={{display:"flex",gap:6}}>
+          {entries.length>=3&&<button onClick={reflect} disabled={reflecting} style={{padding:"8px 12px",borderRadius:10,background:"rgba(100,80,160,0.15)",border:"1px solid rgba(100,80,160,0.35)",fontFamily:F,fontSize:9,color:"rgba(160,140,220,0.8)",letterSpacing:1,cursor:"pointer"}}>{reflecting?"…":"REFLECT"}</button>}
+          <button onClick={()=>setShowNew(!showNew)} style={{padding:"8px 14px",borderRadius:10,background:"rgba(212,175,106,0.1)",border:"1px solid rgba(212,175,106,0.28)",fontFamily:F,fontSize:9,color:"#D4AF6A",letterSpacing:2,cursor:"pointer"}}>{showNew?"CANCEL":"+ LOG"}</button>
+        </div>
       </div>
+      {reflection&&(
+        <div style={{margin:"0 14px 10px",padding:"13px 14px",borderRadius:13,background:"rgba(20,15,40,0.8)",border:"1px solid rgba(100,80,160,0.25)"}}>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(160,140,220,0.6)",letterSpacing:2,marginBottom:8}}>AI REFLECTION · {entries.length} ENTRIES ANALYZED</div>
+          <div style={{fontFamily:F,fontSize:11,color:"#C4A870",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{reflection}</div>
+          <button onClick={()=>setReflection(null)} style={{marginTop:10,background:"none",border:"none",fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",cursor:"pointer",letterSpacing:1}}>DISMISS</button>
+        </div>
+      )}
       {showNew&&<div style={{margin:"0 14px 10px",padding:"13px 14px",borderRadius:13,background:"rgba(8,5,22,0.65)",border:"1px solid rgba(200,175,100,0.1)"}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
           <div><div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Date</div><input type="date" value={form.date} onChange={e=>setForm({...form,date:e.target.value})} style={{background:"rgba(0,0,0,0.45)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",width:"100%",fontSize:11}}/></div>
@@ -1870,6 +1898,31 @@ ${context}`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// LEARN TOPICS
+// ═══════════════════════════════════════════════════════════════════════
+const LEARN_TOPICS=[
+  {id:"planetary-hours",  label:"Planetary Hours",        desc:"The 24-hour cycle of planetary rulership",         traditions:["all"],         level:"beginner"},
+  {id:"lunar-timing",     label:"Lunar Timing",           desc:"Phases, mansions, void of course, void avoidance", traditions:["all"],         level:"beginner"},
+  {id:"electional",       label:"Electional Astrology",   desc:"Choosing optimal moments for magical operation",    traditions:["all"],         level:"intermediate"},
+  {id:"decans",           label:"Decan Magic",            desc:"The 36 faces of the zodiac and their operations",  traditions:["all"],         level:"intermediate"},
+  {id:"fixed-stars",      label:"Fixed Stars",            desc:"The stellar virtues and their talismanic use",      traditions:["all"],         level:"intermediate"},
+  {id:"planetary-magic",  label:"Planetary Magic",        desc:"The seven spheres — operations, materia, timing",  traditions:["western-ceremonial","hellenism"],level:"beginner"},
+  {id:"talismans",        label:"Talisman Making",        desc:"Classical image magic — inscription and consecration",traditions:["western-ceremonial","hellenism"],level:"intermediate"},
+  {id:"invocation",       label:"Invocation & Prayer",    desc:"Speaking with intelligences and planetary spirits", traditions:["western-ceremonial","hellenism"],level:"intermediate"},
+  {id:"kabbalah",         label:"Practical Kabbalah",     desc:"Tree of Life as a map of magical operations",      traditions:["western-ceremonial"],level:"intermediate"},
+  {id:"essential-dignities",label:"Essential Dignities",  desc:"Domicile, exaltation, fall, detriment, peregrine", traditions:["all"],         level:"beginner"},
+  {id:"sigils",           label:"Sigil Craft",            desc:"Creating and charging sigils from intent",          traditions:["chaos","all"], level:"beginner"},
+  {id:"gnosis",           label:"Gnosis & Altered States",desc:"Accessing magical states of consciousness",        traditions:["chaos"],       level:"intermediate"},
+  {id:"servitors",        label:"Servitors & Egregores",  desc:"Creating thought-forms for specific operations",   traditions:["chaos"],       level:"advanced"},
+  {id:"wheel-of-year",   label:"Wheel of the Year",      desc:"The eight stations and their traditional power",   traditions:["traditional-witchcraft"],level:"beginner"},
+  {id:"hedge-crossing",  label:"The Crooked Path",       desc:"Between-worlds work in the traditional arte",      traditions:["traditional-witchcraft"],level:"advanced"},
+  {id:"orphic-hymns",    label:"Orphic Hymns",           desc:"The hymns of Orpheus and their theurgic function", traditions:["hellenism"],   level:"intermediate"},
+  {id:"theurgy",         label:"Theurgic Practice",      desc:"Iamblichean theurgy — ascending through the spheres",traditions:["hellenism"], level:"advanced"},
+  {id:"candle-magic",    label:"Candle & Petition Work",  desc:"Simple, direct folk working methods",               traditions:["folk"],        level:"beginner"},
+  {id:"rootwork",        label:"Materia & Curios",        desc:"Plants, stones, and curios of the folk tradition", traditions:["folk"],        level:"intermediate"},
+];
+
+// ═══════════════════════════════════════════════════════════════════════
 // CONTEXTUAL ORACLE
 // ═══════════════════════════════════════════════════════════════════════
 function buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile){
@@ -1959,6 +2012,106 @@ function OraclePanel({open,onClose,context,profile}){
           <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();sendFollow();}}} placeholder="Ask a follow-up question…" style={{flex:1,background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:11}}/>
           <button onClick={sendFollow} disabled={!input.trim()||loading} style={{padding:"0 12px",borderRadius:10,background:input.trim()?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(input.trim()?"rgba(212,175,106,0.28)":"rgba(200,175,100,0.08)"),fontFamily:F,fontSize:9,color:input.trim()?"#D4AF6A":"#4A3020",letterSpacing:1,cursor:input.trim()?"pointer":"default",height:36}}>ASK</button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// LEARN SCREEN
+// ═══════════════════════════════════════════════════════════════════════
+function LearnScreen({profile}){
+  const [topic,setTopic]=useState(null);
+  const [msgs,setMsgs]=useState([]);
+  const [input,setInput]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [testMode,setTestMode]=useState(false);
+  const bottomRef=useRef(null);
+  const userTraditions=profile?.traditions||["western-ceremonial"];
+  const lvl=profile?.level||"intermediate";
+  const filteredTopics=LEARN_TOPICS.filter(t=>t.traditions.includes("all")||userTraditions.some(ut=>t.traditions.includes(ut)));
+  const sendMsg=async(text,history)=>{
+    if(loading)return;
+    const apiKey=profile?.apiKey||"";
+    const newMsgs=[...history,{role:"user",content:text}];
+    setMsgs(newMsgs);setLoading(true);
+    if(!apiKey){setMsgs(m=>[...m,{role:"assistant",content:"Configure your Anthropic API key in Profile to use the Learn feature."}]);setLoading(false);return;}
+    const trad=userTraditions.map(t=>TRADITIONS[t]?.label||t).join(", ");
+    const tPrompts=userTraditions.map(t=>TRADITIONS[t]?.prompt||"").filter(Boolean).join("\n\n");
+    const lvlNote=lvl==="beginner"?"This student is new to the tradition — define all terms, use analogies, build gradually.":lvl==="advanced"?"This student is an experienced practitioner — engage at the highest level, assume full doctrinal knowledge, push deeper.":"This student has some experience — assume familiarity with basic concepts, focus on nuance and precision.";
+    const modeNote=testMode?"You are in TEST MODE. Ask the student a specific question about the topic they have been learning. Wait for their answer, then evaluate it: affirm what is correct, gently correct what is wrong, and deepen the teaching. Then ask another question.":"You are in LESSON MODE. Teach using the Socratic method: introduce a key concept, ask the student a thought-provoking question, respond to their answer with deeper insight. Keep your turns to 2-3 paragraphs maximum. Guide discovery rather than simply lecturing.";
+    const sys=`You are a master teacher of magical tradition and esoteric knowledge. ${lvlNote}\n\n${modeNote}\n\nTRADITION CONTEXT:\n${tPrompts}\n\nThe student's tradition(s): ${trad}. Adapt all examples, spirit names, and timing systems to their tradition. Do not reference traditions they have not indicated.`;
+    try{
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:700,system:sys,messages:newMsgs.map(m=>({role:m.role,content:m.content}))})});
+      const data=await resp.json();
+      const txt=data.content?.[0]?.text||data.error?.message||"An error occurred.";
+      setMsgs(m=>[...m,{role:"assistant",content:txt}]);
+    }catch(e){setMsgs(m=>[...m,{role:"assistant",content:"Learn unavailable — check connection."}]);}
+    setLoading(false);
+    setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:"smooth"}),100);
+  };
+  const startTopic=(t)=>{
+    setTopic(t);setMsgs([]);setInput("");setTestMode(false);setLoading(false);
+    const prompt=`I want to learn about: ${t.label}. Topic context: ${t.desc}. Please begin the lesson.`;
+    setTimeout(()=>sendMsg(prompt,[]),80);
+  };
+  const sendFollow=()=>{if(!input.trim()||loading)return;const i=input;setInput("");sendMsg(i,msgs);};
+  const switchMode=()=>{
+    const nm=!testMode;setTestMode(nm);
+    sendMsg(nm?"Switch to test mode — ask me a question about what we've covered so far.":"Return to lesson mode — continue the lesson from where we left off.",msgs);
+  };
+  if(!topic){
+    return(
+      <div style={{flex:1,overflowY:"auto",paddingBottom:20}}>
+        <div style={{padding:"16px 18px 10px"}}>
+          <div style={L()}>Magical Education</div>
+          <div style={T(20)}>Learn ⬡</div>
+          <div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",marginTop:3,lineHeight:1.7}}>Choose a topic. The AI teaches through Socratic dialogue — asking questions, responding to your answers, building understanding from the inside out.</div>
+        </div>
+        {["beginner","intermediate","advanced"].filter(l=>filteredTopics.some(t=>t.level===l)).map(l=>(
+          <div key={l}>
+            <div style={{padding:"8px 18px 4px",fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",letterSpacing:3,textTransform:"uppercase"}}>{l}</div>
+            {filteredTopics.filter(t=>t.level===l).map(t=>(
+              <button key={t.id} onClick={()=>startTopic(t)} style={{width:"100%",padding:"11px 18px",background:"none",border:"none",borderBottom:"1px solid rgba(200,175,100,0.05)",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+                <span style={{fontSize:20,color:"rgba(200,175,100,0.2)",flexShrink:0}}>⬡</span>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:F,fontSize:13,color:"rgba(200,175,100,0.8)"}}>{t.label}</div>
+                  <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",marginTop:2}}>{t.desc}</div>
+                </div>
+                <span style={{color:"rgba(200,175,100,0.2)",fontSize:14}}>›</span>
+              </button>
+            ))}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return(
+    <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:0}}>
+      <div style={{padding:"12px 16px 10px",borderBottom:"1px solid rgba(200,175,100,0.07)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>{setTopic(null);setMsgs([]);}} style={{background:"none",border:"none",color:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:10,letterSpacing:1,cursor:"pointer",padding:0}}>← Topics</button>
+          <span style={{color:"rgba(200,175,100,0.15)"}}>|</span>
+          <div style={{fontFamily:F,fontSize:12,color:"#D4AF6A"}}>{topic.label}</div>
+        </div>
+        <button onClick={switchMode} disabled={loading||msgs.length<2} style={{padding:"6px 10px",borderRadius:8,background:testMode?"rgba(212,175,106,0.15)":"rgba(0,0,0,0.3)",border:`1px solid ${testMode?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.12)"}`,fontFamily:F,fontSize:8,color:testMode?"#D4AF6A":"rgba(200,175,100,0.4)",letterSpacing:1,cursor:"pointer"}}>
+          {testMode?"LESSON":"TEST ME"}
+        </button>
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"14px 16px 8px"}}>
+        {loading&&msgs.length<=1&&<div style={{display:"flex",gap:5,padding:"32px 0",justifyContent:"center"}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}</div>}
+        {msgs.filter(m=>m.role!=="user"||msgs.indexOf(m)>0).map((m,i)=>(
+          <div key={i} style={{marginBottom:14}}>
+            {m.role==="user"&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",marginBottom:4,letterSpacing:1}}>YOU</div>}
+            <div style={{fontFamily:F,fontSize:11.5,color:m.role==="user"?"#9A8060":"#C4A870",lineHeight:1.95,whiteSpace:"pre-wrap"}}>{m.content}</div>
+          </div>
+        ))}
+        {loading&&msgs.length>1&&<div style={{display:"flex",gap:5,padding:"8px 0"}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}</div>}
+        <div ref={bottomRef}/>
+      </div>
+      <div style={{padding:"8px 12px 16px",borderTop:"1px solid rgba(200,175,100,0.06)",display:"flex",gap:8,flexShrink:0}}>
+        <textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendFollow();}}} placeholder={testMode?"Answer the question…":"Ask a question or respond…"} rows={2} style={{flex:1,resize:"none",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:11}}/>
+        <button onClick={sendFollow} disabled={!input.trim()||loading} style={{padding:"0 12px",borderRadius:10,background:input.trim()?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(input.trim()?"rgba(212,175,106,0.28)":"rgba(200,175,100,0.08)"),fontFamily:F,fontSize:9,color:input.trim()?"#D4AF6A":"#4A3020",letterSpacing:1,cursor:input.trim()?"pointer":"default",height:36,alignSelf:"flex-end"}}>SEND</button>
       </div>
     </div>
   );
@@ -2164,7 +2317,8 @@ export default function App(){
           {tab==="stars"   &&<StarsScreen   eph={eph} natalPos={natalPos}/>}
           {tab==="natal"   &&<NatalScreen   natalData={natalData} setNatalData={setNatalData} eph={eph} fractal={fractal} natalPos={natalPos}/>}
           {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph}/>}
-          {tab==="journal" &&<JournalScreen/>}
+          {tab==="journal" &&<JournalScreen profile={profile}/>}
+          {tab==="learn"   &&<LearnScreen   profile={profile}/>}
           {tab==="work"    &&<WorkScreen    eph={eph} initPlanet={workPlanet} natalPos={natalPos} profile={profile}/>}
           {tab==="ai"      &&<AIScreen      now={now} eph={eph} fractal={fractal} natalPos={natalPos} hour={hour} profile={profile}/>}
           {tab==="profile" &&<ProfileScreen profile={profile} setProfile={setProfile}/>}
