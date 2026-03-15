@@ -2002,6 +2002,31 @@ function JournalScreen({profile}){
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// KNOWLEDGE BASE — persistent nodes injected into AI context
+// ═══════════════════════════════════════════════════════════════════════
+function loadKnowledge(){
+  try{const raw=window.storage.getItem("astrum_knowledge");if(raw)return JSON.parse(raw);}catch{}
+  return[];
+}
+function saveKnowledge(nodes){window.storage.setItem("astrum_knowledge",JSON.stringify(nodes));}
+
+// Build dynamic system prompt from profile, knowledge nodes, and optional sky context
+function buildSystemPrompt(profile,extraContext){
+  const traditions=profile?.traditions?.length?profile.traditions:["western-ceremonial"];
+  const t=traditions[0];
+  const tradPrompt=TRADITIONS[t]?.prompt||TRADITIONS["western-ceremonial"].prompt;
+  const tradNames=traditions.map(tid=>TRADITIONS[tid]?.label||tid).join(" + ");
+  const levelMap={beginner:"Explain concepts from first principles. Use accessible language.",intermediate:"Assume active practitioner knowledge. Skip basics.",advanced:"Assume deep fluency. Use technical terminology freely."};
+  const levelNote=levelMap[profile?.level||"intermediate"];
+  const name=profile?.name?`The practitioner's name is ${profile.name}.`:"";
+  // Inject knowledge nodes
+  const nodes=loadKnowledge();
+  const alwaysNodes=nodes.filter(n=>n.always);
+  const knowledgeSection=alwaysNodes.length?`\n\nKNOWLEDGE BASE:\n${alwaysNodes.map(n=>`[${n.title}]\n${n.content}`).join("\n\n---\n\n")}`:"";
+  return `${tradPrompt}\n\nTradition context: ${tradNames}. ${name}\n${levelNote}${knowledgeSection}${extraContext?`\n\n${extraContext}`:""}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // AI WORKING PLANNER
 // ═══════════════════════════════════════════════════════════════════════
 function AIScreen({now,eph,fractal,natalPos,hour,profile}){
@@ -2036,33 +2061,7 @@ function AIScreen({now,eph,fractal,natalPos,hour,profile}){
     setMessages(m=>[...m,userMsg]);
     setInput("");setLoading(true);
     const context=buildContext();
-    const traditions=profile?.traditions||["western-ceremonial"];
-    const traditionPrompts=traditions.map(t=>TRADITIONS[t]?.prompt||"").filter(Boolean).join("\n\n");
-    const practitionerName=profile?.name?`The practitioner's name is ${profile.name}.`:"";
-    const levelNote=profile?.level==="beginner"?"Calibrate explanations for a beginner — define terms, explain why before how.":profile?.level==="advanced"?"Calibrate for an adept — assume full doctrinal fluency, skip basics, go deep.":"Calibrate for an intermediate practitioner — assume familiarity with the basics, focus on precision.";
-    const systemPrompt=`You are a masterful advisor in the magical arts, adapting fluidly to the practitioner's tradition and needs. ${practitionerName} ${levelNote}
-
-TRADITION CONTEXT:
-${traditionPrompts}
-
-CLASSICAL SOURCES (draw on as appropriate): the Picatrix (Ghayat al-Hakim), Agrippa's Three Books of Occult Philosophy, Ficino's De Vita Coelitus Comparanda, the Greek Magical Papyri, William Lilly's Christian Astrology, Iamblichus On the Mysteries, and the broader Hermetic corpus. You speak from the tradition itself — not as a commentator, but as a practitioner steeped in its living logic.
-
-Your role is to help this practitioner plan, time, and execute magical workings with precision and depth. When they describe their goal, you:
-
-1. IDENTIFY the most appropriate planetary force(s), with classical reasoning from essential dignities, natural rulerships, and doctrinal sources
-2. EVALUATE the current sky conditions: dignities, direct/retrograde motion, combustion, phase, void of course, via combusta, besiegement
-3. RECOMMEND the best available election window from the options provided, explaining what makes it suitable
-4. IDENTIFY the active decan face for this working, its planetary ruler, and its classical significance for the intention
-5. PRESCRIBE the sacred vowel of the ruling sphere and how to deploy it in invocation
-6. PROVIDE a complete classical materia list: incense, oils, herbs, metals, stones, colors, day and hour
-7. OUTLINE a ritual structure rooted in the grimoire tradition: purification, altar arrangement, inscription, invocation, consecration, incubation
-8. SCHEDULE appropriate follow-up: maintenance timing, talisman care, review at the next favorable moment
-9. WARN of any obstacles and what can be done to mitigate or wait them out
-10. RELATE the working to the natal chart if one is provided — natal dignities, activated decans, angular planets
-
-Speak with authority and precision. Give specific dates and times. Format responses clearly with labeled sections. Be practical: the tradition is not an abstraction — it is a set of working instructions.
-
-${context}`;
+    const systemPrompt=buildSystemPrompt(profile,context);
     const apiKey=profile?.apiKey||"";
     if(!apiKey){setMessages(m=>[...m,{role:"assistant",content:"No API key configured. Go to Profile → Anthropic API Key to enter your key from console.anthropic.com."}]);setLoading(false);return;}
     try{
@@ -2174,11 +2173,7 @@ function OraclePanel({open,onClose,context,profile}){
     setMsgs(newMsgs);
     setLoading(true);
     if(!apiKey){setMsgs(m=>[...m,{role:"assistant",content:"Configure your Anthropic API key in Profile → API Key to activate the Oracle."}]);setLoading(false);return;}
-    const traditions=profile?.traditions||["western-ceremonial"];
-    const tPrompts=traditions.map(t=>TRADITIONS[t]?.prompt||"").filter(Boolean).join("\n\n");
-    const lvl=profile?.level||"intermediate";
-    const lvlNote=lvl==="beginner"?"Calibrate for a beginner — explain terms, keep it accessible.":lvl==="advanced"?"Calibrate for an adept — assume full doctrinal fluency, no basics.":"Calibrate for an intermediate practitioner — assume familiarity, focus on precision.";
-    const sys=`You are the Oracle — an embedded AI advisor in a magical practice app. Your role is to speak directly to what the practitioner is currently observing. ${lvlNote}\n\nTRADITION:\n${tPrompts}\n\nBe concise and specific (2-4 paragraphs for readings, shorter for follow-ups). Reference exact data given. No generalities — address the specific conditions described.`;
+    const sys=buildSystemPrompt(profile,"You are the Oracle — an embedded advisor in a magical practice app. Speak directly to what the practitioner is currently observing. Be concise and specific (2-4 paragraphs for readings, shorter for follow-ups). Reference exact data given. No generalities — address the specific conditions described.");
     try{
       const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:800,system:sys,messages:newMsgs.map(m=>({role:m.role,content:m.content}))})});
       const data=await resp.json();
@@ -2836,11 +2831,8 @@ function LearnScreen({profile}){
     const newMsgs=[...history,{role:"user",content:text}];
     setMsgs(newMsgs);setLoading(true);
     if(!apiKey){setMsgs(m=>[...m,{role:"assistant",content:"Configure your Anthropic API key in Profile to use the Learn feature."}]);setLoading(false);return;}
-    const trad=userTraditions.map(t=>TRADITIONS[t]?.label||t).join(", ");
-    const tPrompts=userTraditions.map(t=>TRADITIONS[t]?.prompt||"").filter(Boolean).join("\n\n");
-    const lvlNote=lvl==="beginner"?"This student is new to the tradition — define all terms, use analogies, build gradually.":lvl==="advanced"?"This student is an experienced practitioner — engage at the highest level, assume full doctrinal knowledge, push deeper.":"This student has some experience — assume familiarity with basic concepts, focus on nuance and precision.";
     const modeNote=testMode?"You are in TEST MODE. Ask the student a specific question about the topic they have been learning. Wait for their answer, then evaluate it: affirm what is correct, gently correct what is wrong, and deepen the teaching. Then ask another question.":"You are in LESSON MODE. Teach using the Socratic method: introduce a key concept, ask the student a thought-provoking question, respond to their answer with deeper insight. Keep your turns to 2-3 paragraphs maximum. Guide discovery rather than simply lecturing.";
-    const sys=`You are a master teacher of magical tradition and esoteric knowledge. ${lvlNote}\n\n${modeNote}\n\nTRADITION CONTEXT:\n${tPrompts}\n\nThe student's tradition(s): ${trad}. Adapt all examples, spirit names, and timing systems to their tradition. Do not reference traditions they have not indicated.`;
+    const sys=buildSystemPrompt(profile,`You are a master teacher of magical tradition and esoteric knowledge.\n\n${modeNote}`);
     try{
       const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:700,system:sys,messages:newMsgs.map(m=>({role:m.role,content:m.content}))})});
       const data=await resp.json();
@@ -2920,6 +2912,77 @@ function LearnScreen({profile}){
 // ═══════════════════════════════════════════════════════════════════════
 // PROFILE / SETTINGS SCREEN
 // ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// KNOWLEDGE BASE COMPONENT (embedded in ProfileScreen)
+// ═══════════════════════════════════════════════════════════════════════
+function KnowledgeBase(){
+  const [nodes,setNodes]=useState(()=>loadKnowledge());
+  const [adding,setAdding]=useState(false);
+  const [title,setTitle]=useState("");
+  const [content,setContent]=useState("");
+  const [source,setSource]=useState("");
+  const [always,setAlways]=useState(true);
+  const [expanded,setExpanded]=useState(null);
+
+  const addNode=()=>{
+    if(!title.trim()||!content.trim())return;
+    const node={id:Date.now(),title:title.trim(),content:content.trim(),source:source.trim(),always,dateAdded:new Date().toISOString()};
+    const next=[...nodes,node];
+    setNodes(next);saveKnowledge(next);
+    setTitle("");setContent("");setSource("");setAdways(true);setAdding(false);
+  };
+  // typo fix: setAlways
+  const setAdways=setAlways;
+  const deleteNode=(id)=>{const next=nodes.filter(n=>n.id!==id);setNodes(next);saveKnowledge(next);};
+  const toggleAlways=(id)=>{const next=nodes.map(n=>n.id===id?{...n,always:!n.always}:n);setNodes(next);saveKnowledge(next);};
+
+  return(
+    <div className="card" style={{margin:"0 14px 10px"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={L()}>Knowledge Base</div>
+        <button onClick={()=>setAdding(!adding)} style={{padding:"3px 10px",border:"1px solid rgba(200,175,100,0.2)",borderRadius:6,background:"transparent",color:GOLD,fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer"}}>{adding?"CANCEL":"+ ADD"}</button>
+      </div>
+      <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",marginTop:4,lineHeight:1.5}}>
+        Knowledge nodes are injected into the AI system prompt. Mark as "Always Include" to inject on every AI call.
+      </div>
+      {adding&&(
+        <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:8}}>
+          <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Node title (e.g. 'Agrippa — Herb Correspondences')" style={{width:"100%",padding:"7px 10px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:6,color:GOLD,fontFamily:F,fontSize:11,boxSizing:"border-box"}}/>
+          <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="Paste knowledge content here — text from a PDF, a URL summary, your own notes…" rows={6} style={{width:"100%",padding:"7px 10px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:6,color:GOLD,fontFamily:F,fontSize:11,resize:"vertical",boxSizing:"border-box"}}/>
+          <input value={source} onChange={e=>setSource(e.target.value)} placeholder="Source (optional — book, URL, author)" style={{width:"100%",padding:"7px 10px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:6,color:GOLD,fontFamily:F,fontSize:11,boxSizing:"border-box"}}/>
+          <div style={{display:"flex",alignItems:"center",gap:8}}>
+            <button onClick={()=>setAlways(!always)} style={{width:18,height:18,borderRadius:4,border:`1px solid ${always?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.2)"}`,background:always?"rgba(200,175,100,0.15)":"transparent",cursor:"pointer",flexShrink:0}}>
+              {always&&<span style={{color:GOLD,fontSize:10,lineHeight:"18px",display:"block",textAlign:"center"}}>✓</span>}
+            </button>
+            <span style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)"}}>Always include in AI prompt</span>
+          </div>
+          <button onClick={addNode} disabled={!title.trim()||!content.trim()} style={{padding:"7px 0",border:"1px solid rgba(200,175,100,0.25)",borderRadius:6,background:"transparent",color:GOLD,fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>ADD NODE</button>
+        </div>
+      )}
+      {nodes.length===0&&!adding&&(
+        <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.2)",marginTop:12,textAlign:"center",padding:"16px 0"}}>No knowledge nodes yet.</div>
+      )}
+      {nodes.map(n=>(
+        <div key={n.id} style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(200,175,100,0.07)"}}>
+          <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+            <button onClick={()=>setExpanded(expanded===n.id?null:n.id)} style={{flex:1,background:"none",border:"none",textAlign:"left",cursor:"pointer",padding:0}}>
+              <div style={{fontFamily:F,fontSize:11,color:GOLD}}>{n.title}</div>
+              {n.source&&<div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)",marginTop:2}}>{n.source}</div>}
+            </button>
+            <button onClick={()=>toggleAlways(n.id)} title="Toggle always-include" style={{width:20,height:20,borderRadius:4,border:`1px solid ${n.always?"rgba(200,175,100,0.4)":"rgba(200,175,100,0.1)"}`,background:n.always?"rgba(200,175,100,0.1)":"transparent",color:GOLD,fontSize:9,cursor:"pointer",flexShrink:0}}>{n.always?"⊕":"○"}</button>
+            <button onClick={()=>deleteNode(n.id)} style={{width:20,height:20,borderRadius:4,border:"1px solid rgba(200,100,100,0.2)",background:"transparent",color:"rgba(200,100,100,0.5)",fontSize:9,cursor:"pointer",flexShrink:0}}>✕</button>
+          </div>
+          {expanded===n.id&&(
+            <div style={{marginTop:8,maxHeight:120,overflowY:"auto",fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.5)",lineHeight:1.6,background:"rgba(0,0,0,0.3)",padding:"6px 8px",borderRadius:4}}>
+              {n.content.slice(0,500)}{n.content.length>500?"…":""}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ProfileScreen({profile,setProfile}){
   const [name,setName]=useState(profile?.name||"");
   const [date,setDate]=useState(profile?.natal?.date||"");
@@ -3025,6 +3088,7 @@ function ProfileScreen({profile,setProfile}){
           <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)",marginTop:5}}>Obtain at console.anthropic.com — you pay only for what you use.</div>
         </div>
       </div>
+      <KnowledgeBase/>
       <div style={{padding:"10px 14px 0"}}>
         <button onClick={saveProfile} style={{width:"100%",padding:"13px 0",borderRadius:12,background:"rgba(212,175,106,0.12)",border:"1px solid rgba(212,175,106,0.35)",fontFamily:F,fontSize:10,color:saved?"#7AB07A":"#D4AF6A",letterSpacing:3,textTransform:"uppercase",cursor:"pointer",transition:"color 0.4s"}}>
           {saved?"✓ PROFILE SAVED":"SAVE PROFILE"}
