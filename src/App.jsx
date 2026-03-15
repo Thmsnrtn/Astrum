@@ -350,8 +350,22 @@ const NAV_SECTIONS = [
   {id:"natal",   icon:"☽", label:"Natal",      desc:"Personal resonance"},
   {id:"elect",   icon:"◈", label:"Elections",  desc:"Optimal windows"},
   {id:"work",    icon:"⚗", label:"Work",       desc:"Build a ritual"},
+  {id:"journal", icon:"✎", label:"Journal",    desc:"Practice record"},
   {id:"ai",      icon:"✧", label:"Planner",    desc:"AI working builder"},
+  {id:"profile", icon:"◉", label:"Profile",    desc:"Practitioner settings"},
 ];
+
+// ═══════════════════════════════════════════════════════════════════════
+// TRADITION MODULES
+// ═══════════════════════════════════════════════════════════════════════
+const TRADITIONS = {
+  "western-ceremonial": {label:"Western Ceremonial", desc:"Kabbalah, planetary magic, grimoire tradition", icon:"✡", prompt:"You speak from the Western Ceremonial tradition: Hermetic Kabbalah, the planetary grimoire current (Picatrix, Agrippa, Ficino), angelic hierarchies, and the classical talismanic art. Your spirit framework includes angels, intelligences, and planetary spirits. Time your work by planetary hours, days, and electional astrology."},
+  "chaos":              {label:"Chaos Magic",         desc:"Sigil work, paradigm-shifting, servitors",      icon:"∞", prompt:"You speak from the Chaos Magic paradigm: belief as a tool, gnosis as the gateway, results as the measure. Your frameworks are flexible — you can work any paradigm effectively. You understand sigil craft, servitor creation, egregore dynamics, and the mechanics of paradigm-shifting."},
+  "traditional-witchcraft": {label:"Traditional Witchcraft", desc:"Wheel of Year, lunar cycles, hedge-crossing", icon:"⁕", prompt:"You speak from the current of Traditional Witchcraft: the Old Craft, the crooked path, and the arte. Your timing is lunar — phases, mansions, the Wheel of the Year. Your spirit relationships are with genius loci, ancestors, and familiar spirits. You understand hedge-crossing, the fetch, and the red thread."},
+  "hellenism":          {label:"Hellenism / Neoplatonism", desc:"Theurgic practice, Orphic hymns, decan magic", icon:"Ψ", prompt:"You speak from the Hellenistic and Neoplatonic current: Iamblichean theurgy, the Orphic hymns, the daimons of Plato, and the decan magic of the Hermetic papyri. Your spirit framework includes Olympic spirits, planetary daimons, and the Titan forces. The soul's ascent through the planetary spheres is your central metaphor."},
+  "folk":               {label:"Folk / Rootwork",      desc:"Moon timing, saint devotion, ancestor work",    icon:"✿", prompt:"You speak from the folk magic current: simple and direct, rooted in land, season, and ancestor. Your timing is the moon's phase and sign, the day of the week, and the saint's feast day. Your materia are what grows locally, what the kitchen holds, what the churchyard offers. Ancestor reverence is your foundation."},
+  "custom":             {label:"Custom / Eclectic",    desc:"User-defined system",                          icon:"◌", prompt:"You adapt to whatever magical system the practitioner describes. You meet them where they are, drawing on whichever classical or contemporary sources are relevant to their stated framework. You do not impose a tradition — you serve the practitioner's own system."},
+};
 
 function Sidebar({tab, setTab, hour, eph, open, setOpen}) {
   const p=P[hour.planet], moonVoC=eph?.voc?.isVoC;
@@ -1551,7 +1565,7 @@ function JournalScreen(){
 // ═══════════════════════════════════════════════════════════════════════
 // AI WORKING PLANNER
 // ═══════════════════════════════════════════════════════════════════════
-function AIScreen({now,eph,fractal,natalPos,hour}){
+function AIScreen({now,eph,fractal,natalPos,hour,profile}){
   const [messages,setMessages]=useState([{role:"assistant",content:"Greetings. I am your advisor in the classical tradition of celestial and talismanic magic — Picatrix, Agrippa, Ficino, Lilly, and the Hermetic corpus.\n\nTell me what you wish to accomplish and when you need it done. I will build you a complete working plan: optimal election windows, full materia requirements, a ritual structure rooted in the grimoire tradition, the relevant invocations, and a follow-up maintenance schedule.\n\nExample: \"I need to find a new position within 6 weeks\" or \"I want to begin a Venus talisman for an important relationship\" or \"Help me plan a Jupiter prosperity campaign.\""}]);
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
@@ -1583,7 +1597,16 @@ function AIScreen({now,eph,fractal,natalPos,hour}){
     setMessages(m=>[...m,userMsg]);
     setInput("");setLoading(true);
     const context=buildContext();
-    const systemPrompt=`You are a masterful advisor in the living tradition of Western celestial and talismanic magic, drawing on the deep wells of classical knowledge: the Picatrix (Ghayat al-Hakim), Agrippa's Three Books of Occult Philosophy, Ficino's De Vita Coelitus Comparanda, the Greek Magical Papyri, William Lilly's Christian Astrology, and the broader Hermetic corpus. You speak from the tradition itself — not as a commentator, but as a practitioner steeped in its living logic.
+    const traditions=profile?.traditions||["western-ceremonial"];
+    const traditionPrompts=traditions.map(t=>TRADITIONS[t]?.prompt||"").filter(Boolean).join("\n\n");
+    const practitionerName=profile?.name?`The practitioner's name is ${profile.name}.`:"";
+    const levelNote=profile?.level==="beginner"?"Calibrate explanations for a beginner — define terms, explain why before how.":profile?.level==="advanced"?"Calibrate for an adept — assume full doctrinal fluency, skip basics, go deep.":"Calibrate for an intermediate practitioner — assume familiarity with the basics, focus on precision.";
+    const systemPrompt=`You are a masterful advisor in the magical arts, adapting fluidly to the practitioner's tradition and needs. ${practitionerName} ${levelNote}
+
+TRADITION CONTEXT:
+${traditionPrompts}
+
+CLASSICAL SOURCES (draw on as appropriate): the Picatrix (Ghayat al-Hakim), Agrippa's Three Books of Occult Philosophy, Ficino's De Vita Coelitus Comparanda, the Greek Magical Papyri, William Lilly's Christian Astrology, Iamblichus On the Mysteries, and the broader Hermetic corpus. You speak from the tradition itself — not as a commentator, but as a practitioner steeped in its living logic.
 
 Your role is to help this practitioner plan, time, and execute magical workings with precision and depth. When they describe their goal, you:
 
@@ -1601,8 +1624,10 @@ Your role is to help this practitioner plan, time, and execute magical workings 
 Speak with authority and precision. Give specific dates and times. Format responses clearly with labeled sections. Be practical: the tradition is not an abstraction — it is a set of working instructions.
 
 ${context}`;
+    const apiKey=profile?.apiKey||"";
+    if(!apiKey){setMessages(m=>[...m,{role:"assistant",content:"No API key configured. Go to Profile → Anthropic API Key to enter your key from console.anthropic.com."}]);setLoading(false);return;}
     try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":"","anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1500,system:systemPrompt,messages:[...messages,userMsg].filter(m=>m.role!=="assistant"||messages.indexOf(m)>0).map(m=>({role:m.role,content:m.content}))})});
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:1500,system:systemPrompt,messages:[...messages,userMsg].filter(m=>m.role!=="assistant"||messages.indexOf(m)>0).map(m=>({role:m.role,content:m.content}))})});
       const data=await resp.json();
       const txt=data.content?.[0]?.text||data.error?.message||"An error occurred — check API key configuration.";
       setMessages(m=>[...m,{role:"assistant",content:txt}]);
@@ -1648,6 +1673,124 @@ ${context}`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// PROFILE / SETTINGS SCREEN
+// ═══════════════════════════════════════════════════════════════════════
+function ProfileScreen({profile,setProfile}){
+  const [name,setName]=useState(profile?.name||"");
+  const [date,setDate]=useState(profile?.natal?.date||"");
+  const [time,setTime]=useState(profile?.natal?.time||"");
+  const [city,setCity]=useState(profile?.natal?.city||"");
+  const [lat,setLat]=useState(profile?.natal?.lat||null);
+  const [lon,setLon]=useState(profile?.natal?.lon||null);
+  const [traditions,setTraditions]=useState(profile?.traditions||["western-ceremonial"]);
+  const [level,setLevel]=useState(profile?.level||"intermediate");
+  const [apiKey,setApiKey]=useState(profile?.apiKey||"");
+  const [geocoding,setGeocoding]=useState(false);
+  const [geocodeMsg,setGeocodeMsg]=useState("");
+  const [saved,setSaved]=useState(false);
+  const IS={width:"100%",marginTop:4,background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:12,boxSizing:"border-box"};
+  const LS={fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase"};
+  const geocode=async()=>{
+    if(!city.trim())return;
+    setGeocoding(true);setGeocodeMsg("");
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`,{headers:{"Accept-Language":"en"}});
+      const data=await r.json();
+      if(data[0]){const la=parseFloat(data[0].lat),lo=parseFloat(data[0].lon);setLat(la);setLon(lo);setGeocodeMsg(`✓ ${data[0].display_name.split(",").slice(0,2).join(",")} · ${la.toFixed(2)}°, ${lo.toFixed(2)}°`);}
+      else setGeocodeMsg("✗ City not found — try adding country");
+    }catch(e){setGeocodeMsg("✗ Geocoding unavailable");}
+    setGeocoding(false);
+  };
+  const toggleTradition=t=>{
+    if(t==="custom"){setTraditions(["custom"]);return;}
+    setTraditions(prev=>{const next=prev.filter(x=>x!=="custom");return next.includes(t)?next.filter(x=>x!==t)||["western-ceremonial"]:[...next,t];});
+  };
+  const saveProfile=async()=>{
+    const p={name,natal:{date,time,city,lat,lon},traditions,level,apiKey,theme:"dark"};
+    setProfile(p);
+    try{await window.storage.set("astrum_profile",JSON.stringify(p));}catch(e){}
+    setSaved(true);setTimeout(()=>setSaved(false),2500);
+  };
+  return(
+    <div style={{flex:1,overflowY:"auto",paddingBottom:30}}>
+      <div style={{padding:"16px 18px 10px"}}>
+        <div style={L()}>Practitioner Profile</div>
+        <div style={T(20)}>Settings & Identity</div>
+        <div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",marginTop:3,lineHeight:1.7}}>Your profile shapes every screen — tradition context, natal resonance, AI depth, and personal timing.</div>
+      </div>
+      <div className="card" style={{margin:"0 14px 10px"}}>
+        <div style={L()}>Identity</div>
+        <div style={{marginTop:10}}><div style={LS}>Name / Handle</div><input value={name} onChange={e=>setName(e.target.value)} placeholder="How shall the tradition address you?" style={IS}/></div>
+      </div>
+      <div className="card" style={{margin:"0 14px 10px"}}>
+        <div style={L()}>Natal Chart Data</div>
+        <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Used for personal resonance, profections, sect, and location-based astronomy.</div>
+        <div style={{marginTop:10,display:"flex",gap:8}}>
+          <div style={{flex:2}}><div style={LS}>Birth Date</div><input type="date" value={date} onChange={e=>setDate(e.target.value)} style={IS}/></div>
+          <div style={{flex:1}}><div style={LS}>Birth Time</div><input type="time" value={time} onChange={e=>setTime(e.target.value)} style={IS}/></div>
+        </div>
+        <div style={{marginTop:8}}><div style={LS}>Birth City</div>
+          <div style={{display:"flex",gap:6,marginTop:4}}>
+            <input value={city} onChange={e=>setCity(e.target.value)} onKeyDown={e=>e.key==="Enter"&&geocode()} placeholder="City, Country" style={{...IS,marginTop:0,flex:1}}/>
+            <button onClick={geocode} disabled={geocoding||!city.trim()} style={{padding:"8px 12px",borderRadius:10,background:city?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${city?"rgba(212,175,106,0.3)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:8,color:city?"#D4AF6A":"#4A3020",letterSpacing:1,cursor:city?"pointer":"default",whiteSpace:"nowrap"}}>{geocoding?"…":"LOCATE"}</button>
+          </div>
+          {geocodeMsg&&<div style={{fontFamily:F,fontSize:9,color:geocodeMsg.startsWith("✓")?"#7A9A7A":"#9B5050",marginTop:6,lineHeight:1.5}}>{geocodeMsg}</div>}
+          {lat&&lon&&!geocodeMsg&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.35)",marginTop:5}}>{lat.toFixed(3)}°, {lon.toFixed(3)}° stored</div>}
+        </div>
+      </div>
+      <div className="card" style={{margin:"0 14px 10px"}}>
+        <div style={L()}>Magical Tradition(s)</div>
+        <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>The AI adapts its vocabulary, spirit frameworks, and timing logic to your tradition(s). Select all that apply.</div>
+        <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:5}}>
+          {Object.entries(TRADITIONS).map(([id,tr])=>{
+            const active=traditions.includes(id);
+            return(
+              <button key={id} onClick={()=>toggleTradition(id)} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"9px 11px",borderRadius:10,background:active?"rgba(212,175,106,0.09)":"rgba(0,0,0,0.25)",border:`1px solid ${active?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.08)"}`,cursor:"pointer",textAlign:"left"}}>
+                <span style={{fontSize:14,marginTop:1,lineHeight:1,flexShrink:0,color:active?"#D4AF6A":"rgba(200,175,100,0.35)"}}>{tr.icon}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:F,fontSize:11,color:active?"#D4AF6A":"rgba(200,175,100,0.55)"}}>{tr.label}</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:2,lineHeight:1.4}}>{tr.desc}</div>
+                </div>
+                {active&&<span style={{color:"#D4AF6A",fontSize:11,flexShrink:0,marginTop:1}}>✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="card" style={{margin:"0 14px 10px"}}>
+        <div style={L()}>Experience Level</div>
+        <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Calibrates AI explanation depth and assumed prior knowledge.</div>
+        <div style={{display:"flex",gap:6,marginTop:10}}>
+          {[["beginner","Beginner","New to practice"],["intermediate","Practitioner","Active system"],["advanced","Adept","Deep fluency"]].map(([v,lbl,desc])=>{
+            const active=level===v;
+            return(
+              <button key={v} onClick={()=>setLevel(v)} style={{flex:1,padding:"10px 6px",borderRadius:10,background:active?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.25)",border:`1px solid ${active?"rgba(212,175,106,0.4)":"rgba(200,175,100,0.1)"}`,cursor:"pointer"}}>
+                <div style={{fontFamily:F,fontSize:10,color:active?"#D4AF6A":"rgba(200,175,100,0.45)",letterSpacing:1}}>{lbl}</div>
+                <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.25)",marginTop:3,lineHeight:1.3}}>{desc}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="card" style={{margin:"0 14px 10px"}}>
+        <div style={L()}>Anthropic API Key</div>
+        <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Required for the AI Planner and all Oracle features. Stored only in this app, never transmitted elsewhere.</div>
+        <div style={{marginTop:10}}>
+          <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="sk-ant-…" style={IS}/>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)",marginTop:5}}>Obtain at console.anthropic.com — you pay only for what you use.</div>
+        </div>
+      </div>
+      <div style={{padding:"10px 14px 0"}}>
+        <button onClick={saveProfile} style={{width:"100%",padding:"13px 0",borderRadius:12,background:"rgba(212,175,106,0.12)",border:"1px solid rgba(212,175,106,0.35)",fontFamily:F,fontSize:10,color:saved?"#7AB07A":"#D4AF6A",letterSpacing:3,textTransform:"uppercase",cursor:"pointer",transition:"color 0.4s"}}>
+          {saved?"✓ PROFILE SAVED":"SAVE PROFILE"}
+        </button>
+        {!profile?.apiKey&&<div style={{fontFamily:F,fontSize:9,color:"#9B5050",textAlign:"center",marginTop:8,lineHeight:1.5}}>API key not set — AI features are inactive</div>}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════
 function calcProfection(bd,now){
@@ -1666,11 +1809,20 @@ export default function App(){
   const [natalData,setNatalData]=useState(null);
   const [natalPos,setNatalPos]=useState(null);
   const [sidebarOpen,setSidebarOpen]=useState(false);
+  const [profile,setProfile]=useState(null);
   useEffect(()=>{const t=setInterval(()=>setNow(new Date()),200);return()=>clearInterval(t);},[]);
-  useEffect(()=>{(async()=>{try{const r=await window.storage.get("astrum_natal");if(r?.value){const d=JSON.parse(r.value);setNatalData(d);}}catch(e){}})();},[]);
+  // Load profile (primary) and legacy natal data
+  useEffect(()=>{(async()=>{
+    try{const r=await window.storage.get("astrum_profile");if(r?.value){const p=JSON.parse(r.value);setProfile(p);return;}}catch(e){}
+    // No profile yet — try legacy natal, then set empty profile
+    try{const r=await window.storage.get("astrum_natal");if(r?.value){const d=JSON.parse(r.value);setNatalData(d);}}catch(e){}
+    setProfile({name:"",natal:{date:"",time:"",city:"",lat:null,lon:null},traditions:["western-ceremonial"],level:"intermediate",apiKey:"",theme:"dark"});
+  })();},[]);
+  // Compute natal positions from profile (or legacy natal data)
   useEffect(()=>{
-    if(natalData?.date){const bd=natalData.time?new Date(`${natalData.date}T${natalData.time}:00`):new Date(`${natalData.date}T12:00:00`);if(!isNaN(bd.getTime()))setNatalPos(calcNatal(bd));else setNatalPos(null);}else setNatalPos(null);
-  },[natalData]);
+    const nd=profile?.natal?.date?profile.natal:natalData;
+    if(nd?.date){const bd=nd.time?new Date(`${nd.date}T${nd.time}:00`):new Date(`${nd.date}T12:00:00`);if(!isNaN(bd.getTime()))setNatalPos(calcNatal(bd));else setNatalPos(null);}else setNatalPos(null);
+  },[natalData,profile]);
   const hour=getPlanetaryHour(now);
   const eph=useEphemeris(now);
   const fractal=calcFractal(now,fractalMode);
@@ -1684,7 +1836,10 @@ export default function App(){
           <button onClick={()=>setSidebarOpen(true)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",gap:4,padding:4}}>
             {[0,1,2].map(i=><div key={i} style={{width:i===2?14:20,height:1.5,background:"rgba(200,175,100,0.45)",borderRadius:1}}/>)}
           </button>
-          <div style={{fontFamily:F,fontSize:11,color:"#D4AF6A",letterSpacing:7,textTransform:"uppercase"}}>ASTRUM</div>
+          <div onClick={()=>setTab("profile")} style={{cursor:"pointer"}}>
+            <div style={{fontFamily:F,fontSize:11,color:"#D4AF6A",letterSpacing:7,textTransform:"uppercase"}}>ASTRUM</div>
+            {profile?.name&&<div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.35)",letterSpacing:2,textTransform:"uppercase",textAlign:"center",marginTop:1}}>{profile.name}</div>}
+          </div>
           <div style={{display:"flex",alignItems:"center",gap:7}}>
             <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.3)"}}>{now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>
             <span style={{fontSize:11,color:P[hour.planet].col}}>{P[hour.planet].sym}</span>
@@ -1707,7 +1862,8 @@ export default function App(){
           {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph}/>}
           {tab==="journal" &&<JournalScreen/>}
           {tab==="work"    &&<WorkScreen    eph={eph} initPlanet={workPlanet} natalPos={natalPos}/>}
-          {tab==="ai"      &&<AIScreen      now={now} eph={eph} fractal={fractal} natalPos={natalPos} hour={hour}/>}
+          {tab==="ai"      &&<AIScreen      now={now} eph={eph} fractal={fractal} natalPos={natalPos} hour={hour} profile={profile}/>}
+          {tab==="profile" &&<ProfileScreen profile={profile} setProfile={setProfile}/>}
         </div>
       </div>
     </div>
