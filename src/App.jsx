@@ -1,6 +1,25 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
 // ═══════════════════════════════════════════════════════════════════════
+// PLATFORM DETECTION
+// ═══════════════════════════════════════════════════════════════════════
+// Tauri: window.__TAURI_INTERNALS__ is injected by Tauri v2
+// Capacitor: window.Capacitor is injected by Capacitor
+const isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
+const isCapacitor = typeof window !== "undefined" && !!window.Capacitor;
+const isNative = isTauri || isCapacitor;
+
+// Thin platform shim: haptics
+async function triggerHaptic(style="medium"){
+  if(isCapacitor){
+    try{
+      const {Haptics,ImpactStyle}=await import("@capacitor/haptics");
+      await Haptics.impact({style:style==="light"?ImpactStyle.Light:style==="heavy"?ImpactStyle.Heavy:ImpactStyle.Medium});
+    }catch{}
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // ASTRONOMY ENGINE — Meeus Algorithms
 // ═══════════════════════════════════════════════════════════════════════
 const D2R = Math.PI / 180, R2D = 180 / Math.PI;

@@ -6,13 +6,27 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:ios": "npm run build && npx cap sync ios && npx cap open ios",
+    "cap:copy": "npx cap copy"
   },
   "dependencies": {
+    "@capacitor/app": "^8.0.1",
+    "@capacitor/cli": "^8.2.0",
+    "@capacitor/core": "^8.2.0",
+    "@capacitor/haptics": "^8.0.1",
+    "@capacitor/ios": "^8.2.0",
+    "@capacitor/status-bar": "^8.0.1",
+    "@tauri-apps/api": "^2.10.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1",
     "@vitejs/plugin-react": "^4.3.1",
     "vite": "^5.4.2"
   }
