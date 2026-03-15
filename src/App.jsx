@@ -446,6 +446,7 @@ const NAV_SECTIONS = [
   {id:"calendar", icon:"◫", label:"Calendar",  desc:"Election planning grid"},
   {id:"work",    icon:"⚗", label:"Work",       desc:"Build a ritual"},
   {id:"journal", icon:"✎", label:"Journal",    desc:"Practice record"},
+  {id:"sigils",  icon:"⟁", label:"Sigils",     desc:"Sigil workshop"},
   {id:"grimoire",icon:"📖", label:"Grimoire",   desc:"Personal book of shadows"},
   {id:"learn",   icon:"⬡", label:"Learn",      desc:"AI magical education"},
   {id:"ai",      icon:"✧", label:"Planner",    desc:"AI working builder"},
@@ -2222,6 +2223,376 @@ function CalendarScreen({now,natalPos}){
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// SIGIL SCREEN
+// ═══════════════════════════════════════════════════════════════════════
+// Rose Cross positions: 22 Hebrew letters + 5 finals mapped to grid cells
+const ROSE_CROSS_LETTERS={
+  A:[2,1],B:[1,3],C:[3,2],D:[1,2],E:[2,3],F:[2,2],G:[3,3],H:[3,1],I:[2,4],J:[2,4],
+  K:[1,4],L:[3,4],M:[1,5],N:[2,5],O:[4,1],P:[4,2],Q:[4,3],R:[4,4],S:[4,5],T:[5,1],
+  U:[5,2],V:[5,2],W:[5,3],X:[5,4],Y:[5,5],Z:[1,1]
+};
+// Rose cross cell → pixel: 5 rows × 5 cols, centered in 260×260 canvas
+function roseCrossXY(row,col,w=260,h=260){
+  const cx=w/2,cy=h/2,dx=w/6,dy=h/6;
+  const ox=(col-3)*dx,oy=(row-3)*dy;
+  return[cx+ox,cy+oy];
+}
+// Kamea (magic squares) for 7 planets — row-major order, 0-indexed
+const KAMEA={
+  saturn:   {size:3,sq:[2,7,6,9,5,1,4,3,8]},
+  jupiter:  {size:4,sq:[16,3,2,13,5,10,11,8,9,6,7,12,4,15,14,1]},
+  mars:     {size:5,sq:[11,24,7,20,3,4,12,25,8,16,17,5,13,21,9,10,18,1,14,22,23,6,19,2,15]},
+  sun:      {size:6,sq:[6,32,3,34,35,1,7,11,27,28,8,30,19,14,16,15,23,24,18,20,22,21,17,13,25,29,10,9,26,12,36,5,33,4,2,31]},
+  venus:    {size:7,sq:[22,47,16,41,10,35,4,5,23,48,17,42,11,29,30,6,24,49,18,36,12,13,31,7,25,43,19,37,38,14,32,1,26,44,20,21,39,8,33,2,27,45,46,15,40,9,34,3,28]},
+  mercury:  {size:8,sq:[64,2,3,61,60,6,7,57,9,55,54,12,13,51,50,16,17,47,46,20,21,43,42,24,40,26,27,37,36,30,31,33,32,34,35,29,28,38,39,25,41,23,22,44,45,19,18,48,49,15,14,52,53,11,10,56,8,58,59,5,4,62,63,1]},
+  moon:     {size:9,sq:[37,78,29,70,21,62,13,54,5,6,38,79,30,71,22,63,14,46,47,7,39,80,31,72,23,55,15,16,48,8,40,81,32,64,24,56,57,17,49,9,41,73,33,65,25,26,58,18,50,1,42,74,34,66,67,27,59,10,51,2,43,75,35,36,68,19,60,11,52,3,44,76,77,28,69,20,61,12,53,4,45]}
+};
+function kamea_letterNum(c){const v=c.toUpperCase().charCodeAt(0)-64;return v>=1&&v<=26?v:0;}
+function kamea_xy(num,planet,w=260,h=260){
+  const km=KAMEA[planet]||KAMEA.jupiter;
+  const idx=km.sq.indexOf(num);
+  if(idx<0)return null;
+  const row=Math.floor(idx/km.size),col=idx%km.size;
+  const cell=Math.min(w,h)/km.size;
+  return[col*cell+cell/2,row*cell+cell/2];
+}
+// Reduce multi-digit number to single digit for Kamea lookup (e.g. 26 → 8)
+function kamea_reduce(n,size){while(n>size*size)n-=size*size;return n;}
+
+function SigilScreen({eph,profile}){
+  const [mode,setMode]=useState("list"); // list|create|view
+  const [method,setMethod]=useState("rose"); // rose|kamea|free
+  const [planet,setSigilPlanet]=useState("jupiter");
+  const [intent,setIntent]=useState("");
+  const [word,setWord]=useState("");
+  const [status,setStatus]=useState("created"); // created|charged|deployed|fulfilled|retired
+  const [sigils,setSigils]=useState([]);
+  const [sel,setSel]=useState(null);
+  const [aiNote,setAiNote]=useState("");
+  const [aiLoading,setAiLoading]=useState(false);
+  // Freehand drawing state
+  const canvasRef=useRef(null);
+  const [drawing,setDrawing]=useState(false);
+  const [paths,setPaths]=useState([]);
+  const [curPath,setCurPath]=useState([]);
+  const [savedSvg,setSavedSvg]=useState(null);
+
+  useEffect(()=>{
+    try{const raw=window.storage.getItem("astrum_sigils");if(raw)setSigils(JSON.parse(raw));}catch{}
+  },[]);
+  const save=(list)=>{setSigils(list);window.storage.setItem("astrum_sigils",JSON.stringify(list));};
+
+  // Build SVG path for rose cross method
+  const buildRosePath=(text)=>{
+    const letters=[...text.toUpperCase().replace(/[^A-Z]/g,"")];
+    if(letters.length<2)return null;
+    const pts=letters.map(l=>ROSE_CROSS_LETTERS[l]||[3,3]).map(([r,c])=>roseCrossXY(r,c));
+    return pts;
+  };
+  // Build SVG path for kamea method
+  const buildKameaPath=(text,pl)=>{
+    const letters=[...text.toUpperCase().replace(/[^A-Z]/g,"")];
+    if(letters.length<2)return null;
+    const km=KAMEA[pl]||KAMEA.jupiter;
+    const pts=letters.map(l=>{
+      let n=kamea_letterNum(l);
+      n=kamea_reduce(n,km.size);
+      if(n<1)n=1;
+      return kamea_xy(n,pl);
+    }).filter(Boolean);
+    return pts;
+  };
+
+  const pathToSvgD=(pts)=>{
+    if(!pts||pts.length<2)return"";
+    return pts.map((p,i)=>(i===0?`M${p[0].toFixed(1)} ${p[1].toFixed(1)}`:`L${p[0].toFixed(1)} ${p[1].toFixed(1)}`)).join(" ");
+  };
+
+  const freeToSvgD=(paths)=>{
+    return paths.map(path=>path.map((p,i)=>(i===0?`M${p[0]} ${p[1]}`:`L${p[0]} ${p[1]}`)).join(" ")).join(" ");
+  };
+
+  const createSigil=()=>{
+    let svgData=null;
+    if(method==="rose"){
+      const pts=buildRosePath(word);
+      if(!pts)return;
+      svgData={method:"rose",pts,word};
+    } else if(method==="kamea"){
+      const pts=buildKameaPath(word,planet);
+      if(!pts)return;
+      svgData={method:"kamea",pts,word,planet};
+    } else {
+      if(!paths.length)return;
+      svgData={method:"free",paths};
+    }
+    const now=new Date();
+    const entry={
+      id:Date.now(),planet,intent,word,method,
+      svgData,status:"created",
+      date:now.toISOString(),
+      skySnap:eph?{moon:eph.pos?.moon?.lon,sun:eph.pos?.sun?.lon}:null,
+      aiNote:""
+    };
+    const next=[entry,...sigils];
+    save(next);setSel(entry);setMode("view");
+    setWord("");setIntent("");setPaths([]);setSavedSvg(null);
+  };
+
+  const updateStatus=(id,st)=>{
+    const next=sigils.map(s=>s.id===id?{...s,status:st}:s);
+    save(next);
+    if(sel?.id===id)setSel(prev=>({...prev,status:st}));
+  };
+
+  const deleteSigil=(id)=>{
+    const next=sigils.filter(s=>s.id!==id);
+    save(next);setSel(null);setMode("list");
+  };
+
+  const getAITiming=async(sigil)=>{
+    const key=profile?.apiKey;
+    if(!key||!eph)return;
+    setAiLoading(true);setAiNote("");
+    const pl=P[sigil.planet];
+    const now=new Date();
+    const body={model:"claude-sonnet-4-5",max_tokens:300,
+      system:`You are an expert in electional astrology and talismanic timing. Give a brief, practical 2-3 sentence note on current timing for charging a ${pl.name} sigil. Current sky: Sun at ${eph.pos?.sun?.lon?.toFixed(1)}°, Moon at ${eph.pos?.moon?.lon?.toFixed(1)}°. Be specific and actionable.`,
+      messages:[{role:"user",content:`When is the best time in the next 48 hours to charge a ${pl.name} sigil? Current moment: ${now.toLocaleString()}.`}]};
+    try{
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"x-api-key":key,"anthropic-version":"2023-06-01","content-type":"application/json","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body)});
+      const data=await resp.json();
+      const note=data.content?.[0]?.text||"";
+      setAiNote(note);
+      // Save note to sigil
+      const next=sigils.map(s=>s.id===sigil.id?{...s,aiNote:note}:s);
+      save(next);setSel(prev=>({...prev,aiNote:note}));
+    }catch(e){setAiNote("AI unavailable.");}
+    setAiLoading(false);
+  };
+
+  // Mouse/touch handlers for freehand canvas
+  const getPos=(e,canvas)=>{
+    const r=canvas.getBoundingClientRect();
+    if(e.touches)return[e.touches[0].clientX-r.left,e.touches[0].clientY-r.top];
+    return[e.clientX-r.left,e.clientY-r.top];
+  };
+  const onMouseDown=(e)=>{
+    const canvas=canvasRef.current;if(!canvas)return;
+    const pos=getPos(e,canvas);
+    setDrawing(true);setCurPath([pos]);
+  };
+  const onMouseMove=(e)=>{
+    if(!drawing)return;
+    const canvas=canvasRef.current;if(!canvas)return;
+    const pos=getPos(e,canvas);
+    setCurPath(prev=>[...prev,pos]);
+  };
+  const onMouseUp=()=>{
+    if(!drawing)return;
+    setDrawing(false);
+    if(curPath.length>1)setPaths(prev=>[...prev,curPath]);
+    setCurPath([]);
+  };
+
+  const SigilPreview=({svgData,size=120})=>{
+    if(!svgData)return null;
+    const W=size,H=size;
+    if(svgData.method==="rose"){
+      const scale=size/260;
+      const pts=svgData.pts.map(([x,y])=>[x*scale,y*scale]);
+      const d=pathToSvgD(pts);
+      const first=pts[0],last=pts[pts.length-1];
+      return(
+        <svg width={W} height={H} style={{display:"block"}}>
+          <rect width={W} height={H} fill="rgba(0,0,0,0.4)" rx={4}/>
+          {/* Rose cross grid dots */}
+          {[1,2,3,4,5].map(r=>[1,2,3,4,5].map(c=>{const [px,py]=roseCrossXY(r,c,260,260).map(v=>v*scale);return<circle key={`${r}-${c}`} cx={px} cy={py} r={1.5} fill="rgba(200,175,100,0.3)"/>})).flat()}
+          <path d={d} fill="none" stroke={P[planet]?.color||"#C8AF64"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+          <circle cx={first[0]} cy={first[1]} r={4} fill="none" stroke={P[planet]?.color||"#C8AF64"} strokeWidth={1.5}/>
+          <circle cx={last[0]} cy={last[1]} r={3} fill={P[planet]?.color||"#C8AF64"}/>
+        </svg>
+      );
+    }
+    if(svgData.method==="kamea"){
+      const km=KAMEA[svgData.planet||planet]||KAMEA.jupiter;
+      const cell=size/km.size;
+      const pts=svgData.pts.map(([x,y])=>[x*size/260,y*size/260]);
+      const d=pathToSvgD(pts);
+      const first=pts[0],last=pts[pts.length-1];
+      return(
+        <svg width={W} height={H} style={{display:"block"}}>
+          <rect width={W} height={H} fill="rgba(0,0,0,0.4)" rx={4}/>
+          {/* Kamea grid */}
+          {Array.from({length:km.size+1},(_,i)=><>
+            <line key={`h${i}`} x1={0} y1={i*cell} x2={W} y2={i*cell} stroke="rgba(200,175,100,0.12)" strokeWidth={0.5}/>
+            <line key={`v${i}`} x1={i*cell} y1={0} x2={i*cell} y2={H} stroke="rgba(200,175,100,0.12)" strokeWidth={0.5}/>
+          </>)}
+          <path d={d} fill="none" stroke={P[svgData.planet||planet]?.color||"#C8AF64"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+          <circle cx={first[0]} cy={first[1]} r={4} fill="none" stroke={P[svgData.planet||planet]?.color||"#C8AF64"} strokeWidth={1.5}/>
+          <circle cx={last[0]} cy={last[1]} r={3} fill={P[svgData.planet||planet]?.color||"#C8AF64"}/>
+        </svg>
+      );
+    }
+    if(svgData.method==="free"){
+      const d=freeToSvgD(svgData.paths);
+      return(
+        <svg width={W} height={H} style={{display:"block"}}>
+          <rect width={W} height={H} fill="rgba(0,0,0,0.4)" rx={4}/>
+          <path d={d} fill="none" stroke="#C8AF64" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      );
+    }
+    return null;
+  };
+
+  const statusColors={created:"rgba(200,175,100,0.6)",charged:"#7AB87A",deployed:"#7AB8C8",fulfilled:"#C8AF64",retired:"rgba(200,175,100,0.25)"};
+  const statusOrder=["created","charged","deployed","fulfilled","retired"];
+
+  if(mode==="view"&&sel){
+    const pl=P[sel.planet];
+    const note=sel.aiNote||aiNote;
+    return(
+      <div style={{padding:"28px 24px",fontFamily:F,color:GOLD,maxWidth:600,margin:"0 auto"}}>
+        <button onClick={()=>setMode("list")} style={{background:"none",border:"none",color:"rgba(200,175,100,0.5)",fontFamily:F,fontSize:10,letterSpacing:2,cursor:"pointer",marginBottom:20,padding:0}}>← SIGILS</button>
+        <div style={{display:"flex",gap:20,alignItems:"flex-start",marginBottom:24}}>
+          <div style={{flexShrink:0}}><SigilPreview svgData={sel.svgData} size={140}/></div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:11,letterSpacing:3,color:"rgba(200,175,100,0.5)",marginBottom:4}}>{pl?.symbol} {pl?.name?.toUpperCase()}</div>
+            <div style={{fontSize:16,marginBottom:6,color:pl?.color||GOLD}}>{sel.intent||"(no intention)"}</div>
+            {sel.word&&<div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:8}}>WORD: {sel.word}</div>}
+            <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.35)",marginBottom:12}}>{new Date(sel.date).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"})}</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {statusOrder.map(st=>(
+                <button key={st} onClick={()=>updateStatus(sel.id,st)} style={{padding:"3px 10px",borderRadius:10,border:`1px solid ${sel.status===st?statusColors[st]:"rgba(200,175,100,0.15)"}`,background:sel.status===st?`${statusColors[st]}22`:"transparent",color:sel.status===st?statusColors[st]:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer",textTransform:"uppercase"}}>{st}</button>
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* AI Timing */}
+        <div style={{borderTop:"1px solid rgba(200,175,100,0.08)",paddingTop:20,marginBottom:20}}>
+          <div style={{fontSize:10,letterSpacing:2,color:"rgba(200,175,100,0.5)",marginBottom:10}}>✧ AI TIMING GUIDANCE</div>
+          {note?<div style={{fontSize:12,lineHeight:1.7,color:"rgba(200,175,100,0.75)"}}>{note}</div>
+          :<button onClick={()=>getAITiming(sel)} disabled={aiLoading||!profile?.apiKey} style={{padding:"6px 16px",border:"1px solid rgba(200,175,100,0.2)",borderRadius:4,background:"transparent",color:aiLoading?"rgba(200,175,100,0.35)":GOLD,fontFamily:F,fontSize:10,letterSpacing:2,cursor:"pointer"}}>
+            {aiLoading?"READING SKY…":"GET TIMING"}
+          </button>}
+          {!profile?.apiKey&&<div style={{fontSize:9,color:"rgba(200,175,100,0.3)",marginTop:6}}>Set API key in Profile to enable AI timing.</div>}
+        </div>
+        <button onClick={()=>deleteSigil(sel.id)} style={{padding:"5px 14px",border:"1px solid rgba(200,100,100,0.2)",borderRadius:4,background:"transparent",color:"rgba(200,100,100,0.5)",fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>DELETE SIGIL</button>
+      </div>
+    );
+  }
+
+  if(mode==="create"){
+    const previewPts=method==="rose"?buildRosePath(word):method==="kamea"?buildKameaPath(word,planet):null;
+    return(
+      <div style={{padding:"28px 24px",fontFamily:F,color:GOLD,maxWidth:560,margin:"0 auto"}}>
+        <button onClick={()=>setMode("list")} style={{background:"none",border:"none",color:"rgba(200,175,100,0.5)",fontFamily:F,fontSize:10,letterSpacing:2,cursor:"pointer",marginBottom:24,padding:0}}>← SIGILS</button>
+        <div style={{fontSize:11,letterSpacing:3,color:"rgba(200,175,100,0.5)",marginBottom:20}}>NEW SIGIL</div>
+
+        {/* Method picker */}
+        <div style={{display:"flex",gap:8,marginBottom:20}}>
+          {[["rose","Rose Cross"],["kamea","Kamea"],["free","Freehand"]].map(([m,lbl])=>(
+            <button key={m} onClick={()=>setMethod(m)} style={{flex:1,padding:"6px 0",border:`1px solid ${method===m?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.1)"}`,borderRadius:4,background:method===m?"rgba(200,175,100,0.06)":"transparent",color:method===m?GOLD:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>{lbl.toUpperCase()}</button>
+          ))}
+        </div>
+
+        {/* Planet */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:8}}>PLANET</div>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {Object.keys(P).map(pk=>(
+              <button key={pk} onClick={()=>setSigilPlanet(pk)} style={{padding:"4px 12px",border:`1px solid ${planet===pk?P[pk].color:"rgba(200,175,100,0.1)"}`,borderRadius:10,background:planet===pk?`${P[pk].color}22`:"transparent",color:planet===pk?P[pk].color:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:10,cursor:"pointer"}}>{P[pk].symbol} {P[pk].name}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Intention */}
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:6}}>INTENTION</div>
+          <input value={intent} onChange={e=>setIntent(e.target.value)} placeholder="Describe the working intention..." style={{width:"100%",padding:"8px 12px",background:"rgba(0,0,0,0.3)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:12,boxSizing:"border-box"}}/>
+        </div>
+
+        {/* Word / drawing */}
+        {(method==="rose"||method==="kamea")&&(
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:6}}>SIGILIZATION WORD {method==="rose"?"(Rose Cross)":"(Kamea)"}</div>
+            <div style={{fontSize:9,color:"rgba(200,175,100,0.3)",marginBottom:8}}>
+              {method==="rose"?"Enter a key word from your intention. Vowels often removed by practitioners.":"Enter letters — each is mapped to its number on the "+P[planet].name+" kamea."}
+            </div>
+            <input value={word} onChange={e=>setWord(e.target.value)} placeholder={method==="rose"?"e.g. INCREASE or NCRSE":"e.g. PROSPER"} style={{width:"100%",padding:"8px 12px",background:"rgba(0,0,0,0.3)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:12,boxSizing:"border-box",marginBottom:16}}/>
+            {/* Live preview */}
+            {word.length>=2&&previewPts&&(
+              <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+                <SigilPreview svgData={{method,pts:previewPts,word,planet}} size={200}/>
+              </div>
+            )}
+          </div>
+        )}
+        {method==="free"&&(
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:8}}>DRAW YOUR SIGIL</div>
+            <div style={{position:"relative",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4,background:"rgba(0,0,0,0.4)",display:"inline-block",cursor:"crosshair",touchAction:"none"}}>
+              <svg width={260} height={260} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
+                onTouchStart={e=>{e.preventDefault();onMouseDown(e);}} onTouchMove={e=>{e.preventDefault();onMouseMove(e);}} onTouchEnd={onMouseUp}>
+                {paths.map((path,i)=><polyline key={i} points={path.map(p=>p.join(",")).join(" ")} fill="none" stroke={P[planet].color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>)}
+                {curPath.length>1&&<polyline points={curPath.map(p=>p.join(",")).join(" ")} fill="none" stroke={P[planet].color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>}
+              </svg>
+            </div>
+            <div style={{marginTop:8,display:"flex",gap:8}}>
+              <button onClick={()=>{setPaths(prev=>prev.slice(0,-1));}} style={{padding:"4px 12px",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4,background:"transparent",color:"rgba(200,175,100,0.5)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer"}}>UNDO</button>
+              <button onClick={()=>{setPaths([]);setCurPath([]);}} style={{padding:"4px 12px",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4,background:"transparent",color:"rgba(200,175,100,0.5)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer"}}>CLEAR</button>
+            </div>
+          </div>
+        )}
+
+        <button onClick={createSigil} disabled={!intent||(method!=="free"&&word.length<2)||(method==="free"&&!paths.length)} style={{width:"100%",padding:"10px",border:`1px solid rgba(200,175,100,${intent?"0.4":"0.1"})`,borderRadius:4,background:"transparent",color:intent?GOLD:"rgba(200,175,100,0.3)",fontFamily:F,fontSize:10,letterSpacing:3,cursor:"pointer"}}>SEAL SIGIL</button>
+      </div>
+    );
+  }
+
+  // List view
+  const statusFilter=["all","created","charged","deployed","fulfilled","retired"];
+  const [filter,setFilter_]=useState("all");
+  const setFilter=(f)=>setFilter_(f);
+  const shown=filter==="all"?sigils:sigils.filter(s=>s.status===filter);
+
+  return(
+    <div style={{padding:"28px 24px",fontFamily:F,color:GOLD,maxWidth:600,margin:"0 auto"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+        <div style={{fontSize:11,letterSpacing:3,color:"rgba(200,175,100,0.5)"}}>SIGIL WORKSHOP</div>
+        <button onClick={()=>setMode("create")} style={{padding:"5px 14px",border:"1px solid rgba(200,175,100,0.3)",borderRadius:4,background:"transparent",color:GOLD,fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>+ NEW</button>
+      </div>
+      {/* Status filter */}
+      <div style={{display:"flex",gap:6,marginBottom:20,flexWrap:"wrap"}}>
+        {statusFilter.map(f=>(
+          <button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 10px",borderRadius:10,border:`1px solid ${filter===f?"rgba(200,175,100,0.4)":"rgba(200,175,100,0.1)"}`,background:filter===f?"rgba(200,175,100,0.07)":"transparent",color:filter===f?GOLD:"rgba(200,175,100,0.35)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer",textTransform:"uppercase"}}>{f}</button>
+        ))}
+      </div>
+      {shown.length===0?(
+        <div style={{textAlign:"center",padding:"60px 20px",color:"rgba(200,175,100,0.2)",fontSize:12}}>
+          {sigils.length===0?"No sigils yet. Create your first working.":"No sigils with this status."}
+        </div>
+      ):(
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12}}>
+          {shown.map(s=>{
+            const pl=P[s.planet];
+            return(
+              <button key={s.id} onClick={()=>{setSel(s);setMode("view");setAiNote("");}} style={{background:"rgba(0,0,0,0.2)",border:`1px solid ${statusColors[s.status]||"rgba(200,175,100,0.12)"}22`,borderRadius:6,padding:12,cursor:"pointer",textAlign:"left",display:"flex",flexDirection:"column",gap:8}}>
+                <div style={{display:"flex",justifyContent:"center"}}><SigilPreview svgData={s.svgData} size={110}/></div>
+                <div style={{fontSize:8,letterSpacing:2,color:pl?.color||GOLD,opacity:0.7}}>{pl?.symbol} {pl?.name?.toUpperCase()}</div>
+                <div style={{fontSize:10,color:GOLD,lineHeight:1.3}}>{s.intent||"—"}</div>
+                <div style={{fontSize:8,letterSpacing:1,color:statusColors[s.status]||"rgba(200,175,100,0.3)",textTransform:"uppercase"}}>{s.status}</div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // GRIMOIRE SCREEN
 // ═══════════════════════════════════════════════════════════════════════
 const GRIM_CATS=["ritual","prayer","observation","dream","correspondence","custom"];
@@ -2618,6 +2989,7 @@ export default function App(){
           {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph}/>}
           {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}
           {tab==="journal" &&<JournalScreen  profile={profile}/>}
+          {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile}/>}
           {tab==="grimoire"&&<GrimoireScreen profile={profile}/>}
           {tab==="learn"   &&<LearnScreen   profile={profile}/>}
           {tab==="work"    &&<WorkScreen    eph={eph} initPlanet={workPlanet} natalPos={natalPos} profile={profile} now={now}/>}
