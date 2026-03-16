@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 
 // ═══════════════════════════════════════════════════════════════════════
 // PLATFORM DETECTION
@@ -511,8 +511,14 @@ function calcNatal(bd,location){
     const decanIdx=Math.min(35,Math.floor(norm(lon)/10));
     pos[pk]={lon,zodiac,dignity,isRetro,decanIdx,decan:DECANS[decanIdx],score:dignityScore(dignity,isRetro)};
   });
+  // Additional bodies
+  const lilith=meanLilith(jd);
+  const chiron=chironLon(jd);
+  pos.lilith={lon:lilith,zodiac:lonToZodiac(lilith),isRetro:false};
+  pos.chiron={lon:chiron,zodiac:lonToZodiac(chiron),isRetro:false};
   // Location-based natal points
-  let asc=null,mc=null,pof=null,isDayChart=null;
+  let asc=null,mc=null,pof=null,isDayChart=null,northNode=null,southNode=null;
+  northNode=trueNode(jd);southNode=norm(northNode+180);
   if(location?.lat&&location?.lon){
     asc=calcASC(jd,location.lat,location.lon);
     mc=calcMC(jd,location.lon);
@@ -520,8 +526,426 @@ function calcNatal(bd,location){
     isDayChart=ss?bd>=ss.rise&&bd<ss.set:pos.sun.lon>=0&&pos.sun.lon<=180;
     pof=calcPOF(asc,pos.moon.lon,pos.sun.lon,isDayChart);
   }
-  return{...pos,asc,mc,pof,isDayChart};
+  // Triplicities for each planet
+  Object.entries(pos).forEach(([pk,p])=>{if(P[pk]&&p?.lon!=null)p.triplicity=getTriplicity(p.lon,isDayChart??true);});
+  return{...pos,asc,mc,pof,isDayChart,northNode,southNode};
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// PHASE 5b-5f: PREDICTIVE ENGINE, ADDITIONAL BODIES, CHART TYPES,
+// EPHEMERIS TOOLS, ADVANCED TECHNIQUES
+// ═══════════════════════════════════════════════════════════════════════
+
+// ── 5c: Additional Bodies ─────────────────────────────────────────────
+function meanLilith(jd){return norm(83.353+40.6726*(jd-2451545)/36525*365.25);}
+function chironLon(jd){
+  const T=(jd-2451545)/36525;
+  const n=360/50.7;
+  const M=norm(76.5+n*T*100);
+  const e=0.382;
+  const Erad=M*D2R+e*Math.sin(M*D2R)*(1+e*Math.cos(M*D2R));
+  const v=2*Math.atan2(Math.sqrt(1+e)*Math.sin(Erad/2),Math.sqrt(1-e)*Math.cos(Erad/2))*R2D;
+  return norm(v+339.0+209.7);
+}
+function trueNode(jd){
+  const Mprime=norm(134.96298+477198.867398*(jd-2451545)/36525);
+  const F=norm(93.27191+483202.017538*(jd-2451545)/36525);
+  const mn=meanNode(jd);
+  const osc=1.274*Math.sin((Mprime-2*F)*D2R);
+  return norm(mn+osc);
+}
+// ── 5c: Dorotheus triplicities ────────────────────────────────────────
+const TRIPLICITIES={
+  fire: {day:"sun",night:"jupiter",part:"saturn"},
+  earth:{day:"venus",night:"moon",part:"mars"},
+  air:  {day:"saturn",night:"mercury",part:"jupiter"},
+  water:{day:"venus",night:"mars",part:"moon"},
+};
+const ELEMENT_BY_SIGN=["fire","earth","air","water","fire","earth","air","water","fire","earth","air","water"];
+function getTriplicity(lon,isDayChart){
+  const t=TRIPLICITIES[ELEMENT_BY_SIGN[Math.floor(norm(lon)/30)]];
+  return isDayChart?t.day:t.night;
+}
+
+// ── 5b: Secondary progressions ────────────────────────────────────────
+function calcProgressions(birthDate,lat,lon,targetDate){
+  const ageYears=(targetDate-birthDate)/(365.25*86400000);
+  const jdProg=dateToJD(birthDate)+ageYears;
+  const pos={};
+  ["sun","moon","mercury","venus","mars","jupiter","saturn"].forEach(pk=>{
+    const l=planetLon(pk,jdProg);
+    pos[pk]={lon:l,zodiac:lonToZodiac(l),isRetro:dailyMotion(pk,jdProg)<0&&pk!=="sun"&&pk!=="moon"};
+  });
+  let asc=null,mc=null;
+  if(lat!=null&&lon!=null){try{asc=calcASC(jdProg,lat,lon);mc=calcMC(jdProg,lon);}catch(e){}}
+  return{pos,asc,mc,ageYears:ageYears.toFixed(2)};
+}
+
+// ── 5b: Solar arc directions ──────────────────────────────────────────
+function calcSolarArc(birthDate,targetDate,natalPos){
+  const ageYears=(targetDate-birthDate)/(365.25*86400000);
+  const jdProg=dateToJD(birthDate)+ageYears;
+  const progSunLon=planetLon("sun",jdProg);
+  const arc=norm(progSunLon-natalPos.sun.lon);
+  const directed={};
+  Object.entries(natalPos).forEach(([pk,np])=>{if(np&&np.lon!=null)directed[pk]={...np,lon:norm(np.lon+arc)};});
+  return{arc:arc.toFixed(2),arcDeg:arc,directed};
+}
+
+// ── 5b: Transit scanner ───────────────────────────────────────────────
+const TRANSIT_ASPECTS=[
+  {name:"Conjunction",angle:0,orb:1,col:"#D4AF6A"},
+  {name:"Opposition",angle:180,orb:1,col:"#D24B31"},
+  {name:"Trine",angle:120,orb:1,col:"#5CA85C"},
+  {name:"Square",angle:90,orb:1,col:"#D24B31"},
+  {name:"Sextile",angle:60,orb:0.8,col:"#7CB8E0"},
+];
+function scanTransits(natalPos,startDate,days=90){
+  const hits=[];
+  const tPlanets=["moon","sun","mercury","venus","mars","jupiter","saturn"];
+  const nPlanets=["sun","moon","mercury","venus","mars","jupiter","saturn"];
+  const ms=86400000;
+  for(const tp of tPlanets){
+    for(const np of nPlanets){
+      if(tp===np)continue;
+      const nlon=natalPos[np]?.lon;
+      if(nlon==null)continue;
+      for(const asp of TRANSIT_ASPECTS){
+        let prev=null,prevDt=null;
+        for(let d=0;d<=days;d++){
+          const dt=new Date(startDate.getTime()+d*ms);
+          const tlon=planetLon(tp,dateToJD(dt));
+          const diff=((norm(tlon-nlon)-asp.angle+180+360)%360)-180;
+          if(prev!==null&&prev*diff<0&&Math.abs(prev)<8&&Math.abs(diff)<8){
+            const frac=Math.abs(prev)/(Math.abs(prev)+Math.abs(diff));
+            const exact=new Date(prevDt.getTime()+frac*ms);
+            hits.push({tp,np,asp:asp.name,col:asp.col,date:exact});
+          }
+          prev=diff;prevDt=dt;
+        }
+      }
+    }
+  }
+  hits.sort((a,b)=>a.date-b.date);
+  return hits;
+}
+
+// ── 5b: Firdaria ──────────────────────────────────────────────────────
+const FIRDARIA_DAY=["sun","venus","mercury","moon","saturn","jupiter","mars","northNode","southNode"];
+const FIRDARIA_NIGHT=["moon","saturn","jupiter","mars","sun","venus","mercury","northNode","southNode"];
+const FIRDARIA_YRS=[10,8,13,9,11,12,7,3,2];
+function calcFirdaria(birthDate,isDayChart,now){
+  const seq=isDayChart?FIRDARIA_DAY:FIRDARIA_NIGHT;
+  const totalYrs=75;
+  const ageYrs=(now-birthDate)/(365.25*86400000);
+  const cycleYrs=ageYrs%totalYrs;
+  let cum=0,majIdx=0;
+  for(let i=0;i<FIRDARIA_YRS.length;i++){
+    if(cycleYrs<cum+FIRDARIA_YRS[i]){majIdx=i;break;}
+    cum+=FIRDARIA_YRS[i];
+  }
+  const majLord=seq[majIdx];
+  const majPer=FIRDARIA_YRS[majIdx];
+  const posInMaj=cycleYrs-cum;
+  const minDur=majPer/7;
+  const minIdx=Math.min(6,Math.floor(posInMaj/minDur));
+  const minLord=seq[(majIdx+minIdx)%seq.length];
+  const pct=(posInMaj/majPer)*100;
+  // Build full period list
+  const periods=[];let c=0;
+  for(let i=0;i<FIRDARIA_YRS.length;i++){
+    const sy=c,ey=c+FIRDARIA_YRS[i];
+    periods.push({lord:seq[i],start:new Date(birthDate.getTime()+sy*365.25*86400000),end:new Date(birthDate.getTime()+ey*365.25*86400000),years:FIRDARIA_YRS[i],isCurrent:i===majIdx});
+    c+=FIRDARIA_YRS[i];
+  }
+  return{majLord,minLord,pct,cycleYrs,periods};
+}
+
+// ── 5d: Solar Return ──────────────────────────────────────────────────
+function calcSolarReturn(natalSunLon,targetYear,lat,lon){
+  let jdA=dateToJD(new Date(`${targetYear}-01-01T00:00:00Z`))+60;
+  let jdB=jdA+370;
+  // Find where sun crosses natal sun lon
+  const diff=(jd)=>((norm(sunLon(jd)-natalSunLon)+180)%360)-180;
+  // Bracket search
+  let found=false;
+  for(let step=1;step<370;step++){
+    if(diff(jdA+step-1)*diff(jdA+step)<0){jdB=jdA+step;jdA=jdA+step-1;found=true;break;}
+  }
+  if(!found)return null;
+  for(let i=0;i<50;i++){const m=(jdA+jdB)/2;if(diff(m)*diff(jdA)<0)jdB=m;else jdA=m;if(jdB-jdA<0.0001)break;}
+  const jdSR=(jdA+jdB)/2;
+  const srDate=new Date((jdSR-2440587.5)*86400000);
+  const pos={};
+  ["sun","moon","mercury","venus","mars","jupiter","saturn"].forEach(pk=>{const l=planetLon(pk,jdSR);pos[pk]={lon:l,zodiac:lonToZodiac(l)};});
+  let asc=null,mc=null;
+  if(lat!=null&&lon!=null){try{asc=calcASC(jdSR,lat,lon);mc=calcMC(jdSR,lon);}catch(e){}}
+  return{date:srDate,jd:jdSR,pos,asc,mc};
+}
+
+// ── 5d: Lunar Return ──────────────────────────────────────────────────
+function calcLunarReturn(natalMoonLon,fromDate,lat,lon){
+  const diff=(jd)=>((norm(moonLon(jd)-natalMoonLon)+180)%360)-180;
+  let jdA=dateToJD(fromDate),found=false;
+  for(let d=0;d<30;d+=0.5){
+    if(diff(jdA+d)*diff(jdA+d+0.5)<0){jdA=jdA+d;found=true;break;}
+  }
+  if(!found)return null;
+  let jdB=jdA+0.5;
+  for(let i=0;i<40;i++){const m=(jdA+jdB)/2;if(diff(m)*diff(jdA)<0)jdB=m;else jdA=m;if(jdB-jdA<0.0001)break;}
+  const jdLR=(jdA+jdB)/2;
+  const lrDate=new Date((jdLR-2440587.5)*86400000);
+  const pos={};
+  ["sun","moon","mercury","venus","mars","jupiter","saturn"].forEach(pk=>{const l=planetLon(pk,jdLR);pos[pk]={lon:l,zodiac:lonToZodiac(l)};});
+  let asc=null,mc=null;
+  if(lat!=null&&lon!=null){try{asc=calcASC(jdLR,lat,lon);mc=calcMC(jdLR,lon);}catch(e){}}
+  return{date:lrDate,jd:jdLR,pos,asc,mc};
+}
+
+// ── 5e: Ingress scanner ───────────────────────────────────────────────
+function scanIngresses(startDate,days=180){
+  const list=[];const ms=86400000;
+  const planets=["sun","moon","mercury","venus","mars","jupiter","saturn"];
+  for(const p of planets){
+    let prev=Math.floor(norm(planetLon(p,dateToJD(startDate)))/30);
+    for(let d=1;d<=days;d++){
+      const jd=dateToJD(new Date(startDate.getTime()+d*ms));
+      const sign=Math.floor(norm(planetLon(p,jd))/30);
+      if(sign!==prev){
+        let jdA=jd-1,jdB=jd;
+        for(let i=0;i<20;i++){const m=(jdA+jdB)/2;if(Math.floor(norm(planetLon(p,m))/30)!==prev)jdB=m;else jdA=m;if(jdB-jdA<0.001)break;}
+        const ex=(jdA+jdB)/2;
+        list.push({planet:p,from:SIGNS[prev%12]?.name,to:SIGNS[sign%12]?.name,date:new Date((ex-2440587.5)*86400000),lon:planetLon(p,ex)});
+      }
+      prev=sign;
+    }
+  }
+  list.sort((a,b)=>a.date-b.date);return list;
+}
+
+// ── 5e: Station scanner ───────────────────────────────────────────────
+function scanStations(startDate,days=365){
+  const list=[];const ms=86400000;
+  const planets=["mercury","venus","mars","jupiter","saturn"];
+  for(const p of planets){
+    let prevDM=dailyMotion(p,dateToJD(startDate));
+    for(let d=1;d<=days;d++){
+      const jd=dateToJD(new Date(startDate.getTime()+d*ms));
+      const dm=dailyMotion(p,jd);
+      if(prevDM>=0&&dm<0||prevDM<0&&dm>=0){
+        let jdA=jd-1,jdB=jd;
+        for(let i=0;i<20;i++){const m=(jdA+jdB)/2;const dm2=dailyMotion(p,m);if(prevDM>=0?dm2<0:dm2>=0)jdA=m;else jdB=m;if(jdB-jdA<0.001)break;}
+        const ex=(jdA+jdB)/2;const l=planetLon(p,ex);
+        list.push({planet:p,type:dm>=0?"Direct":"Rx",date:new Date((ex-2440587.5)*86400000),lon:l,zodiac:lonToZodiac(l)});
+      }
+      prevDM=dm;
+    }
+  }
+  list.sort((a,b)=>a.date-b.date);return list;
+}
+
+// ── 5e: Eclipse scanner ───────────────────────────────────────────────
+function scanEclipses(startDate,months=12){
+  const list=[];const ms=86400000;const days=months*30;
+  for(let d=0;d<=days;d++){
+    const jd=dateToJD(new Date(startDate.getTime()+d*ms));
+    const elong=norm(moonLon(jd)-sunLon(jd));
+    const F=norm(93.272+13.229350*(jd-2451545));
+    const lat=5.128*Math.sin(F*D2R);
+    if((elong<3||elong>357)&&Math.abs(lat)<1.5){
+      let jdA=jd-0.5,jdB=jd+0.5;
+      for(let i=0;i<20;i++){const m=(jdA+jdB)/2;const e=norm(moonLon(m)-sunLon(m));if(e>180)jdA=m;else jdB=m;if(jdB-jdA<0.01)break;}
+      const ex=(jdA+jdB)/2;const l=sunLon(ex);
+      list.push({type:"Solar",date:new Date((ex-2440587.5)*86400000),zodiac:lonToZodiac(l),total:Math.abs(lat)<0.5});
+      d+=25;
+    } else if(elong>177&&elong<183&&Math.abs(lat)<1.5){
+      let jdA=jd-0.5,jdB=jd+0.5;
+      for(let i=0;i<20;i++){const m=(jdA+jdB)/2;const e=norm(moonLon(m)-sunLon(m))-180;if(e>0)jdA=m;else jdB=m;if(jdB-jdA<0.01)break;}
+      const ex=(jdA+jdB)/2;const l=moonLon(ex);
+      list.push({type:"Lunar",date:new Date((ex-2440587.5)*86400000),zodiac:lonToZodiac(l),total:Math.abs(lat)<0.5});
+      d+=25;
+    }
+  }
+  list.sort((a,b)=>a.date-b.date);return list;
+}
+
+// ── 5f: Declinations ─────────────────────────────────────────────────
+function lonToDecl(lon,jd){
+  return Math.asin(Math.sin(obliquity(jd)*D2R)*Math.sin(lon*D2R))*R2D;
+}
+function getDeclAspects(pos,jd){
+  const keys=Object.keys(pos).filter(k=>P[k]&&pos[k]?.lon!=null);
+  const decls={};keys.forEach(k=>{decls[k]=lonToDecl(pos[k].lon,jd);});
+  const aspects=[];
+  for(let i=0;i<keys.length;i++)for(let j=i+1;j<keys.length;j++){
+    const a=keys[i],b=keys[j];
+    const diff=Math.abs(decls[a]-decls[b]);
+    const sum=Math.abs(Math.abs(decls[a])+Math.abs(decls[b])-Math.abs(decls[a]+decls[b]))<0.01?Math.abs(decls[a]+decls[b]):999;
+    if(diff<1)aspects.push({p1:a,p2:b,type:"Parallel",d1:decls[a].toFixed(1),d2:decls[b].toFixed(1)});
+    else if(Math.abs(decls[a]+decls[b])<1)aspects.push({p1:a,p2:b,type:"Contra-P",d1:decls[a].toFixed(1),d2:decls[b].toFixed(1)});
+  }
+  return{decls,aspects};
+}
+
+// ── 5f: Midpoints ────────────────────────────────────────────────────
+function getMidpoints(pos){
+  const keys=Object.keys(pos).filter(k=>P[k]&&pos[k]?.lon!=null);
+  const pairs=[];
+  for(let i=0;i<keys.length;i++)for(let j=i+1;j<keys.length;j++){
+    const a=keys[i],b=keys[j];
+    const la=pos[a].lon,lb=pos[b].lon;
+    const near=norm((la+lb)/2);const far=norm(near+180);
+    const activated=keys.filter(k=>{
+      if(k===a||k===b)return false;
+      const lk=pos[k].lon;
+      return Math.abs(((lk-near+180+360)%360)-180)<1.5||Math.abs(((lk-far+180+360)%360)-180)<1.5;
+    });
+    pairs.push({a,b,near,far,zodiacNear:lonToZodiac(near),activated});
+  }
+  pairs.sort((a,b)=>a.near-b.near);return pairs;
+}
+
+// ── 5f: Extended Arabic Lots ─────────────────────────────────────────
+function calcAllLots(asc,sLon,mLon,maLon,vLon,jLon,saLon,day){
+  if(asc==null)return{};
+  const n=(v)=>norm(v);
+  return{
+    fortune:  day?n(asc+mLon-sLon):n(asc+sLon-mLon),
+    spirit:   day?n(asc+sLon-mLon):n(asc+mLon-sLon),
+    eros:     n(asc+vLon-sLon),
+    necessity:n(asc+saLon-mLon),
+    courage:  n(asc+maLon-saLon),
+    victory:  day?n(asc+jLon-sLon):n(asc+sLon-jLon),
+    nemesis:  day?n(asc+saLon-sLon):n(asc+sLon-saLon),
+    exaltation:day?n(asc+19-mLon):n(asc+mLon-19),
+  };
+}
+
+// ── 5f: Parans ───────────────────────────────────────────────────────
+function calcParans(jd,lat,lon){
+  try{
+    const asc=calcASC(jd,lat,lon);const mc=calcMC(jd,lon);
+    const ic=norm(mc+180),dsc=norm(asc+180);
+    const angles=[{name:"Rising",l:asc},{name:"Setting",l:dsc},{name:"Culminating",l:mc},{name:"IC",l:ic}];
+    const planets=["sun","moon","mercury","venus","mars","jupiter","saturn"];
+    const angular=[];
+    for(const p of planets){
+      const plon=planetLon(p,jd);
+      for(const ang of angles){
+        const diff=Math.abs(((plon-ang.l+180+360)%360)-180);
+        if(diff<15)angular.push({planet:p,angle:ang.name,diff:diff.toFixed(1)});
+      }
+    }
+    const parans=[];
+    for(let i=0;i<angular.length;i++)for(let j=i+1;j<angular.length;j++)
+      if(angular[i].planet!==angular[j].planet)
+        parans.push({p1:angular[i].planet,a1:angular[i].angle,p2:angular[j].planet,a2:angular[j].angle});
+    return{angular,parans};
+  }catch(e){return{angular:[],parans:[]};}
+}
+
+// ── People Library (5d Synastry) ─────────────────────────────────────
+function loadPeople(){try{const r=localStorage.getItem("astrum_people");return r?JSON.parse(r):[];}catch{return[];}}
+function savePeople(p){try{localStorage.setItem("astrum_people",JSON.stringify(p));}catch{}}
+
+// ═══════════════════════════════════════════════════════════════════════
+// HOUSE SYSTEMS ENGINE (Phase 5a)
+// ═══════════════════════════════════════════════════════════════════════
+// Returns array of 12 cusp longitudes [cusp1..cusp12]
+function calcHouses(jd,lat,lon,system="whole"){
+  const asc=calcASC(jd,lat,lon);
+  const mc=calcMC(jd,lon);
+  const RAMC=lstDeg(jd,lon)*D2R;
+  const e=obliquity(jd)*D2R;
+  const phi=lat*D2R;
+  if(system==="whole"){
+    const base=Math.floor(asc/30)*30;
+    return Array.from({length:12},(_,i)=>norm(base+i*30));
+  }
+  if(system==="equal"){
+    return Array.from({length:12},(_,i)=>norm(asc+i*30));
+  }
+  if(system==="regio"){
+    // Regiomontanus: celestial equator divided into 12 equal parts via RAMC
+    // tan(λ) = sin(θ) / (cos(θ)·cos(ε) − tan(φ)·sin(ε))
+    const cusps=[];
+    for(let i=0;i<12;i++){
+      if(i===0){cusps.push(asc);continue;}
+      if(i===3){cusps.push(norm(mc+180));continue;} // IC
+      if(i===6){cusps.push(norm(asc+180));continue;} // DSC
+      if(i===9){cusps.push(mc);continue;} // MC
+      const theta=RAMC+(i+1)*30*D2R; // offset from RAMC
+      const lambda=Math.atan2(Math.sin(theta),(Math.cos(theta)*Math.cos(e)-Math.tan(phi)*Math.sin(e)))*R2D;
+      cusps.push(norm(lambda));
+    }
+    return cusps;
+  }
+  if(system==="koch"){
+    // Koch (Birthplace): based on diurnal semi-arc of the MC degree
+    const cusps=[];
+    for(let i=0;i<12;i++){
+      if(i===0){cusps.push(asc);continue;}
+      if(i===3){cusps.push(norm(mc+180));continue;}
+      if(i===6){cusps.push(norm(asc+180));continue;}
+      if(i===9){cusps.push(mc);continue;}
+      // Offset: houses 11,12 use MC oblique ascension shifted by DSA/3
+      const frac=((i<3?i:(i<6?i-3:(i<9?i-6:i-9)))+1)/3;
+      const mcDec=Math.asin(Math.sin(e)*Math.sin(mc*D2R))*R2D; // MC declination
+      const cosH=-Math.sin(mcDec*D2R)*Math.tan(phi)/(Math.cos(mcDec*D2R)||0.0001);
+      const H=Math.abs(cosH)<=1?Math.acos(Math.max(-1,Math.min(1,cosH)))*R2D:90;
+      const DSA=i<6?90+H:90-H;
+      const theta=RAMC+DSA*frac*D2R*(i<3||(i>=6&&i<9)?1:-1);
+      const lam=Math.atan2(Math.sin(theta),(Math.cos(theta)*Math.cos(e)-Math.tan(phi)*Math.sin(e)))*R2D;
+      cusps.push(norm(lam));
+    }
+    return cusps;
+  }
+  if(system==="placidus"){
+    // Placidus: iterative — each cusp has semi-arc = n×30°/6
+    const cusps=[];
+    for(let i=0;i<12;i++){
+      if(i===0){cusps.push(asc);continue;}
+      if(i===3){cusps.push(norm(mc+180));continue;}
+      if(i===6){cusps.push(norm(asc+180));continue;}
+      if(i===9){cusps.push(mc);continue;}
+      // House offsets: 11→2/3 SA above horizon, 12→1/3 SA above, 2→1/3 SA below, 3→2/3 SA below
+      const fracMap={1:2/3,2:1/3,4:1/3,5:2/3}; // index within quadrant
+      const qi=i<3?i:(i<6?i-3:(i<9?i-6:i-9));
+      const frac=fracMap[qi<3?qi:qi]||0.5;
+      const upperHem=i<6; // houses 11,12,1,2,3 are above horizon
+      // Newton-Raphson iteration
+      let lon0=mc+i*30; // initial guess
+      for(let iter=0;iter<8;iter++){
+        const dec=Math.asin(Math.sin(e)*Math.sin(norm(lon0)*D2R));
+        const cosHA=-Math.sin(dec)*Math.tan(phi)/(Math.cos(dec)||0.0001);
+        if(Math.abs(cosHA)>1){lon0+=0.1;continue;}
+        const HA=Math.acos(cosHA);
+        const SA=upperHem?HA:Math.PI-HA;
+        const target=SA*(upperHem?frac:1-frac);
+        // RA of this degree minus RAMC should equal target
+        const RA=Math.atan2(Math.sin(norm(lon0)*D2R)*Math.cos(e),Math.cos(norm(lon0)*D2R))+Math.PI;
+        const diff=(RA-RAMC-target+Math.PI*3)%(Math.PI*2)-Math.PI;
+        lon0-=diff*R2D*0.5;
+      }
+      cusps.push(norm(lon0));
+    }
+    return cusps;
+  }
+  return Array.from({length:12},(_,i)=>norm(asc+i*30));
+}
+
+// House number (1-12) for a given longitude and cusp array
+function getHouseNum(lon,cusps){
+  for(let i=0;i<12;i++){
+    const c1=cusps[i],c2=cusps[(i+1)%12];
+    // Handle wrap-around
+    if(c1<=c2){if(lon>=c1&&lon<c2)return i+1;}
+    else{if(lon>=c1||lon<c2)return i+1;}
+  }
+  return 1;
+}
+const HOUSE_NAMES=["I","II","III","IV","V","VI","VII","VIII","IX","X","XI","XII"];
+const HOUSE_MEANINGS=["Self, body, life orientation","Possessions, resources, values","Communication, siblings, local travel","Home, family, roots, private self","Creativity, romance, children, joy","Health, work, service, daily rhythm","Partners, open enemies, contracts","Shared resources, transformation, occult","Higher mind, philosophy, long journeys","Career, public role, authority","Community, hopes, friends, groups","Hidden matters, spirituality, retreat"];
 
 // ═══════════════════════════════════════════════════════════════════════
 // STYLES
@@ -542,7 +966,9 @@ const NAV_SECTIONS = [
   {id:"fractal", icon:"◎", label:"Fractal",    desc:"Nested time"},
   {id:"planets", icon:"♄", label:"Planets",    desc:"Seven sphere profiles"},
   {id:"stars",   icon:"★", label:"Stars",      desc:"Fixed stars"},
-  {id:"natal",   icon:"☽", label:"Natal",      desc:"Personal resonance"},
+  {id:"natal",    icon:"☽", label:"Natal",      desc:"Personal resonance"},
+  {id:"transits", icon:"⟳", label:"Transits",  desc:"Transit hit list"},
+  {id:"ephemeris",icon:"≡", label:"Ephemeris", desc:"Ingresses, stations, eclipses"},
   {id:"elect",    icon:"◈", label:"Elections",  desc:"Optimal windows"},
   {id:"calendar", icon:"◫", label:"Calendar",  desc:"Election planning grid"},
   {id:"work",    icon:"⚗", label:"Work",       desc:"Build a ritual"},
@@ -1375,6 +1801,12 @@ function StarsScreen({eph,natalPos}){
           })()}
         </div>
       )}
+      {/* Parans section — requires location */}
+      {(()=>{
+        const loc=eph?.pos&&eph?.jd?{jd:eph.jd}:null;
+        // Extract lat/lon from useEphemeris if available (we don't have it here, skip if not)
+        return null; // parans displayed via NatalScreen
+      })()}
       <div className="card" style={{margin:"0 14px"}}>
         <div style={L()}>The {FIXED_STARS.length} Stars</div>
         <div style={{marginTop:8}}>
@@ -1764,106 +2196,687 @@ function WorkScreen({eph,initPlanet,natalPos,profile,now}){
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// NATAL WHEEL CHART SVG (Phase 5a)
+// ═══════════════════════════════════════════════════════════════════════
+const SIGN_COLORS=["#D04040","#7A5030","#5080C0","#40A060","#D04040","#7A5030","#5080C0","#40A060","#D04040","#7A5030","#5080C0","#40A060"];
+const SIGN_SYMS=["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"];
+const ASP_COLORS={Conjunction:"#D4AF6A",Opposition:"#D24B31",Trine:"#5CA85C",Square:"#D24B31",Sextile:"#7CB8E0"};
+
+function NatalWheelChart({natalPos,outerPos,outerLabel,cusps,houseSys,onSelectPlanet,selPlanet}){
+  if(!natalPos)return null;
+  const W=340,H=340,cx=W/2,cy=H/2;
+  const R_ZODIAC=155,R_ZODIAC_IN=135,R_HOUSE_OUT=130,R_HOUSE_IN=105,R_PLANET=95,R_OUTER=120;
+  // Angle conversion: ASC at 9 o'clock (180° in screen coords), zodiac counterclockwise
+  const asc=natalPos.asc||0;
+  const lon2ang=(lon)=>(asc-lon)*D2R; // radians, counterclockwise from ASC=left
+  const px=(r,a)=>cx+r*Math.cos(a);
+  const py=(r,a)=>cy-r*Math.sin(a); // SVG y-down so negate
+  // Build inner planet list (natal + extra bodies)
+  const planetKeys=["sun","moon","mercury","venus","mars","jupiter","saturn"];
+  if(natalPos.lilith!=null)planetKeys.push("lilith");
+  if(natalPos.chiron!=null)planetKeys.push("chiron");
+  const extraKeys=[natalPos.northNode!=null&&"northNode",natalPos.southNode!=null&&"southNode"].filter(Boolean);
+  const allKeys=[...planetKeys,...extraKeys];
+
+  const allP={...P,
+    lilith:{sym:"⚸",col:"#C080C0",name:"Lilith"},
+    chiron:{sym:"⚷",col:"#80A0B0",name:"Chiron"},
+    northNode:{sym:"☊",col:"#90C890",name:"N.Node"},
+    southNode:{sym:"☋",col:"#C08080",name:"S.Node"},
+  };
+
+  // Aspects between inner planets
+  const ASP_DEFS=[{n:"Conjunction",a:0,o:8},{n:"Opposition",a:180,o:8},{n:"Trine",a:120,o:7},{n:"Square",a:90,o:7},{n:"Sextile",a:60,o:5}];
+  const aspects=[];
+  for(let i=0;i<planetKeys.length;i++)for(let j=i+1;j<planetKeys.length;j++){
+    const pk1=planetKeys[i],pk2=planetKeys[j];
+    const l1=natalPos[pk1]?.lon,l2=natalPos[pk2]?.lon;
+    if(l1==null||l2==null)continue;
+    let diff=Math.abs(norm(l1-l2));if(diff>180)diff=360-diff;
+    ASP_DEFS.forEach(ad=>{if(Math.abs(diff-ad.a)<=ad.o)aspects.push({pk1,pk2,ad,orb:Math.abs(diff-ad.a).toFixed(1)});});
+  }
+
+  // Cluster planets that are too close (< 8°) — offset alternately
+  const placed={};
+  planetKeys.forEach((pk,i)=>{
+    const lon=natalPos[pk]?.lon;if(lon==null)return;
+    let r=R_PLANET;
+    for(let j=0;j<i;j++){
+      const pk2=planetKeys[j],l2=natalPos[pk2]?.lon;if(l2==null)continue;
+      let d=Math.abs(norm(lon-l2));if(d>180)d=360-d;
+      if(d<8)r=placed[pk2]===R_PLANET?R_PLANET-16:R_PLANET;
+    }
+    placed[pk]=r;
+  });
+
+  return(
+    <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{display:"block",touchAction:"none"}}>
+      {/* Background */}
+      <circle cx={cx} cy={cy} r={R_ZODIAC} fill="rgba(4,4,16,0.95)" stroke="rgba(200,175,100,0.15)" strokeWidth={1}/>
+
+      {/* Zodiac sign sectors */}
+      {Array.from({length:12},(_,i)=>{
+        const startLon=i*30,endLon=(i+1)*30;
+        const a1=lon2ang(startLon),a2=lon2ang(endLon);
+        const x1=px(R_ZODIAC,a1),y1=py(R_ZODIAC,a1),x2=px(R_ZODIAC_IN,a1),y2=py(R_ZODIAC_IN,a1);
+        const x3=px(R_ZODIAC_IN,a2),y3=py(R_ZODIAC_IN,a2),x4=px(R_ZODIAC,a2),y4=py(R_ZODIAC,a2);
+        const large=Math.abs(a2-a1)>Math.PI?1:0;
+        const col=SIGN_COLORS[i];
+        const midA=lon2ang(i*30+15),gx=px(R_ZODIAC-10,midA),gy=py(R_ZODIAC-10,midA);
+        return(
+          <g key={i}>
+            <path d={`M${x1} ${y1} A${R_ZODIAC} ${R_ZODIAC} 0 ${large} 0 ${x4} ${y4} L${x3} ${y3} A${R_ZODIAC_IN} ${R_ZODIAC_IN} 0 ${large} 1 ${x2} ${y2} Z`}
+              fill={`${col}11`} stroke={`${col}30`} strokeWidth={0.5}/>
+            <text x={gx} y={gy} textAnchor="middle" dominantBaseline="middle" fill={col} fontSize={8} fontFamily="serif" opacity={0.7}>{SIGN_SYMS[i]}</text>
+          </g>
+        );
+      })}
+
+      {/* 5° tick marks on zodiac ring */}
+      {Array.from({length:72},(_,i)=>{
+        const lon=i*5,a=lon2ang(lon),major=i%6===0;
+        const r0=major?R_ZODIAC_IN:R_ZODIAC_IN+3;
+        return<line key={i} x1={px(r0,a)} y1={py(r0,a)} x2={px(R_ZODIAC_IN+7,a)} y2={py(R_ZODIAC_IN+7,a)} stroke={`rgba(200,175,100,${major?0.4:0.15})`} strokeWidth={major?1:0.5}/>;
+      })}
+
+      {/* House cusps */}
+      {cusps&&cusps.map((c,i)=>{
+        const a=lon2ang(c);
+        const isAngular=i===0||i===3||i===6||i===9;
+        const hx=px((R_HOUSE_IN+R_HOUSE_OUT)/2,a),hy=py((R_HOUSE_IN+R_HOUSE_OUT)/2,a);
+        return(
+          <g key={i}>
+            <line x1={px(isAngular?R_ZODIAC_IN:R_HOUSE_OUT,a)} y1={py(isAngular?R_ZODIAC_IN:R_HOUSE_OUT,a)} x2={px(R_HOUSE_IN-5,a)} y2={py(R_HOUSE_IN-5,a)} stroke={`rgba(200,175,100,${isAngular?0.6:0.2})`} strokeWidth={isAngular?1.2:0.6}/>
+            <text x={hx} y={hy} textAnchor="middle" dominantBaseline="middle" fill={`rgba(200,175,100,${isAngular?0.7:0.3})`} fontSize={isAngular?7:6} fontFamily={F}>{HOUSE_NAMES[i]}</text>
+          </g>
+        );
+      })}
+
+      {/* Aspect lines */}
+      {aspects.map((asp,i)=>{
+        const l1=natalPos[asp.pk1]?.lon,l2=natalPos[asp.pk2]?.lon;
+        if(l1==null||l2==null)return null;
+        const a1=lon2ang(l1),a2=lon2ang(l2),r=R_HOUSE_IN-8;
+        const col=ASP_COLORS[asp.ad.n]||"rgba(200,175,100,0.2)";
+        const isDash=asp.ad.n==="Square"||asp.ad.n==="Opposition";
+        return<line key={i} x1={px(r,a1)} y1={py(r,a1)} x2={px(r,a2)} y2={py(r,a2)} stroke={col} strokeWidth={0.8} opacity={0.35} strokeDasharray={isDash?"3,3":"none"}/>;
+      })}
+
+      {/* Inner ring */}
+      <circle cx={cx} cy={cy} r={R_HOUSE_IN} fill="rgba(4,4,16,0.4)" stroke="rgba(200,175,100,0.12)" strokeWidth={0.8}/>
+      <circle cx={cx} cy={cy} r={R_HOUSE_OUT} fill="none" stroke="rgba(200,175,100,0.1)" strokeWidth={0.5}/>
+
+      {/* Outer planets (bi-wheel) */}
+      {outerPos&&planetKeys.map(pk=>{
+        const pl=allP[pk]||P[pk];if(!pl)return null;
+        const lon=outerPos[pk]?.lon;if(lon==null)return null;
+        const a=lon2ang(lon);
+        return(
+          <g key={"o"+pk}>
+            <circle cx={px(R_OUTER,a)} cy={py(R_OUTER,a)} r={6} fill={`${pl.col}20`} stroke={pl.col} strokeWidth={1} opacity={0.7}/>
+            <text x={px(R_OUTER,a)} y={py(R_OUTER,a)} textAnchor="middle" dominantBaseline="middle" fill={pl.col} fontSize={7} fontFamily="serif">{pl.sym}</text>
+          </g>
+        );
+      })}
+      {outerPos&&outerLabel&&<text x={cx} y={cy+R_OUTER+16} textAnchor="middle" fill="rgba(200,175,100,0.4)" fontSize={7} fontFamily={F}>{outerLabel}</text>}
+
+      {/* Inner planets */}
+      {allKeys.map(pk=>{
+        const pl=allP[pk]||P[pk];if(!pl)return null;
+        const lon=natalPos[pk]?.lon??natalPos[pk];
+        if(lon==null||typeof lon!=="number")return null;
+        const a=lon2ang(lon),r=placed[pk]||R_PLANET;
+        const isSel=selPlanet===pk;
+        return(
+          <g key={pk} onClick={()=>onSelectPlanet&&onSelectPlanet(pk)} style={{cursor:"pointer"}}>
+            {isSel&&<circle cx={px(r,a)} cy={py(r,a)} r={11} fill="none" stroke={pl.col} strokeWidth={1.5}/>}
+            <circle cx={px(r,a)} cy={py(r,a)} r={8} fill="rgba(4,4,16,0.9)" stroke={pl.col} strokeWidth={1.2}/>
+            <text x={px(r,a)} y={py(r,a)} textAnchor="middle" dominantBaseline="middle" fill={pl.col} fontSize={8} fontFamily="serif">{pl.sym}</text>
+            {natalPos[pk]?.isRetro&&<text x={px(r-12,a)} y={py(r-12,a)} textAnchor="middle" fill="#9B4040" fontSize={6}>℞</text>}
+          </g>
+        );
+      })}
+
+      {/* ASC / DSC / MC / IC axis labels */}
+      {natalPos.asc!=null&&[{l:"ASC",lon:natalPos.asc,r:R_ZODIAC+10},{l:"DSC",lon:norm(natalPos.asc+180),r:R_ZODIAC+10},{l:"MC",lon:natalPos.mc,r:R_ZODIAC+10},{l:"IC",lon:norm(natalPos.mc+180),r:R_ZODIAC+10}].map(ax=>{
+        const a=lon2ang(ax.lon);
+        return<text key={ax.l} x={px(ax.r,a)} y={py(ax.r,a)} textAnchor="middle" dominantBaseline="middle" fill="rgba(200,175,100,0.55)" fontSize={6.5} fontFamily={F}>{ax.l}</text>;
+      })}
+
+      {/* Center */}
+      <circle cx={cx} cy={cy} r={30} fill="rgba(4,4,16,0.95)" stroke="rgba(200,175,100,0.1)" strokeWidth={0.8}/>
+      <text x={cx} y={cy-8} textAnchor="middle" fill="rgba(200,175,100,0.5)" fontSize={7} fontFamily={F}>{houseSys?.toUpperCase()||"WS"}</text>
+      <text x={cx} y={cy+5} textAnchor="middle" fill="rgba(200,175,100,0.3)" fontSize={6} fontFamily={F}>HOUSES</text>
+    </svg>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // NATAL SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-function NatalScreen({natalData,setNatalData,eph,fractal,natalPos}){
+function NatalScreen({natalData,setNatalData,eph,fractal,natalPos,profile}){
   const [bd,setBd]=useState(natalData?.date||"");
   const [bt,setBt]=useState(natalData?.time||"");
+  const [view,setView]=useState("wheel");
+  const [houseSys,setHouseSys]=useState(profile?.houseSys||"whole");
+  const [selPlanet,setSelPlanet]=useState(null);
+  const [progDate,setProgDate]=useState(new Date().toISOString().slice(0,10));
+  const [srYear,setSrYear]=useState(new Date().getFullYear());
+  const [synPerson,setSynPerson]=useState(null);
+  const [people,setPeople]=useState(loadPeople);
+  const [showAddPerson,setShowAddPerson]=useState(false);
+  const [newPerson,setNewPerson]=useState({name:"",date:"",time:"",city:"",lat:null,lon:null});
+  const location=profile?.natal?.lat&&profile?.natal?.lon?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
+
   const save=async()=>{if(!bd)return;const d={date:bd,time:bt};setNatalData(d);try{await window.storage.set("astrum_natal",JSON.stringify(d));}catch(e){}};
   const clear=async()=>{setNatalData(null);setBd("");setBt("");try{await window.storage.delete("astrum_natal");}catch(e){}};
+
+  // Compute cusps if we have location + natalPos
+  const cusps=useMemo(()=>{
+    if(!natalPos?.asc||!location)return null;
+    const bd_=natalData?.date?new Date(natalData.date+(natalData.time?"T"+natalData.time:"T12:00")):null;
+    if(!bd_)return null;
+    try{return calcHouses(dateToJD(bd_),location.lat,location.lon,houseSys);}catch{return null;}
+  },[natalPos,natalData,location,houseSys]);
+
+  const houseOf=(lon)=>cusps?getHouseNum(lon,cusps):null;
+
+  // Selected planet detail
+  const selPlanetData=selPlanet&&natalPos?natalPos[selPlanet]:null;
+  const selPlanetObj=selPlanet?(P[selPlanet]||{sym:"?",col:GOLD,name:selPlanet}):null;
+
+  const HOUSE_SYMS=[
+    ["whole","WS","Whole Sign"],["equal","EQ","Equal"],["regio","RG","Regiomontanus"],
+    ["koch","KO","Koch"],["placidus","PL","Placidus"]
+  ];
+
   return (
     <div style={{flex:1,overflowY:"auto",paddingBottom:20}}>
-      <div style={{padding:"16px 18px 10px"}}>
-        <div style={L()}>Natal Chart</div>
-        <div style={T(20)}>Personal Resonance</div>
-        <div style={{fontFamily:F,fontSize:10,color:"#6A5030",fontStyle:"italic",marginTop:3,lineHeight:1.7}}>Your natal chart creates a personal frequency. When transiting planets or fractal layers align with your natal positions, your personal windows of power open.</div>
+      <div style={{padding:"16px 18px 8px",display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
+        <div>
+          <div style={L()}>Natal Chart</div>
+          <div style={T(20)}>Personal Resonance</div>
+        </div>
+        {natalPos&&natalPos.asc!=null&&(
+          <div style={{display:"flex",gap:4}}>
+            {HOUSE_SYMS.map(([sys,abbr,full])=>(
+              <button key={sys} onClick={()=>setHouseSys(sys)} title={full} style={{padding:"3px 6px",borderRadius:5,border:`1px solid ${houseSys===sys?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.1)"}`,background:houseSys===sys?"rgba(200,175,100,0.1)":"transparent",color:houseSys===sys?GOLD:"rgba(200,175,100,0.35)",fontFamily:F,fontSize:7.5,letterSpacing:0.5,cursor:"pointer"}}>{abbr}</button>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Birth data entry */}
       <div className="card" style={{margin:"0 14px 10px"}}>
-        <div style={L()}>Birth Data</div>
-        <div style={{marginTop:10,display:"flex",gap:10}}>
-          <div style={{flex:2}}><div style={L("rgba(200,175,100,0.4)",7)}>Date</div><input type="date" value={bd} onChange={e=>setBd(e.target.value)} style={{width:"100%",marginTop:4,fontSize:12}}/></div>
+        <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
+          <div style={{flex:2}}><div style={L("rgba(200,175,100,0.4)",7)}>Birth Date</div><input type="date" value={bd} onChange={e=>setBd(e.target.value)} style={{width:"100%",marginTop:4,fontSize:12}}/></div>
           <div style={{flex:1}}><div style={L("rgba(200,175,100,0.4)",7)}>Time</div><input type="time" value={bt} onChange={e=>setBt(e.target.value)} style={{width:"100%",marginTop:4,fontSize:12}}/></div>
+          <button onClick={save} disabled={!bd} style={{padding:"9px 14px",borderRadius:10,background:bd?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${bd?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:9,color:bd?"#D4AF6A":"#5A4020",cursor:bd?"pointer":"default",whiteSpace:"nowrap"}}>✦ CALC</button>
+          {natalPos&&<button onClick={clear} style={{padding:"9px 10px",borderRadius:10,background:"rgba(80,20,20,0.3)",border:"1px solid rgba(150,60,60,0.3)",fontFamily:F,fontSize:9,color:"#9B5050",cursor:"pointer"}}>✕</button>}
         </div>
-        <div style={{marginTop:10,display:"flex",gap:8}}>
-          <button onClick={save} disabled={!bd} style={{flex:2,padding:"10px 0",borderRadius:10,background:bd?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${bd?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:9,color:bd?"#D4AF6A":"#5A4020",letterSpacing:2,textTransform:"uppercase",cursor:bd?"pointer":"default"}}>Calculate Chart ✦</button>
-          {natalPos&&<button onClick={clear} style={{flex:1,padding:"10px 0",borderRadius:10,background:"rgba(80,20,20,0.3)",border:"1px solid rgba(150,60,60,0.3)",fontFamily:F,fontSize:9,color:"#9B5050",letterSpacing:2,cursor:"pointer"}}>Clear</button>}
-        </div>
+        {!location&&natalPos&&<div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:7}}>✦ Add birth city in Profile for Ascendant, houses, and lots.</div>}
       </div>
+
       {natalPos&&(
         <>
-          <div className="card" style={{margin:"0 14px 10px"}}>
-            <div style={L()}>Natal Decan Signatures</div>
-            <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,marginBottom:10,lineHeight:1.6}}>These are the seven faces your planets occupied at birth. When the fractal system lands on these faces, or when transiting planets enter these decans, your personal frequency is activated.</div>
-            {Object.entries(natalPos).filter(([pk])=>P[pk]).map(([pk,np])=>{
-              const pl=P[pk],dc=DIGNITY_COL[np.dignity];
-              const fractalActive=fractal.levels.some(l=>l.idx===np.decanIdx);
-              const transitIn=eph.pos[pk]&&Math.floor(norm(eph.pos[pk].lon)/10)===np.decanIdx;
-              return (
-                <button key={pk} className="row-btn">
-                  <span style={{fontSize:14,color:pl.col,width:22}}>{pl.sym}</span>
-                  <div style={{flex:1}}>
-                    <div style={{fontFamily:F,fontSize:12,color:"#C4A870"}}>{np.decan.name}</div>
-                    <div style={{fontFamily:F,fontSize:9,color:"#5A4020"}}>{np.zodiac.degree}° {np.decan.sym} {np.decan.sign} · {DIGNITY_LBL[np.dignity].split(" ")[0]}</div>
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
-                    <span style={{fontFamily:F,fontSize:7,color:dc,letterSpacing:1}}>{np.dignity.toUpperCase()}</span>
-                    {fractalActive&&<span style={{fontFamily:F,fontSize:7,color:"#D4AF6A",letterSpacing:1}}>FRACTAL ✦</span>}
-                    {transitIn&&<span style={{fontFamily:F,fontSize:7,color:"#5CA85C",letterSpacing:1}}>TRANSIT IN</span>}
-                    {np.isRetro&&<span style={{fontFamily:F,fontSize:7,color:"#9B4040"}}>RETRO</span>}
-                  </div>
-                </button>
-              );
-            })}
+          {/* View tabs — scrollable */}
+          <div style={{overflowX:"auto",padding:"0 14px",marginBottom:8}}>
+            <div style={{display:"flex",gap:5,minWidth:"max-content"}}>
+              {[["wheel","Wheel"],["planets","Planets"],["angles","Angles"],["decans","Decans"],["prog","Prog"],["firdaria","Firdaria"],["returns","Returns"],["synastry","Synastry"],["midpoints","Midpoints"]].map(([v,lbl])=>(
+                <button key={v} onClick={()=>setView(v)} style={{padding:"5px 11px",borderRadius:8,border:`1px solid ${view===v?"rgba(200,175,100,0.4)":"rgba(200,175,100,0.1)"}`,background:view===v?"rgba(200,175,100,0.08)":"transparent",color:view===v?GOLD:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer",whiteSpace:"nowrap"}}>{lbl}</button>
+              ))}
+            </div>
           </div>
-          <div className="card" style={{margin:"0 14px 10px"}}>
-            <div style={L()}>Your Strong Channels</div>
-            <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Planets in dignity at birth are your natural strong channels. Working with them in their day and hour produces amplified results specifically for you.</div>
-            {Object.entries(natalPos).filter(([pk])=>P[pk]).sort((a,b)=>b[1].score-a[1].score).slice(0,4).map(([pk,np])=>{
-              const pl=P[pk],transit=eph.pos[pk];
-              return (
-                <div key={pk} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
-                  <div style={{width:32,height:32,borderRadius:16,background:`${pl.col}12`,border:`1px solid ${pl.col}35`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,color:pl.col,flexShrink:0}}>{pl.sym}</div>
-                  <div style={{flex:1}}>
-                    <div style={{fontFamily:F,fontSize:12,color:pl.col}}>{pl.name}</div>
-                    <div style={{fontFamily:F,fontSize:9,color:DIGNITY_COL[np.dignity]}}>{np.dignity} at birth</div>
-                    {transit&&<div style={{fontFamily:F,fontSize:8,color:"#5A4020",marginTop:1}}>Now: {transit.zodiac.name} · {DIGNITY_LBL[transit.dignity].split(" ")[0]}{transit.isRetro?" ℞":""}</div>}
-                  </div>
-                  <div style={{fontFamily:F,fontSize:20,color:pl.col}}>{np.score}</div>
-                </div>
-              );
-            })}
-          </div>
-          {(natalPos?.asc!=null||natalPos?.mc!=null)&&(
-            <div className="card" style={{margin:"0 14px 10px"}}>
-              <div style={L()}>Angles & Parts</div>
-              <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6,marginBottom:10}}>Calculated from birth time and location. The Ascendant is the mask and body; the MC is the social calling; the Part of Fortune is the body of luck.</div>
-              {[
-                natalPos.asc!=null&&{label:"Ascendant (ASC)",lon:natalPos.asc,sym:"AC",desc:"Rising sign — the bodily self and life orientation"},
-                natalPos.mc!=null&&{label:"Midheaven (MC)",lon:natalPos.mc,sym:"MC",desc:"Career, public role, worldly calling"},
-                natalPos.pof!=null&&{label:"Part of Fortune",lon:natalPos.pof,sym:"⊕",desc:natalPos.isDayChart?"Day chart: ASC + Moon − Sun":"Night chart: ASC + Sun − Moon"},
-              ].filter(Boolean).map(({label,lon,sym,desc})=>{
-                const z=lonToZodiac(lon);
-                return(
-                  <div key={sym} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
-                    <div style={{width:32,height:32,borderRadius:16,background:"rgba(200,175,100,0.08)",border:"1px solid rgba(200,175,100,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#D4AF6A",flexShrink:0}}>{sym}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontFamily:F,fontSize:12,color:"#C4A870"}}>{label}</div>
-                      <div style={{fontFamily:F,fontSize:9,color:"#5A4020"}}>{z.degree}° {z.name} · {desc}</div>
+
+          {/* WHEEL VIEW */}
+          {view==="wheel"&&(
+            <>
+              <div style={{display:"flex",justifyContent:"center",marginBottom:4}}>
+                <NatalWheelChart natalPos={natalPos} outerPos={null} cusps={cusps} houseSys={houseSys} onSelectPlanet={setSelPlanet} selPlanet={selPlanet}/>
+              </div>
+              {/* Planet detail popup */}
+              {selPlanet&&selPlanetData&&selPlanetData.lon!=null&&(
+                <div className="card" style={{margin:"4px 14px 10px",background:`rgba(8,5,22,0.9)`,border:`1px solid ${selPlanetObj.col}40`}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                    <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                      <span style={{fontSize:22,color:selPlanetObj.col}}>{selPlanetObj.sym}</span>
+                      <div>
+                        <div style={{fontFamily:F,fontSize:14,color:selPlanetObj.col}}>{selPlanetObj.name||selPlanet}</div>
+                        <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.6)",marginTop:2}}>
+                          {selPlanetData.zodiac?.degree}°{String(selPlanetData.zodiac?.minutes||0).padStart(2,"0")}' {selPlanetData.zodiac?.name}
+                          {selPlanetData.isRetro&&<span style={{color:"#9B4040",marginLeft:6}}>℞</span>}
+                          {cusps&&<span style={{marginLeft:8,color:"rgba(200,175,100,0.4)"}}>House {houseOf(selPlanetData.lon)}</span>}
+                        </div>
+                      </div>
                     </div>
+                    <button onClick={()=>setSelPlanet(null)} style={{background:"none",border:"none",color:"rgba(200,175,100,0.4)",fontSize:16,cursor:"pointer"}}>✕</button>
                   </div>
-                );
-              })}
-              <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.2)",marginTop:8}}>
-                {natalPos.isDayChart!=null&&`Sect: ${natalPos.isDayChart?"Day":"Night"} chart`}
-                {natalPos.asc==null&&" · Enter birth location in Profile for angle calculations"}
+                  {selPlanetData.dignity&&(
+                    <div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap"}}>
+                      <span style={{fontFamily:F,fontSize:8,color:DIGNITY_COL[selPlanetData.dignity],letterSpacing:1,padding:"2px 8px",border:`1px solid ${DIGNITY_COL[selPlanetData.dignity]}40`,borderRadius:4}}>{selPlanetData.dignity.toUpperCase()}</span>
+                      {selPlanetData.bound&&<span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:1,padding:"2px 8px",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4}}>{P[selPlanetData.bound]?.sym} BOUND</span>}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* PLANETS VIEW */}
+          {view==="planets"&&(
+            <div className="card" style={{margin:"0 14px 10px"}}>
+              <div style={L()}>Natal Positions</div>
+              <div style={{marginTop:8}}>
+                {[
+                  ...Object.entries(natalPos).filter(([pk])=>P[pk]),
+                  natalPos.lilith?.lon!=null?["lilith",natalPos.lilith]:null,
+                  natalPos.chiron?.lon!=null?["chiron",natalPos.chiron]:null,
+                ].filter(Boolean).map(([pk,np])=>{
+                  const pl=P[pk]||(pk==="lilith"?{sym:"⚸",col:"#9060A0",name:"Lilith"}:{sym:"⚷",col:"#80A080",name:"Chiron"});
+                  const dc=DIGNITY_COL[np.dignity];
+                  const house=cusps&&np.lon!=null?houseOf(np.lon):null;
+                  const fractalActive=np.decanIdx!=null&&fractal.levels.some(l=>l.idx===np.decanIdx);
+                  const transit=eph.pos[pk];
+                  const tripRuler=P[pk]&&np.lon!=null&&natalPos.isDayChart!=null?getTriplicity(np.lon,natalPos.isDayChart):null;
+                  return(
+                    <div key={pk} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
+                      <span style={{fontSize:16,color:pl.col,width:22}}>{pl.sym}</span>
+                      <div style={{flex:1}}>
+                        <div style={{fontFamily:F,fontSize:11,color:"#C4A870"}}>
+                          {np.zodiac?.degree}°{String(np.zodiac?.minutes||0).padStart(2,"0")}' {np.zodiac?.name}
+                          {np.isRetro&&<span style={{color:"#9B4040",marginLeft:4,fontSize:9}}>℞</span>}
+                        </div>
+                        <div style={{fontFamily:F,fontSize:8,color:"#5A4020",marginTop:1}}>
+                          {np.dignity&&<span style={{color:dc}}>{DIGNITY_LBL[np.dignity]?.split(" ")[0]}</span>}
+                          {tripRuler&&<span style={{marginLeft:6,color:"rgba(200,175,100,0.4)"}}>Trip: {P[tripRuler]?.sym}</span>}
+                          {house&&<span style={{marginLeft:6,color:"rgba(200,175,100,0.35)"}}>H{house}</span>}
+                          {fractalActive&&<span style={{marginLeft:6,color:"#D4AF6A"}}>✦ fractal</span>}
+                          {transit&&<span style={{marginLeft:6,color:"rgba(200,175,100,0.35)"}}>Now: {transit.zodiac?.name}</span>}
+                        </div>
+                      </div>
+                      {np.score!=null&&<div style={{fontFamily:F,fontSize:9,color:dc}}>{np.score}</div>}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
-          {natalPos?.asc==null&&(
-            <div style={{margin:"0 14px 10px",padding:"12px 14px",borderRadius:12,background:"rgba(0,0,0,0.3)",border:"1px solid rgba(200,175,100,0.08)"}}>
-              <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",lineHeight:1.6}}>✦ Enter your birth city in Profile to unlock Ascendant, MC, Part of Fortune, and true sect determination.</div>
+
+          {/* ANGLES & LOTS VIEW */}
+          {view==="angles"&&(()=>{
+            const allLots=natalPos.asc!=null?calcAllLots(
+              natalPos.asc,natalPos.sun?.lon,natalPos.moon?.lon,
+              natalPos.mars?.lon,natalPos.venus?.lon,natalPos.jupiter?.lon,natalPos.saturn?.lon,
+              natalPos.isDayChart??true
+            ):{};
+            const LOT_LABELS={fortune:"Part of Fortune",spirit:"Part of Spirit",eros:"Lot of Eros",necessity:"Lot of Necessity",courage:"Lot of Courage",victory:"Lot of Victory",nemesis:"Lot of Nemesis",exaltation:"Lot of Exaltation"};
+            return(
+              <div>
+                <div className="card" style={{margin:"0 14px 8px"}}>
+                  <div style={L()}>Angles & Nodes</div>
+                  <div style={{marginTop:8}}>
+                    {[
+                      natalPos.asc!=null&&{sym:"AC",label:"Ascendant",lon:natalPos.asc,col:"#D4AF6A",desc:HOUSE_MEANINGS[0]},
+                      natalPos.mc!=null&&{sym:"MC",label:"Midheaven",lon:natalPos.mc,col:"#D4AF6A",desc:HOUSE_MEANINGS[9]},
+                      natalPos.asc!=null&&{sym:"DC",label:"Descendant",lon:norm(natalPos.asc+180),col:"#D4AF6A",desc:HOUSE_MEANINGS[6]},
+                      natalPos.mc!=null&&{sym:"IC",label:"Imum Coeli",lon:norm(natalPos.mc+180),col:"#D4AF6A",desc:HOUSE_MEANINGS[3]},
+                      natalPos.northNode!=null&&{sym:"☊",label:"True North Node",lon:natalPos.northNode,col:"#90C890",desc:"Dragon's Head — increase, growth"},
+                      natalPos.southNode!=null&&{sym:"☋",label:"South Node",lon:natalPos.southNode,col:"#C08080",desc:"Dragon's Tail — release, past"},
+                      natalPos.lilith?.lon!=null&&{sym:"⚸",label:"Black Moon Lilith",lon:natalPos.lilith.lon,col:"#9060A0",desc:"Mean apogee — raw instinct, shadow"},
+                      natalPos.chiron?.lon!=null&&{sym:"⚷",label:"Chiron",lon:natalPos.chiron.lon,col:"#80A080",desc:"Wounded Healer — Saturn/Uranus bridge"},
+                    ].filter(Boolean).map(({sym,label,lon,col,desc})=>{
+                      const z=lonToZodiac(lon),house=cusps?houseOf(lon):null;
+                      return(
+                        <div key={sym} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
+                          <div style={{width:28,height:28,borderRadius:14,background:`${col}15`,border:`1px solid ${col}35`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:col,flexShrink:0}}>{sym}</div>
+                          <div style={{flex:1}}>
+                            <div style={{fontFamily:F,fontSize:11,color:"#C4A870"}}>{label}</div>
+                            <div style={{fontFamily:F,fontSize:8,color:"#5A4020"}}>{z.degree}° {z.name}{house?` · H${house}`:""} · {desc}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {!natalPos.asc&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",padding:"8px 0"}}>Add birth city in Profile to calculate angles.</div>}
+                    <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.2)",marginTop:8}}>
+                      Sect: {natalPos.isDayChart!=null?(natalPos.isDayChart?"☉ Day chart":"☽ Night chart"):"unknown"}
+                      {cusps&&` · ${HOUSE_SYMS.find(h=>h[0]===houseSys)?.[2]||houseSys} houses`}
+                    </div>
+                  </div>
+                </div>
+                {Object.keys(allLots).length>0&&(
+                  <div className="card" style={{margin:"0 14px 8px"}}>
+                    <div style={L()}>Arabic Lots</div>
+                    <div style={{marginTop:8}}>
+                      {Object.entries(allLots).map(([key,lon])=>{
+                        const z=lonToZodiac(lon),house=cusps?houseOf(lon):null;
+                        return(
+                          <div key={key} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                            <div style={{width:26,height:26,borderRadius:13,background:"rgba(144,200,144,0.1)",border:"1px solid rgba(144,200,144,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"#90C890",flexShrink:0}}>⊕</div>
+                            <div style={{flex:1}}>
+                              <div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>{LOT_LABELS[key]||key}</div>
+                              <div style={{fontFamily:F,fontSize:8,color:"#5A4020"}}>{z.degree}° {z.name}{house?` · H${house}`:""}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* DECANS VIEW */}
+          {view==="decans"&&(
+            <div className="card" style={{margin:"0 14px 10px"}}>
+              <div style={L()}>Natal Decan Signatures</div>
+              <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,marginBottom:10,lineHeight:1.6}}>These are the seven faces your planets occupied at birth. When the fractal system lands on these faces, or when transiting planets enter these decans, your personal frequency is activated.</div>
+              {Object.entries(natalPos).filter(([pk])=>P[pk]).map(([pk,np])=>{
+                const pl=P[pk],dc=DIGNITY_COL[np.dignity];
+                const fractalActive=fractal.levels.some(l=>l.idx===np.decanIdx);
+                const transitIn=eph.pos[pk]&&Math.floor(norm(eph.pos[pk].lon)/10)===np.decanIdx;
+                return(
+                  <button key={pk} className="row-btn">
+                    <span style={{fontSize:14,color:pl.col,width:22}}>{pl.sym}</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontFamily:F,fontSize:12,color:"#C4A870"}}>{np.decan.name}</div>
+                      <div style={{fontFamily:F,fontSize:9,color:"#5A4020"}}>{np.zodiac.degree}° {np.decan.sym} {np.decan.sign} · {DIGNITY_LBL[np.dignity].split(" ")[0]}</div>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
+                      <span style={{fontFamily:F,fontSize:7,color:dc,letterSpacing:1}}>{np.dignity.toUpperCase()}</span>
+                      {fractalActive&&<span style={{fontFamily:F,fontSize:7,color:"#D4AF6A",letterSpacing:1}}>FRACTAL ✦</span>}
+                      {transitIn&&<span style={{fontFamily:F,fontSize:7,color:"#5CA85C",letterSpacing:1}}>TRANSIT IN</span>}
+                      {np.isRetro&&<span style={{fontFamily:F,fontSize:7,color:"#9B4040"}}>RETRO</span>}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
+          {/* PROGRESSIONS VIEW */}
+          {view==="prog"&&(()=>{
+            const bd_=natalData?.date?new Date(natalData.date+(natalData.time?"T"+natalData.time:"T12:00")):null;
+            if(!bd_)return <div className="card" style={{margin:"0 14px"}}>Enter birth date to use progressions.</div>;
+            const prog=calcProgressions(bd_,location?.lat??null,location?.lon??null,new Date(progDate));
+            const sa=calcSolarArc(bd_,new Date(progDate),natalPos);
+            return(
+              <div>
+                <div className="card" style={{margin:"0 14px 8px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <div style={L()}>Secondary Progressions</div>
+                    <input type="date" value={progDate} onChange={e=>setProgDate(e.target.value)} style={{fontSize:10,width:130}}/>
+                  </div>
+                  <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",marginBottom:8}}>Age: {prog.ageYears}y · 1 day = 1 year</div>
+                  {Object.entries(prog.pos).filter(([pk])=>P[pk]).map(([pk,np])=>{
+                    const pl=P[pk],natal=natalPos[pk];
+                    const diff=natal?((norm(np.lon-natal.lon+180)-180)).toFixed(1):null;
+                    return(
+                      <div key={pk} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                        <span style={{fontSize:14,color:pl.col,width:20}}>{pl.sym}</span>
+                        <div style={{flex:1}}>
+                          <div style={{fontFamily:F,fontSize:11,color:"#C4A870"}}>{np.zodiac.degree}° {np.zodiac.name}{np.isRetro&&<span style={{color:"#9B4040",fontSize:9}}> ℞</span>}</div>
+                          {diff&&<div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)"}}>Δ {diff}° from natal</div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="card" style={{margin:"0 14px 8px"}}>
+                  <div style={L()}>Solar Arc Directions</div>
+                  <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",marginBottom:8}}>Arc: {sa.arc}°</div>
+                  {Object.entries(sa.directed).filter(([pk])=>P[pk]).map(([pk,dp])=>{
+                    const pl=P[pk];
+                    const isActive=Math.abs(parseFloat(sa.arc)-Math.round(parseFloat(sa.arc)))<0.017;
+                    return(
+                      <div key={pk} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                        <span style={{fontSize:14,color:pl.col,width:20}}>{pl.sym}</span>
+                        <div style={{fontFamily:F,fontSize:11,color:"#C4A870"}}>{lonToZodiac(dp.lon).degree}° {lonToZodiac(dp.lon).name}</div>
+                        {isActive&&<span style={{fontFamily:F,fontSize:7,color:"#5CA85C",letterSpacing:1}}>EXACT</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <NatalWheelChart natalPos={natalPos} outerPos={prog.pos} outerLabel="Prog" cusps={cusps} houseSys={houseSys} onSelectPlanet={setSelPlanet} selPlanet={selPlanet}/>
+              </div>
+            );
+          })()}
+
+          {/* FIRDARIA VIEW */}
+          {view==="firdaria"&&(()=>{
+            const bd_=natalData?.date?new Date(natalData.date+(natalData.time?"T"+natalData.time:"T12:00")):null;
+            if(!bd_)return <div className="card" style={{margin:"0 14px"}}>Enter birth date to use Firdaria.</div>;
+            const isDayChart=natalPos.isDayChart??true;
+            const fd=calcFirdaria(bd_,isDayChart,new Date());
+            const majPl=P[fd.majLord]||{sym:"☊",col:"#90C890",name:fd.majLord};
+            const minPl=P[fd.minLord]||{sym:"☋",col:"#C08080",name:fd.minLord};
+            return(
+              <div>
+                <div className="card" style={{margin:"0 14px 8px"}}>
+                  <div style={L()}>Current Time Lords</div>
+                  <div style={{display:"flex",gap:14,marginTop:10,marginBottom:10}}>
+                    <div style={{flex:1,padding:"10px",borderRadius:10,background:`${majPl.col}10`,border:`1px solid ${majPl.col}30`}}>
+                      <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,marginBottom:4}}>MAJOR LORD</div>
+                      <div style={{fontSize:26,color:majPl.col}}>{majPl.sym}</div>
+                      <div style={{fontFamily:F,fontSize:12,color:majPl.col,marginTop:2}}>{majPl.name}</div>
+                      <div style={{height:3,borderRadius:2,background:`rgba(200,175,100,0.1)`,marginTop:8}}><div style={{height:3,borderRadius:2,background:majPl.col,width:`${fd.pct.toFixed(0)}%`}}/></div>
+                      <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.3)",marginTop:3}}>{fd.pct.toFixed(0)}% elapsed</div>
+                    </div>
+                    <div style={{flex:1,padding:"10px",borderRadius:10,background:`${minPl.col}10`,border:`1px solid ${minPl.col}30`}}>
+                      <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,marginBottom:4}}>MINOR LORD</div>
+                      <div style={{fontSize:26,color:minPl.col}}>{minPl.sym}</div>
+                      <div style={{fontFamily:F,fontSize:12,color:minPl.col,marginTop:2}}>{minPl.name}</div>
+                    </div>
+                  </div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)"}}>{isDayChart?"Day chart sequence":"Night chart sequence"}</div>
+                </div>
+                <div className="card" style={{margin:"0 14px 8px"}}>
+                  <div style={L()}>Period Timeline</div>
+                  <div style={{marginTop:8}}>
+                    {fd.periods.map((period,i)=>{
+                      const pl=P[period.lord]||{sym:"☊",col:"#90C890",name:period.lord};
+                      const isPast=period.end<new Date();
+                      return(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(200,175,100,0.04)",opacity:isPast?0.4:1}}>
+                          <span style={{fontSize:15,color:period.isCurrent?"#D4AF6A":pl.col,width:22}}>{pl.sym}</span>
+                          <div style={{flex:1}}>
+                            <div style={{fontFamily:F,fontSize:11,color:period.isCurrent?"#D4AF6A":"#C4A870"}}>{pl.name} {period.isCurrent&&<span style={{fontSize:7,color:"#5CA85C",letterSpacing:1}}>← NOW</span>}</div>
+                            <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)"}}>{period.start.getFullYear()}–{period.end.getFullYear()} · {period.years}yr</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* RETURNS VIEW */}
+          {view==="returns"&&(()=>{
+            const bd_=natalData?.date?new Date(natalData.date+(natalData.time?"T"+natalData.time:"T12:00")):null;
+            if(!bd_||!natalPos.sun)return <div className="card" style={{margin:"0 14px"}}>Enter birth date to calculate returns.</div>;
+            const sr=calcSolarReturn(natalPos.sun.lon,srYear,location?.lat??null,location?.lon??null);
+            const lr=natalPos.moon?calcLunarReturn(natalPos.moon.lon,new Date(),location?.lat??null,location?.lon??null):null;
+            return(
+              <div>
+                <div className="card" style={{margin:"0 14px 8px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <div style={L()}>Solar Return</div>
+                    <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                      <button onClick={()=>setSrYear(y=>y-1)} style={{background:"none",border:"1px solid rgba(200,175,100,0.2)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:10,padding:"2px 7px",cursor:"pointer"}}>‹</button>
+                      <span style={{fontFamily:F,fontSize:11,color:GOLD}}>{srYear}</span>
+                      <button onClick={()=>setSrYear(y=>y+1)} style={{background:"none",border:"1px solid rgba(200,175,100,0.2)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:10,padding:"2px 7px",cursor:"pointer"}}>›</button>
+                    </div>
+                  </div>
+                  {sr?(
+                    <>
+                      <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.6)",marginBottom:8}}>{sr.date.toLocaleDateString()} {sr.date.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})} UTC{sr.asc!=null&&` · ASC ${lonToZodiac(sr.asc).degree}° ${lonToZodiac(sr.asc).name}`}</div>
+                      {Object.entries(sr.pos).filter(([pk])=>P[pk]).map(([pk,np])=>{
+                        const pl=P[pk];
+                        return(<div key={pk} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                          <span style={{fontSize:13,color:pl.col,width:20}}>{pl.sym}</span>
+                          <div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>{np.zodiac.degree}° {np.zodiac.name}</div>
+                        </div>);
+                      })}
+                    </>
+                  ):<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)"}}>Could not compute solar return.</div>}
+                </div>
+                {sr&&<NatalWheelChart natalPos={natalPos} outerPos={sr.pos} outerLabel="SR" cusps={cusps} houseSys={houseSys} onSelectPlanet={setSelPlanet} selPlanet={selPlanet}/>}
+                {lr&&(
+                  <div className="card" style={{margin:"8px 14px 8px"}}>
+                    <div style={L()}>Next Lunar Return</div>
+                    <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.6)",marginTop:6}}>{lr.date.toLocaleDateString()} {lr.date.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})} UTC{lr.asc!=null&&` · ASC ${lonToZodiac(lr.asc).degree}° ${lonToZodiac(lr.asc).name}`}</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:8}}>
+                      {Object.entries(lr.pos).filter(([pk])=>P[pk]).map(([pk,np])=>{
+                        const pl=P[pk];
+                        return(<div key={pk} style={{fontFamily:F,fontSize:9,color:"#C4A870"}}><span style={{color:pl.col}}>{pl.sym}</span> {np.zodiac.degree}° {np.zodiac.name}</div>);
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* SYNASTRY VIEW */}
+          {view==="synastry"&&(()=>{
+            const savePerson=()=>{
+              if(!newPerson.name||!newPerson.date)return;
+              const bd2=new Date(newPerson.date+(newPerson.time?"T"+newPerson.time:"T12:00"));
+              const loc2=newPerson.lat&&newPerson.lon?{lat:newPerson.lat,lon:newPerson.lon}:null;
+              const pPos=calcNatal(bd2,loc2);
+              const entry={...newPerson,id:Date.now(),pos:pPos};
+              const updated=[...people,entry];
+              setPeople(updated);savePeople(updated);
+              setSynPerson(entry);setShowAddPerson(false);
+              setNewPerson({name:"",date:"",time:"",city:"",lat:null,lon:null});
+            };
+            const removePerson=(id)=>{const updated=people.filter(p=>p.id!==id);setPeople(updated);savePeople(updated);if(synPerson?.id===id)setSynPerson(null);};
+            return(
+              <div>
+                <div className="card" style={{margin:"0 14px 8px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <div style={L()}>People Library</div>
+                    <button onClick={()=>setShowAddPerson(v=>!v)} style={{padding:"5px 10px",borderRadius:8,border:"1px solid rgba(200,175,100,0.3)",background:"rgba(200,175,100,0.06)",color:GOLD,fontFamily:F,fontSize:9,cursor:"pointer"}}>+ Add</button>
+                  </div>
+                  {showAddPerson&&(
+                    <div style={{background:"rgba(8,5,22,0.8)",borderRadius:8,padding:10,marginBottom:10,border:"1px solid rgba(200,175,100,0.1)"}}>
+                      <div style={{display:"flex",gap:8,marginBottom:6}}>
+                        <div style={{flex:2}}><div style={L("rgba(200,175,100,0.4)",7)}>Name</div><input value={newPerson.name} onChange={e=>setNewPerson(p=>({...p,name:e.target.value}))} style={{width:"100%",marginTop:4,fontSize:11}} placeholder="Name"/></div>
+                      </div>
+                      <div style={{display:"flex",gap:8,marginBottom:8}}>
+                        <div style={{flex:2}}><div style={L("rgba(200,175,100,0.4)",7)}>Date</div><input type="date" value={newPerson.date} onChange={e=>setNewPerson(p=>({...p,date:e.target.value}))} style={{width:"100%",marginTop:4,fontSize:11}}/></div>
+                        <div style={{flex:1}}><div style={L("rgba(200,175,100,0.4)",7)}>Time</div><input type="time" value={newPerson.time} onChange={e=>setNewPerson(p=>({...p,time:e.target.value}))} style={{width:"100%",marginTop:4,fontSize:11}}/></div>
+                      </div>
+                      <button onClick={savePerson} disabled={!newPerson.name||!newPerson.date} style={{padding:"7px 14px",borderRadius:8,background:"rgba(212,175,106,0.1)",border:"1px solid rgba(212,175,106,0.3)",color:GOLD,fontFamily:F,fontSize:9,cursor:"pointer"}}>Save Person</button>
+                    </div>
+                  )}
+                  {people.length===0&&!showAddPerson&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",padding:"8px 0"}}>No people saved yet. Add someone to compare charts.</div>}
+                  {people.map(person=>(
+                    <div key={person.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
+                      <button onClick={()=>setSynPerson(synPerson?.id===person.id?null:person)} style={{flex:1,background:"none",border:"none",cursor:"pointer",textAlign:"left",padding:0}}>
+                        <div style={{fontFamily:F,fontSize:12,color:synPerson?.id===person.id?"#D4AF6A":"#C4A870"}}>{person.name}</div>
+                        <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)"}}>{person.date}{person.time?" "+person.time:""}</div>
+                      </button>
+                      <button onClick={()=>removePerson(person.id)} style={{background:"none",border:"none",color:"rgba(200,100,100,0.4)",fontSize:12,cursor:"pointer",padding:4}}>✕</button>
+                    </div>
+                  ))}
+                </div>
+                {synPerson&&synPerson.pos&&(
+                  <>
+                    <div style={{textAlign:"center",fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)",marginBottom:4}}>
+                      Inner: You · Outer: {synPerson.name}
+                    </div>
+                    <NatalWheelChart natalPos={natalPos} outerPos={synPerson.pos} outerLabel={synPerson.name} cusps={cusps} houseSys={houseSys} onSelectPlanet={setSelPlanet} selPlanet={selPlanet}/>
+                    <div className="card" style={{margin:"8px 14px"}}>
+                      <div style={L()}>Synastry Aspects</div>
+                      <div style={{marginTop:8}}>
+                        {(()=>{
+                          const aspList=[];
+                          const myKeys=["sun","moon","mercury","venus","mars","jupiter","saturn"];
+                          const theirKeys=["sun","moon","mercury","venus","mars","jupiter","saturn"];
+                          const ASP_DEF=[{n:"Conj",a:0,orb:8},{n:"Opp",a:180,orb:8},{n:"Trine",a:120,orb:6},{n:"Square",a:90,orb:6},{n:"Sext",a:60,orb:4}];
+                          for(const mk of myKeys)for(const tk of theirKeys){
+                            if(mk===tk)continue;
+                            const ml=natalPos[mk]?.lon,tl=synPerson.pos[tk]?.lon;
+                            if(ml==null||tl==null)continue;
+                            const diff=Math.abs(((norm(ml-tl)+180)%360)-180);
+                            for(const asp of ASP_DEF){
+                              if(Math.abs(diff-asp.a)<asp.orb){
+                                const benefic=(mk==="venus"||mk==="jupiter"||tk==="venus"||tk==="jupiter")&&asp.n!=="Square"&&asp.n!=="Opp";
+                                aspList.push({mk,tk,asp:asp.n,diff:(diff-asp.a).toFixed(1),benefic});
+                              }
+                            }
+                          }
+                          return aspList.slice(0,20).map((a,i)=>(
+                            <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                              <span style={{fontSize:12,color:P[a.mk]?.col}}>{P[a.mk]?.sym}</span>
+                              <span style={{fontFamily:F,fontSize:8,color:a.benefic?"#5CA85C":"#D24B31"}}>{a.asp}</span>
+                              <span style={{fontSize:12,color:P[a.tk]?.col}}>{P[a.tk]?.sym}</span>
+                              <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginLeft:"auto"}}>±{a.diff}°</span>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* MIDPOINTS VIEW */}
+          {view==="midpoints"&&(()=>{
+            const mp=getMidpoints(natalPos);
+            const jd=natalData?.date?dateToJD(new Date(natalData.date+(natalData.time?"T"+natalData.time:"T12:00"))):dateToJD(new Date());
+            const {decls,aspects:declAsp}=getDeclAspects(natalPos,jd);
+            return(
+              <div>
+                <div className="card" style={{margin:"0 14px 8px"}}>
+                  <div style={L()}>Midpoints</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginBottom:8}}>Stimulated midpoints (planet within 1.5°) highlighted</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {mp.map((pair,i)=>{
+                      const active=pair.activated.length>0;
+                      return(
+                        <div key={i} style={{padding:"4px 8px",borderRadius:6,border:`1px solid ${active?"rgba(200,175,100,0.3)":"rgba(200,175,100,0.08)"}`,background:active?"rgba(200,175,100,0.06)":"transparent"}}>
+                          <div style={{fontFamily:F,fontSize:8,color:active?GOLD:"rgba(200,175,100,0.4)"}}>
+                            {P[pair.a]?.sym}{P[pair.b]?.sym} {pair.zodiacNear.degree}°{pair.zodiacNear.sym}
+                          </div>
+                          {active&&<div style={{fontFamily:F,fontSize:7,color:"#5CA85C"}}>{pair.activated.map(k=>P[k]?.sym).join("")} ✦</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="card" style={{margin:"0 14px 8px"}}>
+                  <div style={L()}>Declinations</div>
+                  <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:8}}>
+                    {Object.entries(decls).map(([pk,d])=>(
+                      <div key={pk} style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.6)"}}>
+                        <span style={{color:P[pk]?.col}}>{P[pk]?.sym}</span> {d>0?"+":""}{parseFloat(d).toFixed(1)}°
+                      </div>
+                    ))}
+                  </div>
+                  {declAsp.length>0&&(
+                    <div style={{marginTop:8}}>
+                      <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",marginBottom:6}}>Parallels & Contra-Parallels</div>
+                      {declAsp.map((a,i)=>(
+                        <div key={i} style={{display:"flex",gap:8,padding:"4px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                          <span style={{fontSize:12,color:P[a.p1]?.col}}>{P[a.p1]?.sym}</span>
+                          <span style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)"}}>{a.type}</span>
+                          <span style={{fontSize:12,color:P[a.p2]?.col}}>{P[a.p2]?.sym}</span>
+                          <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginLeft:"auto"}}>{a.d1}° / {a.d2}°</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
         </>
       )}
       {!natalPos&&<div style={{margin:"0 14px",padding:"40px 20px",textAlign:"center"}}><div style={{fontSize:40,marginBottom:14,opacity:0.2}}>☽ ☉ ♄</div><div style={{fontFamily:F,fontSize:13,color:"#5A4020",fontStyle:"italic",lineHeight:1.9}}>Enter your birth date to unlock personal resonance — the layer where every timing system in this app is calibrated to your natal frequency.</div></div>}
@@ -2241,6 +3254,291 @@ function OraclePanel({open,onClose,context,profile}){
           <button onClick={sendFollow} disabled={!input.trim()||loading} style={{padding:"0 12px",borderRadius:10,background:input.trim()?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(input.trim()?"rgba(212,175,106,0.28)":"rgba(200,175,100,0.08)"),fontFamily:F,fontSize:9,color:input.trim()?"#D4AF6A":"#4A3020",letterSpacing:1,cursor:input.trim()?"pointer":"default",height:36}}>ASK</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TRANSITS SCREEN (Phase 5b)
+// ═══════════════════════════════════════════════════════════════════════
+function TransitsScreen({natalPos,now}){
+  const [days,setDays]=useState(90);
+  const [hits,setHits]=useState(null);
+  const [running,setRunning]=useState(false);
+  const [filter,setFilter]=useState("all");
+
+  const run=useCallback(()=>{
+    if(!natalPos){setHits([]);return;}
+    setRunning(true);
+    setTimeout(()=>{
+      try{const h=scanTransits(natalPos,now,days);setHits(h);}catch(e){setHits([]);}
+      setRunning(false);
+    },50);
+  },[natalPos,now,days]);
+
+  const fmtDate=(d)=>{
+    const diff=Math.round((d-now)/(86400000));
+    return d.toLocaleDateString([],{month:"short",day:"numeric"})+" ("+(diff===0?"today":diff===1?"tmrw":diff+"d")+")";
+  };
+
+  const PLANET_FILTER=["all","moon","sun","mercury","venus","mars","jupiter","saturn"];
+  const filtered=hits?hits.filter(h=>filter==="all"||h.tp===filter):null;
+  const BENEFIC_ASPECTS=["Trine","Sextile","Conjunction"];
+
+  return(
+    <div style={{flex:1,overflowY:"auto",paddingBottom:20}}>
+      <div style={{padding:"16px 18px 10px"}}>
+        <div style={L()}>Transit Hit List</div>
+        <div style={T(20)}>Upcoming Sky–Natal Contacts</div>
+      </div>
+      {!natalPos&&<div className="card" style={{margin:"0 14px"}}><div style={{fontFamily:F,fontSize:11,color:"rgba(200,175,100,0.4)"}}>Enter natal chart data to calculate transits.</div></div>}
+      {natalPos&&(
+        <>
+          <div style={{padding:"0 14px 10px",display:"flex",gap:8,alignItems:"center"}}>
+            <div style={{display:"flex",gap:4}}>
+              {[30,90,365].map(d=>(
+                <button key={d} onClick={()=>setDays(d)} style={{padding:"5px 10px",borderRadius:7,border:`1px solid ${days===d?"rgba(200,175,100,0.4)":"rgba(200,175,100,0.1)"}`,background:days===d?"rgba(200,175,100,0.08)":"transparent",color:days===d?GOLD:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:9,cursor:"pointer"}}>{d}d</button>
+              ))}
+            </div>
+            <button onClick={run} disabled={running} style={{marginLeft:"auto",padding:"6px 14px",borderRadius:8,background:"rgba(212,175,106,0.1)",border:"1px solid rgba(212,175,106,0.3)",color:GOLD,fontFamily:F,fontSize:9,cursor:running?"default":"pointer",opacity:running?0.6:1}}>
+              {running?"Scanning…":"▶ Scan"}
+            </button>
+          </div>
+          {/* Planet filter */}
+          {hits&&(
+            <div style={{overflowX:"auto",padding:"0 14px 8px"}}>
+              <div style={{display:"flex",gap:4,minWidth:"max-content"}}>
+                {PLANET_FILTER.map(f=>(
+                  <button key={f} onClick={()=>setFilter(f)} style={{padding:"4px 9px",borderRadius:6,border:`1px solid ${filter===f?"rgba(200,175,100,0.4)":"rgba(200,175,100,0.08)"}`,background:filter===f?"rgba(200,175,100,0.08)":"transparent",color:filter===f?GOLD:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:9,cursor:"pointer"}}>
+                    {f==="all"?"All":(P[f]?.sym+" "+P[f]?.name)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {hits===null&&<div style={{padding:"30px",textAlign:"center",fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.3)"}}>Press Scan to calculate transits</div>}
+          {filtered&&filtered.length===0&&<div style={{padding:"20px 14px",fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.3)"}}>No transits found for this filter.</div>}
+          {filtered&&filtered.length>0&&(
+            <div className="card" style={{margin:"0 14px"}}>
+              {filtered.map((hit,i)=>{
+                const tp=P[hit.tp],np2=P[hit.np];
+                const isBenefic=BENEFIC_ASPECTS.includes(hit.asp);
+                return(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                    <div style={{width:42,flexShrink:0}}>
+                      <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.4)"}}>{hit.date.toLocaleDateString([],{month:"short",day:"numeric"})}</div>
+                      <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.3)"}}>{hit.date.toLocaleDateString([],{weekday:"short"})}</div>
+                    </div>
+                    <span style={{fontSize:14,color:tp?.col||GOLD}}>{tp?.sym||hit.tp}</span>
+                    <div style={{flex:1}}>
+                      <div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>
+                        {tp?.name||hit.tp} {hit.asp} natal {np2?.name||hit.np}
+                      </div>
+                      <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.3)"}}>{fmtDate(hit.date)}</div>
+                    </div>
+                    <span style={{fontFamily:F,fontSize:7,color:isBenefic?"#5CA85C":"#C08080",letterSpacing:1}}>{isBenefic?"✦":""}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// EPHEMERIS SCREEN (Phase 5e)
+// ═══════════════════════════════════════════════════════════════════════
+function EphemerisScreen({now}){
+  const [tab,setTab]=useState("ingresses");
+  const [data,setData]=useState(null);
+  const [running,setRunning]=useState(false);
+  const [months,setMonths]=useState(6);
+  const [graphMonth,setGraphMonth]=useState(now.getMonth());
+  const [graphYear,setGraphYear]=useState(now.getFullYear());
+
+  const run=useCallback(()=>{
+    setRunning(true);
+    setTimeout(()=>{
+      try{
+        const ing=scanIngresses(now,180);
+        const sta=scanStations(now,365);
+        const ecl=scanEclipses(now,months);
+        setData({ing,sta,ecl});
+      }catch(e){console.error(e);setData({ing:[],sta:[],ecl:[]});}
+      setRunning(false);
+    },50);
+  },[now,months]);
+
+  const GRAPH_PLANETS=["sun","moon","mercury","venus","mars","jupiter","saturn"];
+  const GRAPH_COLORS={sun:"#E8C060",moon:"#B0B8D0",mercury:"#88AA88",venus:"#C09870",mars:"#C05050",jupiter:"#A080C0",saturn:"#6080A0"};
+
+  // Graphic ephemeris: compute planet positions for each day of the month
+  const graphData=useMemo(()=>{
+    const year=graphYear,month=graphMonth;
+    const daysInMonth=new Date(year,month+1,0).getDate();
+    const result={};
+    GRAPH_PLANETS.forEach(p=>{result[p]=[];});
+    for(let d=1;d<=daysInMonth;d++){
+      const jd=dateToJD(new Date(year,month,d,12,0,0));
+      GRAPH_PLANETS.forEach(p=>{result[p].push(norm(planetLon(p,jd)));});
+    }
+    return{result,daysInMonth,year,month};
+  },[graphYear,graphMonth]);
+
+  const MONTH_NAMES=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+  return(
+    <div style={{flex:1,overflowY:"auto",paddingBottom:20}}>
+      <div style={{padding:"16px 18px 10px"}}>
+        <div style={L()}>Ephemeris</div>
+        <div style={T(20)}>Ingresses · Stations · Eclipses · Graphic</div>
+      </div>
+      <div style={{display:"flex",gap:6,padding:"0 14px 10px",overflowX:"auto"}}>
+        {[["ingresses","Ingresses"],["stations","Stations"],["eclipses","Eclipses"],["graphic","Graphic Eph"]].map(([id,lbl])=>(
+          <button key={id} onClick={()=>setTab(id)} style={{padding:"5px 12px",borderRadius:8,border:`1px solid ${tab===id?"rgba(200,175,100,0.4)":"rgba(200,175,100,0.1)"}`,background:tab===id?"rgba(200,175,100,0.08)":"transparent",color:tab===id?GOLD:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer",whiteSpace:"nowrap"}}>{lbl}</button>
+        ))}
+      </div>
+
+      {tab!=="graphic"&&(
+        <div style={{padding:"0 14px 10px",display:"flex",gap:8,alignItems:"center"}}>
+          <button onClick={run} disabled={running} style={{padding:"6px 14px",borderRadius:8,background:"rgba(212,175,106,0.1)",border:"1px solid rgba(212,175,106,0.3)",color:GOLD,fontFamily:F,fontSize:9,cursor:running?"default":"pointer",opacity:running?0.6:1}}>
+            {running?"Calculating…":"▶ Calculate"}
+          </button>
+          {!data&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)"}}>Press Calculate to load data</div>}
+        </div>
+      )}
+
+      {tab==="ingresses"&&data&&(
+        <div className="card" style={{margin:"0 14px"}}>
+          <div style={L()}>Sign Ingresses — next 6 months</div>
+          <div style={{marginTop:8}}>
+            {data.ing.slice(0,40).map((ing,i)=>{
+              const pl=P[ing.planet];
+              return(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                  <span style={{fontSize:14,color:pl?.col||GOLD,width:22}}>{pl?.sym||ing.planet}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>{pl?.name||ing.planet} enters {ing.to}</div>
+                    <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)"}}>{ing.date.toLocaleDateString([],{weekday:"short",month:"short",day:"numeric",year:"numeric"})}</div>
+                  </div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)"}}>{Math.round((ing.date-now)/86400000)}d</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {tab==="stations"&&data&&(
+        <div className="card" style={{margin:"0 14px"}}>
+          <div style={L()}>Retrograde Stations — next 12 months</div>
+          <div style={{marginTop:8}}>
+            {data.sta.map((st,i)=>{
+              const pl=P[st.planet];
+              const isRx=st.type==="Rx";
+              return(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                  <span style={{fontSize:14,color:pl?.col||GOLD,width:22}}>{pl?.sym||st.planet}</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>
+                      {pl?.name} {isRx?"Stations Retrograde ℞":"Stations Direct ♐"}
+                    </div>
+                    <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)"}}>{st.date.toLocaleDateString([],{weekday:"short",month:"short",day:"numeric",year:"numeric"})} · {st.zodiac.degree}° {st.zodiac.name}</div>
+                  </div>
+                  <span style={{fontFamily:F,fontSize:8,color:isRx?"#C08080":"#5CA85C",letterSpacing:1}}>{isRx?"℞":"D"}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {tab==="eclipses"&&data&&(
+        <div className="card" style={{margin:"0 14px"}}>
+          <div style={L()}>Eclipse Calendar — next {months} months</div>
+          <div style={{display:"flex",gap:4,marginTop:6,marginBottom:10}}>
+            {[3,6,12,24].map(m=>(
+              <button key={m} onClick={()=>setMonths(m)} style={{padding:"3px 8px",borderRadius:6,border:`1px solid ${months===m?"rgba(200,175,100,0.4)":"rgba(200,175,100,0.1)"}`,background:months===m?"rgba(200,175,100,0.08)":"transparent",color:months===m?GOLD:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:8,cursor:"pointer"}}>{m}mo</button>
+            ))}
+          </div>
+          {data.ecl.length===0&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)"}}>No eclipses found in this period.</div>}
+          {data.ecl.map((ecl,i)=>{
+            const isSolar=ecl.type==="Solar";
+            return(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid rgba(200,175,100,0.06)"}}>
+                <div style={{width:34,height:34,borderRadius:17,background:isSolar?"rgba(230,200,60,0.1)":"rgba(100,120,180,0.1)",border:`1px solid ${isSolar?"rgba(230,200,60,0.3)":"rgba(100,120,180,0.3)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{isSolar?"☉":"☽"}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:F,fontSize:11,color:"#C4A870"}}>{ecl.type} Eclipse {ecl.total?"(Total/Annular)":"(Partial/Penumbral)"}</div>
+                  <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)"}}>{ecl.zodiac.degree}° {ecl.zodiac.name}</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)"}}>{ecl.date.toLocaleDateString([],{weekday:"short",month:"long",day:"numeric",year:"numeric"})}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {tab==="graphic"&&(()=>{
+        const {result,daysInMonth}=graphData;
+        const W=390,H=260,pad={l:28,r:8,t:10,b:20};
+        const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+        const xOf=(d)=>pad.l+((d-1)/(daysInMonth-1))*cw;
+        const yOf=(lon)=>pad.t+ch*(1-lon/360);
+        // Detect large jumps (0/360 wrap) and split into segments
+        const pathFor=(lons)=>{
+          let d="";let first=true;
+          for(let i=0;i<lons.length;i++){
+            const x=xOf(i+1),y=yOf(lons[i]);
+            if(first){d+=`M${x.toFixed(1)},${y.toFixed(1)}`;first=false;}
+            else{
+              const prev=lons[i-1];
+              if(Math.abs(lons[i]-prev)>180)d+=`M${x.toFixed(1)},${y.toFixed(1)}`;
+              else d+=`L${x.toFixed(1)},${y.toFixed(1)}`;
+            }
+          }
+          return d;
+        };
+        return(
+          <div style={{padding:"0 14px"}}>
+            <div style={{display:"flex",gap:4,alignItems:"center",marginBottom:8}}>
+              <button onClick={()=>{let m=graphMonth-1,y=graphYear;if(m<0){m=11;y--;}setGraphMonth(m);setGraphYear(y);}} style={{background:"none",border:"1px solid rgba(200,175,100,0.2)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:11,padding:"2px 8px",cursor:"pointer"}}>‹</button>
+              <span style={{fontFamily:F,fontSize:11,color:GOLD,flex:1,textAlign:"center"}}>{MONTH_NAMES[graphMonth]} {graphYear}</span>
+              <button onClick={()=>{let m=graphMonth+1,y=graphYear;if(m>11){m=0;y++;}setGraphMonth(m);setGraphYear(y);}} style={{background:"none",border:"1px solid rgba(200,175,100,0.2)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:11,padding:"2px 8px",cursor:"pointer"}}>›</button>
+            </div>
+            <div style={{background:"rgba(4,4,16,0.9)",borderRadius:12,border:"1px solid rgba(200,175,100,0.1)",padding:4}}>
+              <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{display:"block"}}>
+                {/* Y axis labels (sign boundaries) */}
+                {[0,30,60,90,120,150,180,210,240,270,300,330,360].map(deg=>{
+                  const y=yOf(deg);const si=Math.floor(deg/30)%12;
+                  return(<g key={deg}><line x1={pad.l} y1={y} x2={W-pad.r} y2={y} stroke="rgba(200,175,100,0.06)" strokeWidth={0.5}/><text x={pad.l-2} y={y+3} textAnchor="end" fill="rgba(200,175,100,0.25)" fontSize={7}>{SIGN_SYMS[si]}</text></g>);
+                })}
+                {/* Today line */}
+                {(()=>{const today=new Date(graphYear,graphMonth,now.getDate());if(today.getMonth()===graphMonth&&today.getFullYear()===graphYear){const x=xOf(now.getDate());return<line x1={x} y1={pad.t} x2={x} y2={H-pad.b} stroke="rgba(200,175,100,0.2)" strokeWidth={0.8} strokeDasharray="3,3"/>;}return null;})()}
+                {/* Planet lines */}
+                {GRAPH_PLANETS.map(p=>(
+                  <path key={p} d={pathFor(result[p])} fill="none" stroke={GRAPH_COLORS[p]} strokeWidth={1.2} opacity={0.85}/>
+                ))}
+                {/* X axis day labels */}
+                {[1,5,10,15,20,25,daysInMonth].map(d=>(
+                  <text key={d} x={xOf(d)} y={H-pad.b+12} textAnchor="middle" fill="rgba(200,175,100,0.3)" fontSize={7}>{d}</text>
+                ))}
+              </svg>
+            </div>
+            {/* Legend */}
+            <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:8}}>
+              {GRAPH_PLANETS.map(p=>(
+                <div key={p} style={{display:"flex",alignItems:"center",gap:3}}>
+                  <div style={{width:14,height:2,background:GRAPH_COLORS[p],borderRadius:1}}/>
+                  <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.5)"}}>{P[p]?.sym}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -3198,7 +4496,9 @@ export default function App(){
           {tab==="fractal" &&<FractalScreen fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode}/>}
           {tab==="planets" &&<PlanetsScreen eph={eph} natalPos={natalPos} now={now}/>}
           {tab==="stars"   &&<StarsScreen   eph={eph} natalPos={natalPos}/>}
-          {tab==="natal"   &&<NatalScreen   natalData={natalData} setNatalData={setNatalData} eph={eph} fractal={fractal} natalPos={natalPos}/>}
+          {tab==="natal"   &&<NatalScreen   natalData={natalData} setNatalData={setNatalData} eph={eph} fractal={fractal} natalPos={natalPos} profile={profile}/>}
+          {tab==="transits"&&<TransitsScreen natalPos={natalPos} now={now}/>}
+          {tab==="ephemeris"&&<EphemerisScreen now={now}/>}
           {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph}/>}
           {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}
           {tab==="journal" &&<JournalScreen  profile={profile}/>}
