@@ -437,6 +437,29 @@ function fmtTime(s){
   if(s>=60){const m=Math.floor(s/60),sc=Math.floor(s%60);return`${m}m ${sc}s`;}
   return`${s.toFixed(1)}s`;
 }
+function fmtWindowTime(d,level){
+  if(level<=2)return d.toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+  if(level===3)return d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit",second:"2-digit"});
+  return d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit",second:"2-digit"});
+}
+function calcWindowBounds(fractal,now){
+  return fractal.levels.map(lev=>({
+    start:new Date(now.getTime()-lev.secIn*1000),
+    end:new Date(now.getTime()+(lev.dur-lev.secIn)*1000),
+  }));
+}
+function calcL2Forecast(fractal,now,mode){
+  const l1=fractal.levels[0];
+  const l1StartMs=now.getTime()-l1.secIn*1000;
+  const currentSlot=Math.floor(l1.secIn/L_DUR[1]);
+  const forecast=[];
+  for(let slot=currentSlot+1;slot<36;slot++){
+    const startMs=l1StartMs+slot*L_DUR[1]*1000;
+    const decIdx=mode==="A"?slot:(slot+fractal.l1Idx)%36;
+    forecast.push({decan:DECANS[decIdx],decIdx,start:new Date(startMs),end:new Date(startMs+L_DUR[1]*1000),isCoherent:decIdx===fractal.l1Idx});
+  }
+  return forecast;
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 // EPHEMERIS HOOK
@@ -1055,6 +1078,12 @@ input:focus,textarea:focus{border-color:rgba(var(--tint-rgb),0.45);box-shadow:0 
 @keyframes control-expand{0%{opacity:0;transform:scale(0.75) translateY(8px)}65%{transform:scale(1.04) translateY(-2px)}100%{opacity:1;transform:scale(1) translateY(0)}}
 @keyframes live-dot{0%,100%{opacity:0.4}50%{opacity:1}}
 @keyframes particle{0%{transform:translateY(0) translateX(0) scale(1);opacity:0.5}100%{transform:translateY(-120px) translateX(20px) scale(0.3);opacity:0}}
+@keyframes l4-pulse{0%,100%{box-shadow:0 0 0 0 rgba(var(--tint-rgb),0),inset 0 1px 0 rgba(255,255,255,0.06)}50%{box-shadow:0 0 22px 2px rgba(var(--tint-rgb),0.28),inset 0 1px 0 rgba(255,255,255,0.12)}}
+@keyframes coherence-glow{0%,100%{box-shadow:0 0 0 0 rgba(212,175,106,0)}50%{box-shadow:0 0 28px 4px rgba(212,175,106,0.3)}}
+@keyframes fractal-in{0%{opacity:0;transform:translateX(-8px)}100%{opacity:1;transform:translateX(0)}}
+.l4-active{animation:l4-pulse 18.79s linear infinite;}
+.coherence-full{animation:coherence-glow 3s ease-in-out infinite;}
+.fractal-level{animation:fractal-in 0.25s ease both;}
 
 /* ── Command Palette ── */
 .cmd-overlay{animation:cmd-in 0.15s ease;}
@@ -3206,68 +3235,217 @@ function NatalScreen({natalData,setNatalData,eph,fractal,natalPos,profile}){
 // ═══════════════════════════════════════════════════════════════════════
 // FRACTAL SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-function FractalScreen({fractal,natalPos,mode,setMode}){
-  const [selLevel,setSelLevel]=useState(null);
-  const {levels,cosmicCoherence,secToThreshold}=fractal;
-  const personalDecans=natalPos?Object.entries(natalPos).filter(([pk])=>P[pk]).map(([,np])=>np.decanIdx):[];
-  const L_META=[
-    {w:"Atziluth",p:"Election · Talismanic harvest"},
-    {w:"Beriah",p:"Ritual design · Working day"},
-    {w:"Yetzirah",p:"Single act · Meditation"},
-    {w:"Assiah · The Breath",p:"One vowel · One breath"}
-  ];
-  const L_DUR_L=["~10.1 days","~6.76 hours","~11.3 min","~18.8 sec"];
+const VOWEL_SOUNDS={"moon":"AH","mercury":"EH","venus":"AY","sun":"EE","mars":"OH","jupiter":"EUW","saturn":"OHW"};
+const L_META=[
+  {w:"Atziluth",dur:"~10.1 days",use:"Electional window · Talismanic harvest"},
+  {w:"Beriah",dur:"~6.76 hours",use:"Ritual design · Working day"},
+  {w:"Yetzirah",dur:"~11.3 min",use:"Single act · Focused meditation"},
+  {w:"Assiah",dur:"~18.8 sec",use:"One vowel · One breath · One face"},
+];
+const ROMAN=["I","II","III","IV"];
+
+function FractalScreen({fractal,natalPos,mode,setMode,now}){
+  const [showForecast,setShowForecast]=useState(false);
+  const {levels,cosmicCoherence,secToThreshold,l1Idx}=fractal;
+  const personalDecans=useMemo(()=>natalPos?Object.entries(natalPos).filter(([pk])=>P[pk]).map(([,np])=>np.decanIdx):[]
+  ,[natalPos]);
+  const bounds=useMemo(()=>now?calcWindowBounds(fractal,now):null,[fractal,now]);
+  const forecast=useMemo(()=>now?calcL2Forecast(fractal,now,mode):[],[fractal,now,mode]);
+  const isFullCoherence=cosmicCoherence===4;
+
   return (
-    <div style={{flex:1,overflowY:"auto",paddingBottom:20}}>
+    <div style={{flex:1,overflowY:"auto",paddingBottom:32}}>
+
+      {/* Header */}
       <div style={{padding:"16px 18px 10px"}}>
-        <div style={L()}>Fractal Decan System</div>
-        <div style={T(20)}>The Nested Faces</div>
-        <div style={{fontFamily:F,fontSize:10,color:"#6A5030",fontStyle:"italic",marginTop:3}}>36⁴ = 1,679,616 divisions of the year · Four Kabbalistic worlds</div>
+        <div style={L()}>Fractal Timing</div>
+        <div style={T(20)}>Nested Decan Windows</div>
+        <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",fontStyle:"italic",marginTop:3,letterSpacing:0.5}}>36⁴ = 1,679,616 divisions of the tropical year</div>
       </div>
-      <div style={{padding:"0 14px 10px",display:"flex",gap:8}}>
-        {["A","B"].map(m=>(
-          <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:"10px 0",borderRadius:12,background:mode===m?"rgba(212,175,106,0.1)":"rgba(8,5,22,0.5)",border:`1px solid ${mode===m?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.09)"}`,cursor:"pointer"}}>
-            <div style={L(mode===m?"#D4AF6A":"#5A4020",8)}>Option {m}</div>
-            <div style={{fontFamily:F,fontSize:10,color:mode===m?"#C4A870":"#4A3020",fontStyle:"italic",marginTop:2}}>{m==="A"?"Wave · Navigator":"Particle · Initiator"}</div>
+
+      {/* Mode Toggle */}
+      <div style={{padding:"0 14px 12px",display:"flex",gap:8}}>
+        {[
+          {m:"A",label:"Entry Mode",desc:"Sub-periods restart from Aries I at each decan boundary — focus on the moment of entering"},
+          {m:"B",label:"Absolute Mode",desc:"Sub-periods inherit position from parent's place in the annual cycle — locate within the year"},
+        ].map(({m,label,desc})=>(
+          <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:"10px 12px",borderRadius:13,background:mode===m?"rgba(212,175,106,0.1)":"rgba(8,5,22,0.5)",border:`1px solid ${mode===m?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.07)"}`,cursor:"pointer",textAlign:"left"}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+              <div style={{width:16,height:16,borderRadius:8,background:mode===m?"rgba(212,175,106,0.25)":"rgba(200,175,100,0.07)",border:`1px solid ${mode===m?"rgba(212,175,106,0.5)":"rgba(200,175,100,0.15)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F,fontSize:8,color:mode===m?"#D4AF6A":"rgba(200,175,100,0.35)",flexShrink:0}}>{m}</div>
+              <div style={L(mode===m?"#D4AF6A":"rgba(200,175,100,0.35)",8)}>{label}</div>
+            </div>
+            <div style={{fontFamily:F,fontSize:8,color:mode===m?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.2)",fontStyle:"italic",lineHeight:1.5}}>{desc}</div>
           </button>
         ))}
       </div>
+
+      {/* Level Cards */}
       {levels.map((lev,i)=>{
-        const col=P[lev.decan.ruler].col,isCoherent=lev.idx===levels[0].idx,isPersonal=personalDecans.includes(lev.idx),isActive=selLevel===i,secLeft=lev.dur-lev.secIn;
+        const col=P[lev.decan.ruler].col;
+        const isCoherent=lev.idx===l1Idx;
+        const isPersonal=personalDecans.includes(lev.idx);
+        const secLeft=lev.dur-lev.secIn;
+        const nextDecan=DECANS[(lev.idx+1)%36];
+        const nextRulerCol=P[nextDecan.ruler].col;
+        const bnd=bounds?bounds[i]:null;
+        const isL4=i===3;
+
         return (
-          <div key={i} onClick={()=>setSelLevel(isActive?null:i)} style={{margin:"0 14px 8px",borderRadius:15,background:isCoherent?"rgba(212,175,106,0.07)":"rgba(8,5,22,0.65)",border:`1px solid ${isCoherent?"rgba(212,175,106,0.28)":isPersonal?"rgba(255,215,0,0.12)":"rgba(200,175,100,0.09)"}`,padding:"12px 14px",cursor:"pointer",backdropFilter:"blur(16px)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{width:32,height:32,borderRadius:16,background:`${col}12`,border:`1px solid ${col}35`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F,fontSize:10,color:col,flexShrink:0}}>{"IIII".slice(0,i+1)}</div>
-                <div>
-                  <div style={{display:"flex",alignItems:"center",gap:5}}>
-                    <div style={L("rgba(200,175,100,0.35)",7)}>{L_META[i].w} · {L_DUR_L[i]}</div>
-                    {isCoherent&&i>0&&<span style={{fontFamily:F,fontSize:7,color:"#D4AF6A",letterSpacing:1}}>COSMIC ✦</span>}
-                    {isPersonal&&!isCoherent&&<span style={{fontFamily:F,fontSize:7,color:"#FFD700",letterSpacing:1}}>NATAL ✦</span>}
-                  </div>
-                  <div style={T(14,isCoherent?"#D4AF6A":col)}>{lev.decan.name}</div>
-                  <div style={{fontFamily:F,fontSize:9,color:`${col}70`,marginTop:1}}>{lev.decan.sym} {lev.decan.sign} · {lev.decan.ruler.charAt(0).toUpperCase()+lev.decan.ruler.slice(1)}</div>
+          <div key={i} style={{position:"relative"}}>
+            {/* Nesting connector line between cards */}
+            {i>0&&(
+              <div style={{position:"absolute",top:-10,left:32,width:2,height:18,background:`${P[levels[i-1].decan.ruler].col}30`,borderRadius:1,zIndex:1}}/>
+            )}
+            <div
+              className={`fractal-level${isL4?" l4-active":""}${isFullCoherence&&isCoherent?" coherence-full":""}`}
+              style={{
+                margin:`0 14px ${i<3?4:8}px`,
+                borderRadius:16,
+                background:isCoherent&&i>0?"rgba(212,175,106,0.06)":"rgba(var(--glass-bg),0.6)",
+                border:`1px solid ${isCoherent&&i>0?"rgba(212,175,106,0.25)":isPersonal?"rgba(255,215,0,0.12)":`${col}18`}`,
+                backdropFilter:"blur(20px) saturate(160%)",
+                borderLeft:`3px solid ${col}${isCoherent&&i>0?"70":"35"}`,
+                padding:"13px 14px 11px",
+                animationDelay:`${i*0.06}s`,
+              }}
+            >
+              {/* Level header row */}
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:9}}>
+                <div style={{width:24,height:24,borderRadius:12,background:`${col}15`,border:`1px solid ${col}35`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F,fontSize:8,color:col,flexShrink:0,letterSpacing:1}}>{ROMAN[i]}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.35)",letterSpacing:1.5,textTransform:"uppercase"}}>{L_META[i].w} · {L_META[i].dur}</div>
+                </div>
+                {isCoherent&&i>0&&<span style={{fontFamily:F,fontSize:6,color:"#D4AF6A",letterSpacing:1,padding:"2px 6px",borderRadius:6,background:"rgba(212,175,106,0.1)",border:"1px solid rgba(212,175,106,0.2)"}}>✦ COHERENT</span>}
+                {isPersonal&&!isCoherent&&<span style={{fontFamily:F,fontSize:6,color:"#C8A820",letterSpacing:1,padding:"2px 6px",borderRadius:6,background:"rgba(200,168,32,0.08)",border:"1px solid rgba(200,168,32,0.18)"}}>NATAL</span>}
+              </div>
+
+              {/* Main decan body */}
+              <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:10}}>
+                <span className="planet-orb" style={{fontSize:isL4?18:16,color:col,padding:isL4?"5px 7px":"4px 6px",flexShrink:0}}>{P[lev.decan.ruler].sym}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontFamily:"Georgia,serif",fontSize:isL4?17:15,color:isCoherent&&i>0?"#D4AF6A":col,fontStyle:"italic",letterSpacing:0.3,lineHeight:1.2,marginBottom:2}}>{lev.decan.name}</div>
+                  <div style={{fontFamily:F,fontSize:9,color:`${col}70`}}>{lev.decan.sym} {lev.decan.sign} · {lev.decan.ruler.charAt(0).toUpperCase()+lev.decan.ruler.slice(1)} · {lev.decan.tarot}</div>
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <div style={{fontFamily:F,fontSize:isL4?15:13,color:col,fontVariantNumeric:"tabular-nums"}}>{fmtTime(secLeft)}</div>
+                  <div style={{fontFamily:F,fontSize:6,color:"rgba(200,175,100,0.3)",letterSpacing:1}}>remaining</div>
                 </div>
               </div>
-              <div style={{textAlign:"right",flexShrink:0}}>
-                <div style={{fontFamily:F,fontSize:12,color:col}}>{fmtTime(secLeft)}</div>
-                <div style={{fontFamily:F,fontSize:6,color:"#4A3020",letterSpacing:1}}>remaining</div>
+
+              {/* Timeline progress bar with labeled endpoints */}
+              <div style={{marginBottom:7}}>
+                <div style={{position:"relative",height:4,background:`${col}12`,borderRadius:2}}>
+                  <div style={{position:"absolute",top:0,left:0,height:"100%",width:`${lev.pos*100}%`,background:`linear-gradient(90deg,${col}50,${col})`,borderRadius:2,transition:isL4?"width 0.3s":"width 2s"}}/>
+                  {/* Position dot */}
+                  <div style={{position:"absolute",top:"50%",left:`${lev.pos*100}%`,transform:"translate(-50%,-50%)",width:8,height:8,borderRadius:4,background:col,boxShadow:`0 0 6px ${col}80`,border:"1.5px solid rgba(8,5,22,0.8)",transition:isL4?"left 0.3s":"left 2s"}}/>
+                </div>
+                {/* Timestamps */}
+                {bnd&&(
+                  <div style={{display:"flex",justifyContent:"space-between",marginTop:4}}>
+                    <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.3)"}}>{fmtWindowTime(bnd.start,i+1)}</div>
+                    <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.18)",letterSpacing:0.5}}>{Math.round(lev.pos*100)}% elapsed</div>
+                    <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.3)"}}>{fmtWindowTime(bnd.end,i+1)}</div>
+                  </div>
+                )}
               </div>
+
+              {/* Next decan preview */}
+              <div style={{display:"flex",alignItems:"center",gap:6,paddingTop:7,borderTop:`1px solid ${col}12`}}>
+                <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.25)",letterSpacing:0.5}}>NEXT →</div>
+                <span style={{fontSize:10,color:`${nextRulerCol}80`}}>{P[nextDecan.ruler].sym}</span>
+                <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)",fontStyle:"italic"}}>{nextDecan.name}</div>
+                <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.2)",marginLeft:"auto"}}>{nextDecan.sym} {nextDecan.sign}</div>
+              </div>
+
+              {/* L4 Assiah breath panel — always visible at L4 */}
+              {isL4&&(
+                <div style={{marginTop:9,padding:"10px 12px",borderRadius:11,background:"rgba(0,0,0,0.35)",border:`1px solid ${col}18`,textAlign:"center"}}>
+                  <div style={{fontFamily:"Georgia,serif",fontSize:22,color:col,letterSpacing:10,marginBottom:3}}>{VOWEL_SOUNDS[lev.decan.ruler]||"OM"}</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)",fontStyle:"italic",letterSpacing:1}}>Sound now · one breath · one face</div>
+                </div>
+              )}
+
+              {/* Usage hint */}
+              <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.2)",fontStyle:"italic",marginTop:6,letterSpacing:0.5}}>{L_META[i].use}</div>
             </div>
-            <div style={{marginTop:9,height:2,background:"rgba(200,175,100,0.07)",borderRadius:1}}><div style={{height:"100%",width:`${lev.pos*100}%`,background:col,borderRadius:1,transition:i>=3?"width 0.2s":"width 1.5s"}}/></div>
-            {isActive&&(
-              <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${col}15`}}>
-                <div style={{fontFamily:F,fontSize:9,color:`${col}60`,fontStyle:"italic",marginTop:3,lineHeight:1.7}}>{L_META[i].p}</div>
-                <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:5,lineHeight:1.7}}>{mode==="A"?"Wave mode: The full zodiacal drama replays from Aries I through this container. Navigate the wave.":"Particle mode: This level opened on its parent's face. The threshold is the moment of maximum coherence."}</div>
-                {i===3&&<div style={{marginTop:10,padding:"9px 11px",borderRadius:10,background:"rgba(0,0,0,0.3)",border:`1px solid ${col}15`,textAlign:"center"}}><div style={{fontFamily:"serif",fontSize:20,color:"#D4AF6A",letterSpacing:8,marginBottom:4}}>{{"moon":"AH","mercury":"EH","venus":"AY","sun":"EE","mars":"OH","jupiter":"EUW","saturn":"OHW"}[lev.decan.ruler]}</div><div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic"}}>Sound now · one breath · one face</div></div>}
-              </div>
-            )}
           </div>
         );
       })}
-      <div className="card" style={{margin:"0 14px",display:"flex",gap:12,justifyContent:"space-between"}}>
-        <div style={{textAlign:"center"}}><div style={L("rgba(200,175,100,0.4)",7)}>Cosmic Levels</div><div style={{fontFamily:F,fontSize:24,color:cosmicCoherence>=3?"#D4AF6A":"#6A5030",marginTop:4}}>{cosmicCoherence}</div></div>
-        <div style={{textAlign:"center"}}><div style={L("rgba(200,175,100,0.4)",7)}>Next {mode==="B"?"Threshold":"Coherence"}</div><div style={{fontFamily:F,fontSize:16,color:"#C4A870",marginTop:4}}>{fmtTime(secToThreshold)}</div></div>
+
+      {/* Coherence Indicator */}
+      <div className={`card${isFullCoherence?" coherence-full":""}`} style={{margin:"4px 14px 10px",background:isFullCoherence?"rgba(212,175,106,0.06)":"rgba(var(--glass-bg),0.55)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+          <div style={L("rgba(200,175,100,0.4)",7)}>Coherence</div>
+          {isFullCoherence&&<span style={{fontFamily:F,fontSize:7,color:"#D4AF6A",letterSpacing:1,padding:"2px 8px",borderRadius:6,background:"rgba(212,175,106,0.1)",border:"1px solid rgba(212,175,106,0.25)"}}>✦ FULL</span>}
+        </div>
+        {/* 4-segment visual */}
+        <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
+          {levels.map((lev,i)=>{
+            const isC=lev.idx===l1Idx;
+            const col=P[lev.decan.ruler].col;
+            return(
+              <React.Fragment key={i}>
+                <div style={{textAlign:"center"}}>
+                  <div style={{width:32,height:32,borderRadius:16,background:isC?`${col}22`:"rgba(0,0,0,0.3)",border:`2px solid ${isC?col:"rgba(200,175,100,0.1)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F,fontSize:9,color:isC?col:"rgba(200,175,100,0.2)",boxShadow:isC?`0 0 10px ${col}40`:"none",transition:"all 0.4s"}}>{ROMAN[i]}</div>
+                  <div style={{fontFamily:F,fontSize:6,color:isC?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.15)",marginTop:3,letterSpacing:0.5}}>{isC?"●":"○"}</div>
+                </div>
+                {i<3&&<div style={{flex:1,height:1,background:`rgba(200,175,100,${isC&&levels[i+1]?.idx===l1Idx?0.3:0.07})`}}/>}
+              </React.Fragment>
+            );
+          })}
+          <div style={{marginLeft:8,textAlign:"right"}}>
+            <div style={{fontFamily:F,fontSize:20,color:cosmicCoherence>=3?"#D4AF6A":"rgba(200,175,100,0.3)",lineHeight:1}}>{cosmicCoherence}<span style={{fontSize:10,color:"rgba(200,175,100,0.3)"}}>/4</span></div>
+          </div>
+        </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.3)",letterSpacing:1}}>NEXT L1 THRESHOLD</div>
+            <div style={{fontFamily:F,fontSize:13,color:"#C4A870",marginTop:2}}>{fmtTime(secToThreshold)}</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.3)",letterSpacing:1}}>CURRENT DECAN</div>
+            <div style={{fontFamily:F,fontSize:10,color:P[levels[0].decan.ruler].col,marginTop:2}}>{levels[0].decan.sym} {levels[0].decan.name}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* L2 Forecast — Today's Windows */}
+      <div style={{margin:"0 14px"}}>
+        <button
+          onClick={()=>setShowForecast(v=>!v)}
+          style={{width:"100%",padding:"11px 14px",borderRadius:13,background:"rgba(var(--glass-bg),0.5)",border:"1px solid rgba(200,175,100,0.1)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",backdropFilter:"blur(12px)"}}
+        >
+          <div>
+            <div style={L("rgba(200,175,100,0.4)",7)}>L2 Windows This Decan</div>
+            <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",fontStyle:"italic",marginTop:2}}>Remaining Beriah windows · {forecast.length} upcoming in this 10-day period</div>
+          </div>
+          <div style={{fontFamily:F,fontSize:12,color:"rgba(200,175,100,0.35)",flexShrink:0,marginLeft:8}}>{showForecast?"▲":"▼"}</div>
+        </button>
+
+        {showForecast&&(
+          <div className="glass-medium" style={{borderRadius:"0 0 13px 13px",marginTop:-1,overflow:"hidden"}}>
+            {forecast.length===0&&(
+              <div style={{padding:"14px",fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",textAlign:"center",fontStyle:"italic"}}>This is the final L2 window in the current decan.</div>
+            )}
+            {forecast.map((fw,i)=>{
+              const fc=P[fw.decan.ruler].col;
+              return(
+                <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 14px",borderBottom:"1px solid rgba(200,175,100,0.04)",background:fw.isCoherent?"rgba(212,175,106,0.05)":"transparent"}}>
+                  <span className="planet-orb" style={{fontSize:12,color:fc,padding:"2px 4px",flexShrink:0,opacity:fw.isCoherent?1:0.7}}>{P[fw.decan.ruler].sym}</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontFamily:F,fontSize:9,color:fw.isCoherent?"#D4AF6A":fc,fontStyle:"italic",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fw.decan.name}</div>
+                    <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.35)"}}>{fw.decan.sym} {fw.decan.sign}</div>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.5)",fontVariantNumeric:"tabular-nums"}}>{fw.start.toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"})}</div>
+                    {fw.isCoherent&&<div style={{fontFamily:F,fontSize:6,color:"#D4AF6A",letterSpacing:1}}>✦ COHERENT</div>}
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{padding:"8px 14px",fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.2)",fontStyle:"italic",textAlign:"center"}}>Each window is ~6.76 hours · L3 and L4 windows nest within each</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -4875,7 +5053,7 @@ export default function App(){
           {tab==="sky"     &&<SkyScreen     now={now} hour={hour} eph={eph} fractal={fractal} natalPos={natalPos} onWork={openWork}/>}
           {tab==="aspects" &&<AspectsScreen eph={eph}/>}
           {tab==="decans"  &&<DecansScreen  eph={eph} fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode}/>}
-          {tab==="fractal" &&<FractalScreen fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode}/>}
+          {tab==="fractal" &&<FractalScreen fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode} now={now}/>}
           {tab==="planets" &&<PlanetsScreen eph={eph} natalPos={natalPos} now={now}/>}
           {tab==="stars"   &&<StarsScreen   eph={eph} natalPos={natalPos}/>}
           {tab==="natal"   &&<NatalScreen   natalData={natalData} setNatalData={setNatalData} eph={eph} fractal={fractal} natalPos={natalPos} profile={profile}/>}
