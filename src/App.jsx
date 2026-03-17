@@ -950,12 +950,143 @@ const HOUSE_MEANINGS=["Self, body, life orientation","Possessions, resources, va
 // ═══════════════════════════════════════════════════════════════════════
 // STYLES
 // ═══════════════════════════════════════════════════════════════════════
-const CSS=`*{box-sizing:border-box;margin:0;padding:0;} body{background:#04060F;} @keyframes breathe{0%,100%{opacity:0.7;transform:scale(1)}50%{opacity:1;transform:scale(1.015)}} @keyframes float-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}} @keyframes arc-draw{from{stroke-dashoffset:1000}to{stroke-dashoffset:0}} @keyframes voc-pulse{0%,100%{background:rgba(180,100,50,0.12)}50%{background:rgba(180,100,50,0.22)}} .glass{background:rgba(8,5,22,0.78);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border:1px solid rgba(200,175,100,0.11);box-shadow:0 8px 40px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.05),inset 0 -1px 0 rgba(0,0,0,0.3);border-radius:18px;} .card{background:rgba(8,5,22,0.65);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(200,175,100,0.09);box-shadow:0 4px 20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04);border-radius:14px;padding:13px 14px;margin-bottom:9px;} .chip{background:rgba(200,175,100,0.07);border:1px solid rgba(200,175,100,0.18);border-radius:6px;padding:2px 8px;font-family:inherit;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;} .row-btn{width:100%;background:none;border:none;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(200,175,100,0.06);} .row-btn:last-child{border-bottom:none;} input,textarea{background:rgba(0,0,0,0.45);border:1px solid rgba(200,175,100,0.18);border-radius:10px;color:#C4A870;font-family:inherit;outline:none;padding:9px 12px;} input:focus,textarea:focus{border-color:rgba(200,175,100,0.4);} ::-webkit-scrollbar{width:2px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:rgba(200,175,100,0.2);border-radius:1px;}`;
+const CSS=`
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#04060F;}
+
+/* ── Liquid Glass Token System ── */
+:root{
+  --tint-primary:#D4AF6A;
+  --tint-rgb:200,175,100;
+  --glass-bg:8,5,22;
+  --bg-grad1:rgba(60,40,120,0.25);
+  --bg-grad2:rgba(160,120,30,0.15);
+  --shadow-col:0,0,0;
+}
+
+/* ── Glass Material Tiers ── */
+.glass-ultra{
+  background:rgba(var(--glass-bg),0.70);
+  backdrop-filter:blur(40px) saturate(200%) brightness(1.08);
+  -webkit-backdrop-filter:blur(40px) saturate(200%) brightness(1.08);
+  border:1px solid rgba(var(--tint-rgb),0.14);
+  box-shadow:0 16px 60px rgba(var(--shadow-col),0.7),inset 0 1.5px 0 rgba(255,255,255,0.13),inset 0 -1px 0 rgba(0,0,0,0.35),inset 1px 0 0 rgba(255,255,255,0.04);
+  border-radius:22px;
+}
+.glass-heavy,.glass{
+  background:rgba(var(--glass-bg),0.68);
+  backdrop-filter:blur(28px) saturate(180%) brightness(1.05);
+  -webkit-backdrop-filter:blur(28px) saturate(180%) brightness(1.05);
+  border:1px solid rgba(var(--tint-rgb),0.12);
+  box-shadow:0 10px 40px rgba(var(--shadow-col),0.6),inset 0 1px 0 rgba(255,255,255,0.10),inset 0 -1px 0 rgba(0,0,0,0.28);
+  border-radius:18px;
+}
+.glass-medium,.card{
+  background:rgba(var(--glass-bg),0.58);
+  backdrop-filter:blur(20px) saturate(160%) brightness(1.03);
+  -webkit-backdrop-filter:blur(20px) saturate(160%) brightness(1.03);
+  border:1px solid rgba(var(--tint-rgb),0.10);
+  box-shadow:0 6px 24px rgba(var(--shadow-col),0.5),inset 0 1px 0 rgba(255,255,255,0.07);
+  border-radius:14px;
+  padding:13px 14px;
+  margin-bottom:9px;
+  transition:border-color 0.22s,box-shadow 0.22s;
+}
+.card:hover{
+  border-color:rgba(var(--tint-rgb),0.19);
+  box-shadow:0 8px 30px rgba(var(--shadow-col),0.55),inset 0 1px 0 rgba(255,255,255,0.09),0 0 0 0.5px rgba(var(--tint-rgb),0.07);
+}
+.glass-light,.chip{
+  background:rgba(var(--glass-bg),0.44);
+  backdrop-filter:blur(12px) saturate(140%);
+  -webkit-backdrop-filter:blur(12px) saturate(140%);
+  border:1px solid rgba(var(--tint-rgb),0.16);
+  border-radius:6px;
+  padding:2px 8px;
+  font-family:inherit;
+  font-size:8px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+}
+
+/* ── Planet Squircle Orbs ── */
+.planet-orb{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:30%;
+  background:rgba(var(--glass-bg),0.55);
+  backdrop-filter:blur(8px);
+  border:1px solid rgba(var(--tint-rgb),0.22);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);
+  transition:transform 0.2s,opacity 0.2s,box-shadow 0.2s;
+}
+.planet-orb:hover{transform:scale(1.12);opacity:1!important;box-shadow:0 0 10px rgba(var(--tint-rgb),0.25),inset 0 1px 0 rgba(255,255,255,0.1);}
+
+/* ── Rows & Buttons ── */
+.row-btn{width:100%;background:none;border:none;cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(var(--tint-rgb),0.06);transition:opacity 0.15s;}
+.row-btn:last-child{border-bottom:none;}
+.row-btn:hover{opacity:0.82;}
+
+/* ── Form Elements ── */
+input,textarea{
+  background:rgba(0,0,0,0.40);
+  border:1px solid rgba(var(--tint-rgb),0.18);
+  border-radius:10px;
+  color:#C4A870;
+  font-family:inherit;
+  outline:none;
+  padding:9px 12px;
+  transition:border-color 0.2s,box-shadow 0.2s;
+}
+input:focus,textarea:focus{border-color:rgba(var(--tint-rgb),0.45);box-shadow:0 0 0 3px rgba(var(--tint-rgb),0.08);}
+
+/* ── Keyframes ── */
+@keyframes breathe{0%,100%{opacity:0.7;transform:scale(1)}50%{opacity:1;transform:scale(1.015)}}
+@keyframes float-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spring-in{0%{opacity:0;transform:scale(0.88) translateY(14px)}60%{opacity:1;transform:scale(1.02) translateY(-3px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes slide-screen{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:translateX(0)}}
+@keyframes arc-draw{from{stroke-dashoffset:1000}to{stroke-dashoffset:0}}
+@keyframes voc-pulse{0%,100%{background:rgba(180,100,50,0.12)}50%{background:rgba(180,100,50,0.22)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes ticker-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+@keyframes cmd-in{from{opacity:0}to{opacity:1}}
+@keyframes panel-spring{0%{opacity:0;transform:scale(0.9) translateY(16px)}65%{transform:scale(1.015) translateY(-4px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes control-expand{0%{opacity:0;transform:scale(0.75) translateY(8px)}65%{transform:scale(1.04) translateY(-2px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes live-dot{0%,100%{opacity:0.4}50%{opacity:1}}
+@keyframes particle{0%{transform:translateY(0) translateX(0) scale(1);opacity:0.5}100%{transform:translateY(-120px) translateX(20px) scale(0.3);opacity:0}}
+
+/* ── Command Palette ── */
+.cmd-overlay{animation:cmd-in 0.15s ease;}
+.cmd-panel{animation:panel-spring 0.3s cubic-bezier(0.34,1.56,0.64,1);}
+.cmd-result{width:100%;background:none;border:none;border-left:2px solid transparent;padding:10px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;text-align:left;transition:background 0.1s,border-color 0.1s;}
+.cmd-result:hover,.cmd-result.active{background:rgba(var(--tint-rgb),0.09);border-left-color:var(--tint-primary);}
+
+/* ── Control Center ── */
+.cc-action{display:flex;align-items:center;gap:8px;padding:8px 15px 8px 11px;border-radius:22px;cursor:pointer;border:none;transition:transform 0.2s,opacity 0.2s;}
+.cc-action:hover{transform:translateX(-4px);}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar{width:2px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:rgba(var(--tint-rgb),0.22);border-radius:1px;}
+`;
 
 const F = "Georgia, 'Times New Roman', serif";
+const GOLD = "#D4AF6A";
 const L=(c="#7A6030",s=8)=>({fontFamily:F,fontSize:s,color:c,letterSpacing:3.5,textTransform:"uppercase"});
 const T=(s=18,c="#D4AF6A")=>({fontFamily:F,fontSize:s,color:c,lineHeight:1.2});
 const B=(s=12,c="#8A7050")=>({fontFamily:F,fontSize:s,color:c,fontStyle:"italic",lineHeight:1.9});
+
+// ── Planetary Tint Presets ────────────────────────────────────────────────
+const TINT_PRESETS = {
+  solar:    {label:"☉ Solar",    primary:"#D4AF6A", rgb:"200,175,100", glassBg:"8,5,22",   grad1:"rgba(160,120,30,0.18)",  grad2:"rgba(60,40,120,0.22)"},
+  lunar:    {label:"☽ Lunar",    primary:"#A8C0D8", rgb:"155,185,210", glassBg:"5,8,22",   grad1:"rgba(55,80,130,0.20)",  grad2:"rgba(20,30,80,0.28)"},
+  martial:  {label:"♂ Martial",  primary:"#C87060", rgb:"185,100,80",  glassBg:"16,5,5",   grad1:"rgba(120,35,25,0.22)",  grad2:"rgba(80,15,10,0.25)"},
+  jovian:   {label:"♃ Jovian",   primary:"#8888D4", rgb:"110,110,196", glassBg:"5,5,22",   grad1:"rgba(50,45,130,0.25)",  grad2:"rgba(30,25,90,0.28)"},
+  venusian: {label:"♀ Venusian", primary:"#C87090", rgb:"192,102,132", glassBg:"16,5,11",  grad1:"rgba(110,50,70,0.20)",  grad2:"rgba(80,20,50,0.25)"},
+  saturnine:{label:"♄ Saturnine",primary:"#8898A8", rgb:"122,138,158", glassBg:"5,8,16",   grad1:"rgba(50,60,82,0.20)",  grad2:"rgba(25,30,52,0.28)"},
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 // SIDEBAR NAVIGATION
@@ -983,6 +1114,194 @@ const NAV_SECTIONS = [
 // ═══════════════════════════════════════════════════════════════════════
 // TRADITION MODULES
 // ═══════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════
+// COMMAND PALETTE (Batch 2 — Spotlight-Grade)
+// ═══════════════════════════════════════════════════════════════════════
+function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
+  const [query,setQuery]=useState("");
+  const [mode,setMode]=useState("navigate");
+  const [idx,setIdx]=useState(0);
+  const inputRef=useRef();
+  const [hist,setHist]=useState(()=>{try{return JSON.parse(localStorage.getItem("astrum_cmd_hist")||"[]");}catch{return[];}});
+
+  useEffect(()=>{
+    if(open){setTimeout(()=>inputRef.current?.focus(),60);setQuery("");setMode("navigate");setIdx(0);}
+  },[open]);
+
+  const q=query.toLowerCase();
+  const navItems=NAV_SECTIONS.filter(s=>!q||s.label.toLowerCase().includes(q)||s.desc.toLowerCase().includes(q));
+  const calcItems=[
+    {id:"scan-transits",label:"Scan Transits",desc:"90-day transit hit list against natal chart",icon:"⟳",screen:"transits"},
+    {id:"solar-return",label:"Solar Return",desc:"Calculate this year's solar return chart",icon:"☉",screen:"natal"},
+    {id:"lunar-return",label:"Lunar Return",desc:"Find the next lunar return date",icon:"☽",screen:"natal"},
+    {id:"ingresses",label:"Sign Ingresses",desc:"Upcoming planetary sign changes (6 months)",icon:"≡",screen:"ephemeris"},
+    {id:"stations",label:"Retrograde Stations",desc:"Next Rx and Direct stations",icon:"℞",screen:"ephemeris"},
+    {id:"eclipses",label:"Eclipse Calendar",desc:"Upcoming solar and lunar eclipses",icon:"◉",screen:"ephemeris"},
+    {id:"firdaria",label:"Firdaria Time Lords",desc:"Current major and minor period lords",icon:"⏳",screen:"natal"},
+    {id:"progressions",label:"Progressions",desc:"Secondary progressions for today",icon:"→",screen:"natal"},
+    {id:"elect",label:"Electional Search",desc:"Find auspicious windows",icon:"◈",screen:"elect"},
+    {id:"sigil",label:"New Sigil",desc:"Create a sigil in the workshop",icon:"⟁",screen:"sigils"},
+  ].filter(c=>!q||c.label.toLowerCase().includes(q)||c.desc.toLowerCase().includes(q));
+  const histItems=hist.filter(h=>!q||h.label?.toLowerCase().includes(q));
+
+  const items=mode==="navigate"?navItems:mode==="calculate"?calcItems:mode==="history"?histItems:[];
+  useEffect(()=>setIdx(0),[query,mode]);
+
+  const addHist=(entry)=>{const u=[entry,...hist.filter(h=>h.id!==entry.id)].slice(0,25);setHist(u);localStorage.setItem("astrum_cmd_hist",JSON.stringify(u));};
+
+  const execute=(item)=>{
+    if(mode==="navigate"){addHist({...item,mode:"navigate",ts:Date.now()});setTab(item.id);onClose();}
+    else if(mode==="calculate"){addHist({...item,mode:"calculate",ts:Date.now()});if(item.screen)setTab(item.screen);onClose();}
+    else if(mode==="ask"){if(query.trim()){onOracle(query.trim());onClose();}}
+    else if(mode==="history"){if(item.screen||item.id)setTab(item.screen||item.id);onClose();}
+  };
+
+  const handleKey=(e)=>{
+    if(e.key==="Escape"){onClose();return;}
+    if(e.key==="ArrowDown"){setIdx(i=>Math.min(i+1,items.length-1));e.preventDefault();}
+    if(e.key==="ArrowUp"){setIdx(i=>Math.max(i-1,0));e.preventDefault();}
+    if(e.key==="Enter"){if(mode==="ask"&&query.trim())execute({});else if(items[idx])execute(items[idx]);}
+    if(e.key==="Tab"){const ms=["navigate","calculate","ask","history"];setMode(m=>ms[(ms.indexOf(m)+1)%ms.length]);e.preventDefault();}
+  };
+
+  if(!open)return null;
+  const MODES=[["navigate","↗ Navigate"],["calculate","◈ Calculate"],["ask","✧ Ask"],["history","◷ History"]];
+
+  return(
+    <div className="cmd-overlay" onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.65)",zIndex:1000,display:"flex",alignItems:"flex-start",justifyContent:"center",paddingTop:72,backdropFilter:"blur(10px)",WebkitBackdropFilter:"blur(10px)"}}>
+      <div className="cmd-panel glass-ultra" onClick={e=>e.stopPropagation()} style={{width:"100%",maxWidth:420,margin:"0 14px",overflow:"hidden"}}>
+        {/* Search */}
+        <div style={{padding:"14px 16px",borderBottom:"1px solid rgba(var(--tint-rgb),0.1)",display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:15,color:"rgba(var(--tint-rgb),0.45)",flexShrink:0}}>⌘</span>
+          <input ref={inputRef} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={handleKey}
+            placeholder={mode==="ask"?"Ask the Oracle anything…":"Search screens, actions, calculations…"}
+            style={{flex:1,background:"none",border:"none",color:"var(--tint-primary)",fontFamily:F,fontSize:14,outline:"none",padding:0,boxShadow:"none"}}/>
+          {query&&<button onClick={()=>setQuery("")} style={{background:"none",border:"none",color:"rgba(200,175,100,0.3)",cursor:"pointer",fontSize:13,padding:2}}>✕</button>}
+        </div>
+        {/* Mode tabs */}
+        <div style={{display:"flex",padding:"0 6px",borderBottom:"1px solid rgba(var(--tint-rgb),0.07)"}}>
+          {MODES.map(([m,lbl])=>(
+            <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:"8px 2px",background:"none",border:"none",borderBottom:`2px solid ${mode===m?"var(--tint-primary)":"transparent"}`,color:mode===m?"var(--tint-primary)":"rgba(200,175,100,0.3)",fontFamily:F,fontSize:7.5,letterSpacing:0.5,cursor:"pointer",transition:"border-color 0.15s,color 0.15s",whiteSpace:"nowrap"}}>{lbl}</button>
+          ))}
+        </div>
+        {/* Results */}
+        <div style={{maxHeight:320,overflowY:"auto"}}>
+          {mode==="ask"?(
+            <div style={{padding:"18px 16px"}}>
+              <div style={{fontFamily:F,fontSize:8.5,color:"rgba(200,175,100,0.35)",letterSpacing:2,marginBottom:12}}>TYPE YOUR QUESTION · PRESS ⏎ TO CONSULT ORACLE</div>
+              {eph?.pos?.moon&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",lineHeight:1.8}}>☽ Moon in {eph.pos.moon.zodiac.name} · {eph.moonPhase||""}{eph.voc?.isVoC?" · VoC":""}{natalPos?" · Natal loaded":""}</div>}
+            </div>
+          ):items.length===0?(
+            <div style={{padding:"26px",textAlign:"center",fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.22)"}}>No results for "{query}"</div>
+          ):items.map((item,i)=>{
+            const active=i===idx;
+            return(
+              <button key={item.id||i} className={`cmd-result${active?" active":""}`} onClick={()=>execute(item)}
+                style={{borderLeftColor:active?"var(--tint-primary)":"transparent"}}>
+                <span style={{fontSize:14,color:"var(--tint-primary)",width:22,textAlign:"center",flexShrink:0}}>{item.icon}</span>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontFamily:F,fontSize:12,color:active?"var(--tint-primary)":"#C4A870",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.label}</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.32)",marginTop:1}}>{item.desc}</div>
+                </div>
+                {mode==="history"&&item.ts&&<div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.22)",flexShrink:0}}>{Math.max(0,Math.round((Date.now()-item.ts)/60000))}m</div>}
+              </button>
+            );
+          })}
+        </div>
+        {/* Footer hints */}
+        <div style={{padding:"8px 16px",borderTop:"1px solid rgba(var(--tint-rgb),0.07)",display:"flex",gap:14,flexWrap:"wrap"}}>
+          {[["↑↓","Move"],["⏎","Select"],["⇥","Mode"],["Esc","Close"]].map(([k,v])=>(
+            <div key={k} style={{display:"flex",alignItems:"center",gap:4}}>
+              <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.5)",padding:"2px 5px",background:"rgba(200,175,100,0.07)",borderRadius:4,border:"1px solid rgba(200,175,100,0.12)"}}>{k}</span>
+              <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)"}}>{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ASTRAL LIVE BAR (Batch 4 — Continuity)
+// ═══════════════════════════════════════════════════════════════════════
+function AstralLiveBar({tab,eph,now,natalPos,hour}){
+  const nav=NAV_SECTIONS.find(s=>s.id===tab);
+  const events=useMemo(()=>{
+    const list=[];
+    if(eph?.voc?.isVoC)list.push(`⚠ Moon VoC · enters ${eph.voc.nextSign?.name||"?"} in ${fmtTime(eph.voc.hoursToIngress*3600)}`);
+    if(eph?.pos?.moon){const z=eph.pos.moon.zodiac;list.push(`☽ ${z.degree}° ${z.name} · ${eph.moonPhase||""}`);}
+    if(hour?.planet&&P[hour.planet]){const p=P[hour.planet];list.push(`${p.sym} Hour of ${p.name} · ${Math.floor((hour.msRemaining||0)/60000)}m`);}
+    if(eph?.pos?.sun){const z=eph.pos.sun.zodiac;list.push(`☉ ${z.degree}° ${z.name}`);}
+    return list;
+  },[eph,hour]);
+
+  const multi=events.length>1;
+  return(
+    <div style={{height:26,background:"rgba(var(--glass-bg,8,5,22),0.72)",backdropFilter:"blur(20px) saturate(160%)",WebkitBackdropFilter:"blur(20px) saturate(160%)",display:"flex",alignItems:"center",padding:"0 14px",borderBottom:"1px solid rgba(var(--tint-rgb,200,175,100),0.06)",gap:10,overflow:"hidden",flexShrink:0}}>
+      {/* Live dot */}
+      <div style={{width:4,height:4,borderRadius:2,background:"var(--tint-primary)",animation:"live-dot 2s ease-in-out infinite",flexShrink:0}}/>
+      {/* Breadcrumb */}
+      <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.5)",letterSpacing:2.5,textTransform:"uppercase",flexShrink:0,whiteSpace:"nowrap"}}>{nav?.icon} {nav?.label}</div>
+      {/* Separator */}
+      <div style={{width:1,height:12,background:"rgba(200,175,100,0.12)",flexShrink:0}}/>
+      {/* Event ticker */}
+      <div style={{flex:1,overflow:"hidden",position:"relative",height:"100%",display:"flex",alignItems:"center"}}>
+        {multi?(
+          <div style={{display:"flex",gap:0,animation:"ticker-scroll 18s linear infinite",whiteSpace:"nowrap"}}>
+            {[...events,...events].map((ev,i)=>(
+              <span key={i} style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.38)",letterSpacing:1.2,paddingRight:44}}>{ev}</span>
+            ))}
+          </div>
+        ):(
+          <span style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.35)",letterSpacing:1.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{events[0]||nav?.desc}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// ASTRAL CONTROL CENTER (Batch 5 — Replaces Oracle float button)
+// ═══════════════════════════════════════════════════════════════════════
+function AstralControlCenter({tab,onOracle,setTab,natalPos,eph}){
+  const [open,setOpen]=useState(false);
+  const actions=[
+    {icon:"✧",label:"Oracle",    col:"var(--tint-primary)", action:()=>{onOracle();setOpen(false);}},
+    {icon:"⟳",label:"Transits",  col:"#7CB8E0", action:()=>{setTab("transits");setOpen(false);}},
+    {icon:"◈",label:"Election",  col:"#5CA85C", action:()=>{setTab("elect");setOpen(false);}},
+    {icon:"⟁",label:"Sigil",     col:"#A880D0", action:()=>{setTab("sigils");setOpen(false);}},
+    {icon:"✎",label:"Journal",   col:"#C4A870", action:()=>{setTab("journal");setOpen(false);}},
+    {icon:"☽",label:"Natal",     col:"#B0C8D8", action:()=>{setTab("natal");setOpen(false);}},
+  ];
+  if(tab==="ai"||tab==="profile")return null;
+  return(
+    <div style={{position:"fixed",bottom:22,right:18,zIndex:500}}>
+      {open&&(
+        <>
+          <div onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,zIndex:-1}}/>
+          <div style={{position:"absolute",bottom:54,right:0,display:"flex",flexDirection:"column",alignItems:"flex-end",gap:7}}>
+            {actions.map((a,i)=>(
+              <button key={a.label} className="cc-action" onClick={a.action}
+                style={{animationDelay:`${i*0.045}s`,animation:"control-expand 0.28s cubic-bezier(0.34,1.56,0.64,1) both",background:"rgba(var(--glass-bg,8,5,22),0.88)",backdropFilter:"blur(24px) saturate(180%)",WebkitBackdropFilter:"blur(24px) saturate(180%)",border:`1px solid ${a.col}35`,boxShadow:`0 6px 24px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.08)`}}>
+                <span style={{fontSize:14,color:a.col}}>{a.icon}</span>
+                <span style={{fontFamily:F,fontSize:9,color:a.col,letterSpacing:1}}>{a.label}</span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      <button onClick={()=>setOpen(o=>!o)}
+        style={{width:48,height:48,borderRadius:24,background:"rgba(var(--glass-bg,8,5,22),0.88)",backdropFilter:"blur(28px) saturate(200%)",WebkitBackdropFilter:"blur(28px) saturate(200%)",border:`1.5px solid rgba(var(--tint-rgb,200,175,100),${open?0.5:0.28})`,boxShadow:`0 6px 28px rgba(0,0,0,0.65),inset 0 1px 0 rgba(255,255,255,0.12)`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",transition:"transform 0.28s cubic-bezier(0.34,1.56,0.64,1),border-color 0.2s",transform:open?"rotate(45deg) scale(1.06)":"scale(1)",fontSize:18,color:"var(--tint-primary)"}}>
+        ✧
+      </button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// TRADITION MODULES
+// ═══════════════════════════════════════════════════════════════════════
 const TRADITIONS = {
   "western-ceremonial": {label:"Western Ceremonial", desc:"Kabbalah, planetary magic, grimoire tradition", icon:"✡", prompt:"You speak from the Western Ceremonial tradition: Hermetic Kabbalah, the planetary grimoire current (Picatrix, Agrippa, Ficino), angelic hierarchies, and the classical talismanic art. Your spirit framework includes angels, intelligences, and planetary spirits. Time your work by planetary hours, days, and electional astrology."},
   "chaos":              {label:"Chaos Magic",         desc:"Sigil work, paradigm-shifting, servitors",      icon:"∞", prompt:"You speak from the Chaos Magic paradigm: belief as a tool, gnosis as the gateway, results as the measure. Your frameworks are flexible — you can work any paradigm effectively. You understand sigil craft, servitor creation, egregore dynamics, and the mechanics of paradigm-shifting."},
@@ -997,7 +1316,7 @@ function Sidebar({tab, setTab, hour, eph, open, setOpen}) {
   return (
     <>
       {open && <div onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,backdropFilter:"blur(4px)"}}/>}
-      <div style={{position:"fixed",left:0,top:0,bottom:0,width:open?240:0,background:"rgba(4,4,16,0.97)",backdropFilter:"blur(28px)",borderRight:"1px solid rgba(200,175,100,0.1)",zIndex:300,overflow:"hidden",transition:"width 0.3s cubic-bezier(0.4,0,0.2,1)",boxShadow:open?"8px 0 40px rgba(0,0,0,0.6)":"none"}}>
+      <div style={{position:"fixed",left:0,top:0,bottom:0,width:open?240:0,background:"rgba(var(--glass-bg,8,5,22),0.82)",backdropFilter:"blur(40px) saturate(200%) brightness(1.05)",WebkitBackdropFilter:"blur(40px) saturate(200%) brightness(1.05)",borderRight:"1px solid rgba(var(--tint-rgb,200,175,100),0.13)",zIndex:300,overflow:"hidden",transition:"width 0.32s cubic-bezier(0.34,1.56,0.64,1)",boxShadow:open?"12px 0 50px rgba(0,0,0,0.65),inset -1px 0 0 rgba(255,255,255,0.04)":"none"}}>
         {open && (
           <div style={{width:240,height:"100%",overflowY:"auto",display:"flex",flexDirection:"column"}}>
             <div style={{padding:"22px 20px 16px",borderBottom:"1px solid rgba(200,175,100,0.08)"}}>
@@ -1170,7 +1489,7 @@ function SkyScreen({now,hour,eph,fractal,natalPos,onWork}){
             const pl=P[pk],pos=eph.pos[pk],dc=DIGNITY_COL[pos.dignity];
             return (
               <div key={pk} onClick={()=>onWork(pk)} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 8px",borderRadius:10,background:"rgba(0,0,0,0.3)",cursor:"pointer"}}>
-                <span style={{fontSize:14,color:pl.col}}>{pl.sym}</span>
+                <span className="planet-orb" style={{fontSize:14,color:pl.col,padding:"3px 5px"}}>{pl.sym}</span>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>
                     {pos.zodiac.degree}°{String(pos.zodiac.minutes).padStart(2,"0")}' {pos.zodiac.sym}
@@ -3282,8 +3601,21 @@ function TransitsScreen({natalPos,now}){
   };
 
   const PLANET_FILTER=["all","moon","sun","mercury","venus","mars","jupiter","saturn"];
-  const filtered=hits?hits.filter(h=>filter==="all"||h.tp===filter):null;
   const BENEFIC_ASPECTS=["Trine","Sextile","Conjunction"];
+  const BENEFIC_PLANETS=["venus","jupiter","sun","moon"];
+  const filtered=useMemo(()=>{
+    if(!hits)return null;
+    const f=hits.filter(h=>filter==="all"||h.tp===filter);
+    // Sort: within same calendar day, benefic aspects first; then by date
+    return f.sort((a,b)=>{
+      const dayA=Math.floor(a.date.getTime()/86400000);
+      const dayB=Math.floor(b.date.getTime()/86400000);
+      if(dayA!==dayB)return dayA-dayB;
+      const benefA=(BENEFIC_ASPECTS.includes(a.asp)?1:0)+(BENEFIC_PLANETS.includes(a.tp)?1:0);
+      const benefB=(BENEFIC_ASPECTS.includes(b.asp)?1:0)+(BENEFIC_PLANETS.includes(b.tp)?1:0);
+      return benefB-benefA;
+    });
+  },[hits,filter]);
 
   return(
     <div style={{flex:1,overflowY:"auto",paddingBottom:20}}>
@@ -3324,19 +3656,19 @@ function TransitsScreen({natalPos,now}){
                 const tp=P[hit.tp],np2=P[hit.np];
                 const isBenefic=BENEFIC_ASPECTS.includes(hit.asp);
                 return(
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 8px",borderBottom:"1px solid rgba(200,175,100,0.04)",borderLeft:`2px solid ${isBenefic?"rgba(92,168,92,0.5)":"rgba(192,128,128,0.35)"}`,marginLeft:2,borderRadius:"0 6px 6px 0"}}>
                     <div style={{width:42,flexShrink:0}}>
                       <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.4)"}}>{hit.date.toLocaleDateString([],{month:"short",day:"numeric"})}</div>
                       <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.3)"}}>{hit.date.toLocaleDateString([],{weekday:"short"})}</div>
                     </div>
-                    <span style={{fontSize:14,color:tp?.col||GOLD}}>{tp?.sym||hit.tp}</span>
+                    <span className="planet-orb" style={{fontSize:14,color:tp?.col||GOLD,padding:"2px 4px"}}>{tp?.sym||hit.tp}</span>
                     <div style={{flex:1}}>
                       <div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>
-                        {tp?.name||hit.tp} {hit.asp} natal {np2?.name||hit.np}
+                        {tp?.name||hit.tp} <span style={{color:hit.col||"rgba(200,175,100,0.5)"}}>{hit.asp}</span> natal {np2?.name||hit.np}
                       </div>
                       <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.3)"}}>{fmtDate(hit.date)}</div>
                     </div>
-                    <span style={{fontFamily:F,fontSize:7,color:isBenefic?"#5CA85C":"#C08080",letterSpacing:1}}>{isBenefic?"✦":""}</span>
+                    <span style={{fontFamily:F,fontSize:9,color:isBenefic?"#5CA85C":"#C08080"}}>{isBenefic?"✦":"▼"}</span>
                   </div>
                 );
               })}
@@ -3419,7 +3751,7 @@ function EphemerisScreen({now}){
               const pl=P[ing.planet];
               return(
                 <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
-                  <span style={{fontSize:14,color:pl?.col||GOLD,width:22}}>{pl?.sym||ing.planet}</span>
+                  <span className="planet-orb" style={{fontSize:14,color:pl?.col||GOLD,padding:"2px 4px"}}>{pl?.sym||ing.planet}</span>
                   <div style={{flex:1}}>
                     <div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>{pl?.name||ing.planet} enters {ing.to}</div>
                     <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)"}}>{ing.date.toLocaleDateString([],{weekday:"short",month:"short",day:"numeric",year:"numeric"})}</div>
@@ -3441,7 +3773,7 @@ function EphemerisScreen({now}){
               const isRx=st.type==="Rx";
               return(
                 <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
-                  <span style={{fontSize:14,color:pl?.col||GOLD,width:22}}>{pl?.sym||st.planet}</span>
+                  <span className="planet-orb" style={{fontSize:14,color:pl?.col||GOLD,padding:"2px 4px"}}>{pl?.sym||st.planet}</span>
                   <div style={{flex:1}}>
                     <div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>
                       {pl?.name} {isRx?"Stations Retrograde ℞":"Stations Direct ♐"}
@@ -4310,6 +4642,7 @@ function ProfileScreen({profile,setProfile}){
   const [traditions,setTraditions]=useState(profile?.traditions||["western-ceremonial"]);
   const [level,setLevel]=useState(profile?.level||"intermediate");
   const [apiKey,setApiKey]=useState(profile?.apiKey||"");
+  const [tint,setTint]=useState(profile?.tint||"solar");
   const [geocoding,setGeocoding]=useState(false);
   const [geocodeMsg,setGeocodeMsg]=useState("");
   const [saved,setSaved]=useState(false);
@@ -4331,7 +4664,7 @@ function ProfileScreen({profile,setProfile}){
     setTraditions(prev=>{const next=prev.filter(x=>x!=="custom");return next.includes(t)?next.filter(x=>x!==t)||["western-ceremonial"]:[...next,t];});
   };
   const saveProfile=async()=>{
-    const p={name,natal:{date,time,city,lat,lon},traditions,level,apiKey,theme:"dark"};
+    const p={name,natal:{date,time,city,lat,lon},traditions,level,apiKey,tint,theme:"dark"};
     setProfile(p);
     try{await window.storage.set("astrum_profile",JSON.stringify(p));}catch(e){}
     setSaved(true);setTimeout(()=>setSaved(false),2500);
@@ -4406,6 +4739,23 @@ function ProfileScreen({profile,setProfile}){
         </div>
       </div>
       <KnowledgeBase/>
+      {/* Planetary Tint — Batch 3 */}
+      <div className="card" style={{margin:"0 14px 10px"}}>
+        <div style={L()}>Visual Tint</div>
+        <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Each planetary tint shifts the glass materials, accent colors, and background gradients across the entire app.</div>
+        <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:5}}>
+          {Object.entries(TINT_PRESETS).map(([key,preset])=>{
+            const active=tint===key;
+            return(
+              <button key={key} onClick={()=>setTint(key)} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 11px",borderRadius:10,background:active?`rgba(var(--glass-bg,8,5,22),0.7)`:"rgba(0,0,0,0.2)",border:`1px solid ${active?preset.primary+"60":"rgba(200,175,100,0.08)"}`,cursor:"pointer",textAlign:"left",transition:"border-color 0.2s,background 0.2s"}}>
+                <div style={{width:20,height:20,borderRadius:6,background:preset.primary,boxShadow:`0 2px 8px ${preset.primary}40`,flexShrink:0}}/>
+                <div style={{fontFamily:F,fontSize:11,color:active?preset.primary:"rgba(200,175,100,0.55)"}}>{preset.label}</div>
+                {active&&<span style={{marginLeft:"auto",fontFamily:F,fontSize:9,color:preset.primary}}>✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <div style={{padding:"10px 14px 0"}}>
         <button onClick={saveProfile} style={{width:"100%",padding:"13px 0",borderRadius:12,background:"rgba(212,175,106,0.12)",border:"1px solid rgba(212,175,106,0.35)",fontFamily:F,fontSize:10,color:saved?"#7AB07A":"#D4AF6A",letterSpacing:3,textTransform:"uppercase",cursor:"pointer",transition:"color 0.4s"}}>
           {saved?"✓ PROFILE SAVED":"SAVE PROFILE"}
@@ -4438,13 +4788,13 @@ export default function App(){
   const [profile,setProfile]=useState(null);
   const [oracleOpen,setOracleOpen]=useState(false);
   const [oracleCtx,setOracleCtx]=useState("");
+  const [cmdOpen,setCmdOpen]=useState(false);
   useEffect(()=>{const t=setInterval(()=>setNow(new Date()),200);return()=>clearInterval(t);},[]);
   // Load profile (primary) and legacy natal data
   useEffect(()=>{(async()=>{
     try{const r=await window.storage.get("astrum_profile");if(r?.value){const p=JSON.parse(r.value);setProfile(p);return;}}catch(e){}
-    // No profile yet — try legacy natal, then set empty profile
     try{const r=await window.storage.get("astrum_natal");if(r?.value){const d=JSON.parse(r.value);setNatalData(d);}}catch(e){}
-    setProfile({name:"",natal:{date:"",time:"",city:"",lat:null,lon:null},traditions:["western-ceremonial"],level:"intermediate",apiKey:"",theme:"dark"});
+    setProfile({name:"",natal:{date:"",time:"",city:"",lat:null,lon:null},traditions:["western-ceremonial"],level:"intermediate",apiKey:"",tint:"solar",theme:"dark"});
   })();},[]);
   // Compute natal positions from profile (or legacy natal data)
   useEffect(()=>{
@@ -4455,41 +4805,73 @@ export default function App(){
       if(!isNaN(bd.getTime()))setNatalPos(calcNatal(bd,loc));else setNatalPos(null);
     }else setNatalPos(null);
   },[natalData,profile]);
+
+  // ── Tint system: inject CSS custom properties (Batch 3) ─────────────
+  const activeTint=profile?.tint||"solar";
+  useEffect(()=>{
+    const t=TINT_PRESETS[activeTint]||TINT_PRESETS.solar;
+    const root=document.documentElement;
+    root.style.setProperty("--tint-primary",t.primary);
+    root.style.setProperty("--tint-rgb",t.rgb);
+    root.style.setProperty("--glass-bg",t.glassBg);
+    root.style.setProperty("--bg-grad1",t.grad1);
+    root.style.setProperty("--bg-grad2",t.grad2);
+  },[activeTint]);
+
+  // ── Dynamic background: shift with planetary hour (Batch 1) ─────────
+  const hourTint=useMemo(()=>{
+    const cols={sun:"rgba(220,175,40,0.12)",moon:"rgba(160,180,220,0.12)",mercury:"rgba(100,160,100,0.10)",venus:"rgba(200,140,110,0.12)",mars:"rgba(180,50,40,0.14)",jupiter:"rgba(100,90,200,0.14)",saturn:"rgba(80,100,140,0.12)"};
+    return cols[hour?.planet]||"rgba(160,120,30,0.12)";
+  },[hour?.planet]);
+
+  // ── ⌘K keyboard shortcut (Batch 2) ──────────────────────────────────
+  useEffect(()=>{
+    const handler=(e)=>{if((e.metaKey||e.ctrlKey)&&e.key==="k"){e.preventDefault();setCmdOpen(o=>!o);}if(e.key==="Escape")setCmdOpen(false);};
+    window.addEventListener("keydown",handler);
+    return()=>window.removeEventListener("keydown",handler);
+  },[]);
+
   const location=profile?.natal?.lat&&profile?.natal?.lon?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
   const hour=location?getPlanetaryHourUnequal(now,location.lat,location.lon):getPlanetaryHour(now);
   const eph=useEphemeris(now,location);
   const fractal=calcFractal(now,fractalMode);
   const openWork=useCallback(pk=>{setWork(pk);setTab("work");},[]);
-  const openOracle=useCallback(()=>{
+  const openOracle=useCallback((prefill)=>{
     if(!eph)return;
-    setOracleCtx(buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile));
+    setOracleCtx(prefill||buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile));
     setOracleOpen(true);
   },[tab,now,eph,fractal,natalPos,hour,profile]);
   return (
-    <div style={{minHeight:"100vh",background:"radial-gradient(ellipse at 20% 10%,rgba(60,40,120,0.25) 0%,transparent 50%),radial-gradient(ellipse at 80% 90%,rgba(160,120,30,0.15) 0%,transparent 50%),#04060F",display:"flex",justifyContent:"center",fontFamily:F,color:"#D4AF6A"}}>
+    <div style={{minHeight:"100vh",background:`radial-gradient(ellipse at 20% 10%,var(--bg-grad1,rgba(60,40,120,0.25)) 0%,transparent 52%),radial-gradient(ellipse at 80% 90%,var(--bg-grad2,rgba(160,120,30,0.15)) 0%,transparent 52%),radial-gradient(ellipse at 50% 50%,${hourTint} 0%,transparent 65%),#04060F`,display:"flex",justifyContent:"center",fontFamily:F,color:"var(--tint-primary,#D4AF6A)",transition:"background 3s ease"}}>
       <style>{CSS}</style>
       <div style={{width:"100%",maxWidth:430,minHeight:"100vh",display:"flex",flexDirection:"column",position:"relative"}}>
         <Sidebar tab={tab} setTab={setTab} hour={hour} eph={eph} open={sidebarOpen} setOpen={setSidebarOpen}/>
-        <div style={{height:50,background:"rgba(4,4,16,0.97)",backdropFilter:"blur(28px)",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 16px",flexShrink:0,borderBottom:"1px solid rgba(200,175,100,0.07)",boxShadow:"0 1px 0 rgba(255,255,255,0.02)"}}>
+
+        {/* ── Liquid Glass Header Bar (Batch 1) ── */}
+        <div style={{height:50,background:"rgba(var(--glass-bg,8,5,22),0.78)",backdropFilter:"blur(36px) saturate(190%) brightness(1.06)",WebkitBackdropFilter:"blur(36px) saturate(190%) brightness(1.06)",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 14px",flexShrink:0,borderBottom:"1px solid rgba(var(--tint-rgb,200,175,100),0.09)",boxShadow:"0 2px 0 rgba(255,255,255,0.025),inset 0 1px 0 rgba(255,255,255,0.07)"}}>
           <button onClick={()=>setSidebarOpen(true)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",gap:4,padding:4}}>
-            {[0,1,2].map(i=><div key={i} style={{width:i===2?14:20,height:1.5,background:"rgba(200,175,100,0.45)",borderRadius:1}}/>)}
+            {[0,1,2].map(i=><div key={i} style={{width:i===2?14:20,height:1.5,background:"rgba(var(--tint-rgb,200,175,100),0.5)",borderRadius:1,transition:"width 0.2s"}}/>)}
           </button>
-          <div onClick={()=>setTab("profile")} style={{cursor:"pointer"}}>
-            <div style={{fontFamily:F,fontSize:11,color:"#D4AF6A",letterSpacing:7,textTransform:"uppercase"}}>ASTRUM</div>
-            {profile?.name&&<div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.35)",letterSpacing:2,textTransform:"uppercase",textAlign:"center",marginTop:1}}>{profile.name}</div>}
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:7}}>
-            <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.3)"}}>{now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>
-            <span style={{fontSize:11,color:P[hour.planet].col}}>{P[hour.planet].sym}</span>
+          {/* ASTRUM title — tap to open command palette (Batch 2) */}
+          <button onClick={()=>setCmdOpen(true)} style={{background:"none",border:"none",cursor:"pointer",textAlign:"center",padding:"4px 10px",borderRadius:8,transition:"background 0.15s"}}
+            onMouseEnter={e=>e.currentTarget.style.background="rgba(var(--tint-rgb,200,175,100),0.06)"}
+            onMouseLeave={e=>e.currentTarget.style.background="none"}>
+            <div style={{fontFamily:F,fontSize:11,color:"var(--tint-primary,#D4AF6A)",letterSpacing:7,textTransform:"uppercase"}}>ASTRUM</div>
+            {profile?.name
+              ?<div style={{fontFamily:F,fontSize:7,color:"rgba(var(--tint-rgb,200,175,100),0.35)",letterSpacing:2,textTransform:"uppercase",marginTop:1}}>{profile.name}</div>
+              :<div style={{fontFamily:F,fontSize:6.5,color:"rgba(var(--tint-rgb,200,175,100),0.22)",letterSpacing:1.5,marginTop:1}}>⌘K to search</div>}
+          </button>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <div style={{fontFamily:F,fontSize:9.5,color:"rgba(var(--tint-rgb,200,175,100),0.32)"}}>{now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>
+            <span style={{fontSize:12,color:P[hour.planet].col,animation:"live-dot 3s ease-in-out infinite"}}>{P[hour.planet].sym}</span>
           </div>
         </div>
-        <div style={{height:28,background:"rgba(4,4,16,0.8)",backdropFilter:"blur(16px)",display:"flex",alignItems:"center",padding:"0 18px",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
-          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",letterSpacing:3,textTransform:"uppercase"}}>
-            {NAV_SECTIONS.find(s=>s.id===tab)?.icon} {NAV_SECTIONS.find(s=>s.id===tab)?.label} — {NAV_SECTIONS.find(s=>s.id===tab)?.desc}
-          </div>
-          {eph.voc?.isVoC&&<div style={{marginLeft:"auto",fontFamily:F,fontSize:7,color:"#E09060",letterSpacing:2}}>⚠ MOON VoC</div>}
-        </div>
-        <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",overflowY:"auto"}}>
+
+        {/* ── Astral Live Bar (Batch 4 — replaces static breadcrumb) ── */}
+        <AstralLiveBar tab={tab} eph={eph} now={now} natalPos={natalPos} hour={hour}/>
+
+        {/* ── Screen content — slide transition on tab change (Batch 6) ── */}
+        <div key={tab} style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",overflowY:"auto",animation:"slide-screen 0.2s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
           {tab==="sky"     &&<SkyScreen     now={now} hour={hour} eph={eph} fractal={fractal} natalPos={natalPos} onWork={openWork}/>}
           {tab==="aspects" &&<AspectsScreen eph={eph}/>}
           {tab==="decans"  &&<DecansScreen  eph={eph} fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode}/>}
@@ -4509,14 +4891,13 @@ export default function App(){
           {tab==="ai"      &&<AIScreen      now={now} eph={eph} fractal={fractal} natalPos={natalPos} hour={hour} profile={profile}/>}
           {tab==="profile" &&<ProfileScreen profile={profile} setProfile={setProfile}/>}
         </div>
-        {/* Floating Oracle Button — visible on all screens except ai+profile */}
-        {tab!=="ai"&&tab!=="profile"&&(
-          <button onClick={openOracle} style={{position:"fixed",bottom:24,right:24,width:46,height:46,borderRadius:23,background:"rgba(4,4,18,0.92)",border:"1px solid rgba(200,175,100,0.25)",backdropFilter:"blur(16px)",boxShadow:"0 4px 24px rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",zIndex:400,transition:"border-color 0.2s,transform 0.15s",fontSize:17,color:"#D4AF6A"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(212,175,106,0.55)";e.currentTarget.style.transform="scale(1.08)";}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(200,175,100,0.25)";e.currentTarget.style.transform="scale(1)";}}>
-            ✧
-          </button>
-        )}
+
+        {/* ── Astral Control Center (Batch 5 — replaces Oracle float button) ── */}
+        <AstralControlCenter tab={tab} onOracle={openOracle} setTab={setTab} natalPos={natalPos} eph={eph}/>
+
+        {/* ── Command Palette (Batch 2) ── */}
+        <CommandPalette open={cmdOpen} onClose={()=>setCmdOpen(false)} setTab={(t)=>{setTab(t);setCmdOpen(false);}} natalPos={natalPos} eph={eph} onOracle={(q)=>{openOracle(q);}}/>
+
         <OraclePanel open={oracleOpen} onClose={()=>setOracleOpen(false)} context={oracleCtx} profile={profile}/>
       </div>
     </div>
