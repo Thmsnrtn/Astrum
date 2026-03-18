@@ -3,9 +3,12 @@ import react from '@vitejs/plugin-react'
 
 // Tauri expects a fixed port in dev mode and correct build output
 const TAURI = process.env.TAURI_ENV_PLATFORM !== undefined
+// GitHub Pages needs /Astrum/ base path; local dev and Tauri use /
+const GH_PAGES = process.env.GITHUB_PAGES === 'true'
 
 export default defineConfig({
   plugins: [react()],
+  base: GH_PAGES ? '/Astrum/' : (TAURI ? '/' : '/'),
   // Prevent vite from obscuring Rust errors
   clearScreen: false,
   server: {
