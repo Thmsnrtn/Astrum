@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import HERBALISM_DATA from './data/herbalism.json';
 
 // ═══════════════════════════════════════════════════════════════════════
 // PLATFORM DETECTION
@@ -8,6 +9,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 const isTauri = typeof window !== "undefined" && !!window.__TAURI_INTERNALS__;
 const isCapacitor = typeof window !== "undefined" && !!window.Capacitor;
 const isNative = isTauri || isCapacitor;
+const isDesktop = isTauri && !isCapacitor;
 
 // Thin platform shim: haptics
 async function triggerHaptic(style="medium"){
@@ -534,6 +536,48 @@ const T=(s=18,c="#D4AF6A")=>({fontFamily:F,fontSize:s,color:c,lineHeight:1.2});
 const B=(s=12,c="#8A7050")=>({fontFamily:F,fontSize:s,color:c,fontStyle:"italic",lineHeight:1.9});
 
 // ═══════════════════════════════════════════════════════════════════════
+// HERBALISM LIBRARY — Alchemical & Botanical Resources
+// ═══════════════════════════════════════════════════════════════════════
+const HERB_KEYWORDS = ["herb","plant","botanical","tincture","spagyric","extract","root","bark","leaf","flower","remedy","medicinal","calendula","aloe","ferment","brew","potion","materia","formula","decoction","infusion","salt principle","sulphur","mercury principle","alchemy","alchemical","spagyrics","planetary herb","correspondence","flavour","flavor","taste","bitter","astringent","pungent","aromatic","demulcent","adaptogen","constitution","tissue state","elemental","five elements"];
+
+function searchHerbalism(query, maxChars=3500) {
+  if (!query) return "";
+  const q = query.toLowerCase();
+  const keywords = q.split(/\s+/).filter(w => w.length > 3);
+  const scored = HERBALISM_DATA.resources.map(r => {
+    const haystack = (r.title + " " + r.category + " " + r.text).toLowerCase();
+    let score = 0;
+    keywords.forEach(kw => { score += (haystack.split(kw).length - 1); });
+    return { ...r, score };
+  }).filter(r => r.score > 0).sort((a, b) => b.score - a.score);
+  if (!scored.length) return "";
+  let result = "HERBALISM LIBRARY:\n";
+  let chars = 0;
+  for (const r of scored.slice(0, 4)) {
+    if (chars >= maxChars) break;
+    const excerpt = r.text.slice(0, Math.min(900, maxChars - chars));
+    if (excerpt.trim()) {
+      result += `\n[${r.title}]\n${excerpt}\n`;
+      chars += excerpt.length;
+    }
+  }
+  return chars > 0 ? result : "";
+}
+
+async function openHerbalFile(filePath) {
+  if (isTauri) {
+    try {
+      const url = "file://" + encodeURI(filePath);
+      if (window.__TAURI__?.shell?.open) {
+        await window.__TAURI__.shell.open(url);
+      } else if (window.__TAURI_INTERNALS__) {
+        await window.__TAURI_INTERNALS__.invoke("plugin:shell|open", { path: url });
+      }
+    } catch(e) { console.error("openHerbalFile:", e); }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // SIDEBAR NAVIGATION
 // ═══════════════════════════════════════════════════════════════════════
 const NAV_SECTIONS = [
@@ -549,6 +593,7 @@ const NAV_SECTIONS = [
   {id:"journal", icon:"✎", label:"Journal",    desc:"Practice record"},
   {id:"sigils",  icon:"⟁", label:"Sigils",     desc:"Sigil workshop"},
   {id:"grimoire",icon:"📖", label:"Grimoire",   desc:"Personal book of shadows"},
+  {id:"herbarium",icon:"⚘", label:"Herbarium",   desc:"Alchemical herb library"},
   {id:"learn",   icon:"⬡", label:"Learn",      desc:"AI magical education"},
   {id:"ai",      icon:"✧", label:"Planner",    desc:"AI working builder"},
   {id:"profile", icon:"◉", label:"Profile",    desc:"Practitioner settings"},
@@ -566,56 +611,73 @@ const TRADITIONS = {
   "custom":             {label:"Custom / Eclectic",    desc:"User-defined system",                          icon:"◌", prompt:"You adapt to whatever magical system the practitioner describes. You meet them where they are, drawing on whichever classical or contemporary sources are relevant to their stated framework. You do not impose a tradition — you serve the practitioner's own system."},
 };
 
-function Sidebar({tab, setTab, hour, eph, open, setOpen}) {
+function Sidebar({tab, setTab, hour, eph, open, setOpen, permanent}) {
   const p=P[hour.planet], moonVoC=eph?.voc?.isVoC;
+
+  const navItems = (
+    <div style={{padding:"8px 0",flex:1,overflowY:"auto"}}>
+      {NAV_SECTIONS.map(s=>{
+        const active=tab===s.id;
+        return (
+          <button key={s.id} onClick={()=>{setTab(s.id);if(!permanent)setOpen(false);}} style={{width:"100%",background:active?"rgba(200,175,100,0.1)":"none",border:"none",borderLeft:active?"2px solid #D4AF6A":"2px solid transparent",cursor:"pointer",padding:permanent?"8px 16px":"10px 20px",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+            <span style={{fontSize:14,color:active?"#D4AF6A":"rgba(200,175,100,0.4)",width:18,textAlign:"center",flexShrink:0}}>{s.icon}</span>
+            <div>
+              <div style={{fontFamily:F,fontSize:permanent?12:13,color:active?"#D4AF6A":"rgba(200,175,100,0.7)"}}>{s.label}</div>
+              {!permanent&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)"}}>{s.desc}</div>}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const planetBlock = (
+    <div style={{padding:permanent?"14px 16px 12px":"22px 20px 16px",borderBottom:"1px solid rgba(200,175,100,0.08)"}}>
+      {!permanent&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+        <div style={{fontFamily:F,fontSize:13,color:"#D4AF6A",letterSpacing:6,textTransform:"uppercase"}}>ASTRUM</div>
+        <button onClick={()=>setOpen(false)} style={{background:"none",border:"none",color:"rgba(200,175,100,0.4)",fontSize:16,cursor:"pointer",padding:4}}>✕</button>
+      </div>}
+      <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}>
+        <span style={{fontSize:permanent?16:18,color:p.col}}>{p.sym}</span>
+        <div>
+          <div style={L(`${p.col}80`,7)}>Hour of {p.name}</div>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:1.5}}>
+            {Math.floor(hour.msRemaining/60000)}m {Math.floor((hour.msRemaining%60000)/1000)}s
+          </div>
+        </div>
+      </div>
+      {moonVoC&&<div style={{padding:"4px 8px",borderRadius:6,background:"rgba(200,100,50,0.15)",border:"1px solid rgba(200,100,50,0.3)",marginBottom:4}}>
+        <div style={{fontFamily:F,fontSize:7,color:"#E09060",letterSpacing:2}}>⚠ MOON VOID OF COURSE</div>
+        <div style={{fontFamily:F,fontSize:8,color:"rgba(200,130,80,0.7)",marginTop:1,lineHeight:1.4}}>Until Moon enters {eph.voc.nextSign?.name}</div>
+      </div>}
+      {eph?.pos?.moon&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)"}}>
+        ☽ {eph.pos.moon.zodiac.sym} {eph.pos.moon.zodiac.degree}° · {eph.moonPhase}
+      </div>}
+    </div>
+  );
+
+  // Permanent desktop sidebar — in document flow
+  if (permanent) {
+    return (
+      <div style={{width:200,flexShrink:0,height:"100vh",background:"rgba(4,4,16,0.98)",borderRight:"1px solid rgba(200,175,100,0.1)",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        <div style={{padding:"20px 16px 12px",borderBottom:"1px solid rgba(200,175,100,0.08)"}}>
+          <div style={{fontFamily:F,fontSize:12,color:"#D4AF6A",letterSpacing:6,textTransform:"uppercase",marginBottom:10}}>ASTRUM</div>
+          {planetBlock}
+        </div>
+        {navItems}
+      </div>
+    );
+  }
+
+  // Mobile overlay sidebar
   return (
     <>
-      {open && <div onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,backdropFilter:"blur(4px)"}}/>}
+      {open&&<div onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,backdropFilter:"blur(4px)"}}/>}
       <div style={{position:"fixed",left:0,top:0,bottom:0,width:open?240:0,background:"rgba(4,4,16,0.97)",backdropFilter:"blur(28px)",borderRight:"1px solid rgba(200,175,100,0.1)",zIndex:300,overflow:"hidden",transition:"width 0.3s cubic-bezier(0.4,0,0.2,1)",boxShadow:open?"8px 0 40px rgba(0,0,0,0.6)":"none"}}>
-        {open && (
-          <div style={{width:240,height:"100%",overflowY:"auto",display:"flex",flexDirection:"column"}}>
-            <div style={{padding:"22px 20px 16px",borderBottom:"1px solid rgba(200,175,100,0.08)"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                <div style={{fontFamily:F,fontSize:13,color:"#D4AF6A",letterSpacing:6,textTransform:"uppercase"}}>ASTRUM</div>
-                <button onClick={()=>setOpen(false)} style={{background:"none",border:"none",color:"rgba(200,175,100,0.4)",fontSize:16,cursor:"pointer",padding:4}}>✕</button>
-              </div>
-              <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
-                <span style={{fontSize:18,color:p.col}}>{p.sym}</span>
-                <div>
-                  <div style={L(`${p.col}80`,7)}>Hour of {p.name}</div>
-                  <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",letterSpacing:2}}>
-                    {Math.floor(hour.msRemaining/60000)}m {Math.floor((hour.msRemaining%60000)/1000)}s remaining
-                  </div>
-                </div>
-              </div>
-              {moonVoC && (
-                <div style={{padding:"5px 9px",borderRadius:8,background:"rgba(200,100,50,0.15)",border:"1px solid rgba(200,100,50,0.3)",marginBottom:6}}>
-                  <div style={{fontFamily:F,fontSize:8,color:"#E09060",letterSpacing:2}}>⚠ MOON VOID OF COURSE</div>
-                  <div style={{fontFamily:F,fontSize:9,color:"rgba(200,130,80,0.7)",marginTop:2}}>Avoid new operations — {fmtTime(eph.voc.hoursToIngress*3600)} until Moon enters {eph.voc.nextSign?.name}</div>
-                </div>
-              )}
-              {eph?.pos?.moon && (
-                <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.5)"}}>
-                  Moon: {eph.pos.moon.zodiac.sym} {eph.pos.moon.zodiac.degree}° · {eph.moonPhase}
-                </div>
-              )}
-            </div>
-            <div style={{padding:"12px 0",flex:1}}>
-              {NAV_SECTIONS.map(s=>{
-                const active=tab===s.id;
-                return (
-                  <button key={s.id} onClick={()=>{setTab(s.id);setOpen(false);}} style={{width:"100%",background:active?"rgba(200,175,100,0.1)":"none",border:"none",borderLeft:active?"2px solid #D4AF6A":"2px solid transparent",cursor:"pointer",padding:"10px 20px",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
-                    <span style={{fontSize:15,color:active?"#D4AF6A":"rgba(200,175,100,0.4)",width:20,textAlign:"center"}}>{s.icon}</span>
-                    <div>
-                      <div style={{fontFamily:F,fontSize:13,color:active?"#D4AF6A":"rgba(200,175,100,0.7)"}}>{s.label}</div>
-                      <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)"}}>{s.desc}</div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {open&&<div style={{width:240,height:"100%",overflowY:"auto",display:"flex",flexDirection:"column"}}>
+          {planetBlock}
+          {navItems}
+        </div>}
       </div>
     </>
   );
@@ -873,72 +935,120 @@ function SkyScreen({now,hour,eph,fractal,natalPos,onWork}){
 // ═══════════════════════════════════════════════════════════════════════
 function DecansScreen({eph,fractal,natalPos,mode,setMode}){
   const [sel,setSel]=useState(eph.decanIdx);
+  const [signFilter,setSignFilter]=useState("All");
   const d=DECANS[sel],col=P[d.ruler].col;
   const isCurrentSolar=sel===eph.decanIdx;
   const isFractalActive=fractal.levels.some(l=>l.idx===sel);
+  const fractalLevels=fractal.levels.filter(l=>l.idx===sel);
+  const FLABELS=["10-day","6.7-hr","11-min","19-sec"];
   const isNatal=natalPos&&Object.entries(natalPos).filter(([pk])=>P[pk]).some(([,np])=>np.decanIdx===sel);
+  const SIGNS_UNIQ=["All",...Array.from(new Set(DECANS.map(d=>d.sign)))];
+  const filtered=signFilter==="All"?DECANS:DECANS.filter(d=>d.sign===signFilter);
   return (
-    <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:20}}>
-      <div style={{padding:"16px 18px 10px"}}>
-        <div style={L()}>Classical Tradition · 36 Faces</div>
-        <div style={T(20)}>The Thirty-Six Faces</div>
-      </div>
-      <div className="card" style={{margin:"0 14px 10px",background:`linear-gradient(135deg,rgba(8,5,22,0.8),${col}09)`,borderColor:`${col}28`}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-          <div style={{flex:1}}>
-            <div style={L(`${col}80`,8)}>Decan {d.n} · {d.sym} {d.sign} · {d.ruler.charAt(0).toUpperCase()+d.ruler.slice(1)}</div>
-            <div style={T(18,col)}>{d.name}</div>
-            <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",marginTop:2}}>Tarot: {d.tarot}</div>
+    <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+      <div style={{flex:1,display:"flex",flexDirection:"row",overflow:"hidden",minHeight:0}}>
+        {/* Left: detail panel */}
+        <div style={{width:340,flexShrink:0,borderRight:"1px solid rgba(200,175,100,0.07)",overflowY:"auto",padding:"20px 20px 24px"}}>
+          <div style={L()}>Decan {d.n} of 36</div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginTop:4,marginBottom:2}}>
+            <span style={{fontSize:18,color:col}}>{P[d.ruler].sym}</span>
+            <div style={T(20,col)}>{d.name}</div>
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
-            {isCurrentSolar&&<span className="chip" style={{color:"#D4AF6A",borderColor:"rgba(212,175,106,0.3)"}}>Solar Now</span>}
-            {isFractalActive&&<span className="chip" style={{color:"#D4AF6A",borderColor:"rgba(212,175,106,0.3)"}}>Fractal Active</span>}
-            {isNatal&&<span className="chip" style={{color:"#FFD700",borderColor:"rgba(255,215,0,0.3)"}}>In Natal</span>}
+          <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.4)",marginBottom:12}}>
+            {d.sym} {d.sign} · {d.ruler.charAt(0).toUpperCase()+d.ruler.slice(1)} · {d.tarot}
           </div>
+          {/* Status chips */}
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+            {isCurrentSolar&&<span className="chip" style={{color:"#D4AF6A",borderColor:"rgba(212,175,106,0.35)"}}>☉ Solar Now</span>}
+            {isFractalActive&&<span className="chip" style={{color:col,borderColor:`${col}40`}}>◎ Fractal Active</span>}
+            {isNatal&&<span className="chip" style={{color:"#FFD700",borderColor:"rgba(255,215,0,0.3)"}}>☽ In Natal</span>}
+          </div>
+          {/* Magic description */}
+          <div style={{fontFamily:F,fontSize:11.5,color:"#B09060",fontStyle:"italic",lineHeight:1.85,marginBottom:16,padding:"12px 14px",borderRadius:10,background:`${col}06`,border:`1px solid ${col}15`}}>{d.magic}</div>
+          {/* Fractal levels if active */}
+          {isFractalActive&&(
+            <div style={{marginBottom:14,padding:"10px 12px",borderRadius:10,background:"rgba(0,0,0,0.3)",border:`1px solid ${col}20`}}>
+              <div style={L(`${col}60`,7)}>Active Fractal Layers</div>
+              <div style={{marginTop:6,display:"flex",flexDirection:"column",gap:4}}>
+                {fractalLevels.map(l=>(
+                  <div key={l.level} style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div style={{fontFamily:F,fontSize:9,color:`${col}80`}}>{FLABELS[l.level-1]} window</div>
+                    <div style={{fontFamily:F,fontSize:9,color:col}}>{fmtTime(l.dur-l.secIn)} left</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Natal planets in this decan */}
+          {natalPos&&Object.entries(natalPos).filter(([pk])=>P[pk]&&natalPos[pk].decanIdx===sel).length>0&&(
+            <div style={{marginBottom:14,padding:"10px 12px",borderRadius:10,background:"rgba(255,215,0,0.04)",border:"1px solid rgba(255,215,0,0.15)"}}>
+              <div style={L("rgba(255,215,0,0.5)",7)}>Your Natal Planets Here</div>
+              <div style={{marginTop:6,display:"flex",gap:8,flexWrap:"wrap"}}>
+                {Object.entries(natalPos).filter(([pk])=>P[pk]&&natalPos[pk].decanIdx===sel).map(([pk,np])=>(
+                  <div key={pk} style={{display:"flex",alignItems:"center",gap:5}}>
+                    <span style={{fontSize:14,color:P[pk].col}}>{P[pk].sym}</span>
+                    <span style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)"}}>{P[pk].name} · {DIGNITY_LBL[np.dignity].split(" ")[0]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* All natal faces list */}
+          {natalPos&&(
+            <div>
+              <div style={L()}>All Your Natal Faces</div>
+              <div style={{marginTop:8}}>
+                {Object.entries(natalPos).filter(([pk])=>P[pk]).map(([pk,np])=>(
+                  <button key={pk} className="row-btn" onClick={()=>setSel(np.decanIdx)}>
+                    <span style={{fontSize:13,color:P[pk].col,width:20,flexShrink:0}}>{P[pk].sym}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontFamily:F,fontSize:11,color:sel===np.decanIdx?"#D4AF6A":"#C4A870"}}>{np.decan.name}</div>
+                      <div style={{fontFamily:F,fontSize:8,color:"#6A5030"}}>{np.decan.sym} {np.decan.sign}</div>
+                    </div>
+                    <div style={{fontFamily:F,fontSize:7,color:DIGNITY_COL[np.dignity],letterSpacing:1}}>{np.dignity.toUpperCase()}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-        <div style={{fontFamily:F,fontSize:11,color:"#9A8060",fontStyle:"italic",marginTop:10,lineHeight:1.8}}>{d.magic}</div>
-        {isFractalActive&&(
-          <div style={{marginTop:9,padding:"8px 10px",borderRadius:9,background:"rgba(0,0,0,0.3)",borderColor:`${col}15`,border:"1px solid"}}>
-            <div style={L(`${col}50`,7)}>Active Fractal Levels</div>
-            <div style={{fontFamily:F,fontSize:9,color:`${col}80`,marginTop:4,fontStyle:"italic"}}>
-              {fractal.levels.filter(l=>l.idx===sel).map(l=>`Level ${l.level} (${["Atziluth","Beriah","Yetzirah","Assiah"][l.level-1]}) · ${fmtTime(l.dur-l.secIn)} remaining`).join(" · ")}
+        {/* Right: grid */}
+        <div style={{flex:1,overflowY:"auto",padding:"16px 20px 24px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <div style={L()}>All 36 Faces</div>
+            <div style={{display:"flex",gap:5,flexWrap:"wrap",justifyContent:"flex-end"}}>
+              {SIGNS_UNIQ.map(s=>(
+                <button key={s} onClick={()=>setSignFilter(s)} style={{padding:"2px 8px",borderRadius:5,background:signFilter===s?"rgba(212,175,106,0.12)":"none",border:`1px solid ${signFilter===s?"rgba(212,175,106,0.3)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:7,color:signFilter===s?"#D4AF6A":"rgba(200,175,100,0.4)",letterSpacing:1,cursor:"pointer"}}>{s==="All"?"ALL":s.toUpperCase().slice(0,3)}</button>
+              ))}
             </div>
           </div>
-        )}
-      </div>
-      <div className="card" style={{margin:"0 14px 10px",padding:"10px 10px"}}>
-        <div style={L()}>All 36 Faces</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:3,marginTop:9}}>
-          {DECANS.map(dec=>{
-            const rc=P[dec.ruler].col, isSel=dec.n-1===sel, isSolar=dec.n-1===eph.decanIdx;
-            const isNat=natalPos&&Object.entries(natalPos).filter(([pk])=>P[pk]).some(([,np])=>np.decanIdx===dec.n-1);
-            return (
-              <div key={dec.n} onClick={()=>setSel(dec.n-1)} style={{aspectRatio:"1",borderRadius:8,background:isSel?`${rc}20`:isSolar?`${rc}10`:"rgba(0,0,0,0.3)",border:`1px solid ${isSel?rc+"60":isSolar?rc+"30":"rgba(200,175,100,0.08)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",position:"relative"}}>
-                <div style={{fontSize:10,color:rc}}>{P[dec.ruler].sym}</div>
-                <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.4)",marginTop:1}}>{dec.n}</div>
-                {isNat&&<div style={{position:"absolute",top:2,right:2,width:3,height:3,borderRadius:2,background:"#FFD700"}}/>}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      {natalPos&&(
-        <div className="card" style={{margin:"0 14px 10px"}}>
-          <div style={L()}>Your Natal Faces</div>
-          <div style={{marginTop:8}}>
-            {Object.entries(natalPos).filter(([pk])=>P[pk]).map(([pk,np])=>(
-              <button key={pk} className="row-btn" onClick={()=>setSel(np.decanIdx)} style={{cursor:"pointer"}}>
-                <span style={{fontSize:13,color:P[pk].col,width:20}}>{P[pk].sym}</span>
-                <div style={{flex:1}}>
-                  <div style={{fontFamily:F,fontSize:11,color:"#C4A870"}}>{np.decan.name}</div>
-                  <div style={{fontFamily:F,fontSize:9,color:"#6A5030"}}>{np.decan.sym} {np.decan.sign} · {DIGNITY_LBL[np.dignity].split(" ")[0]}</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:8}}>
+            {filtered.map(dec=>{
+              const rc=P[dec.ruler].col;
+              const isSel=dec.n-1===sel;
+              const isSolar=dec.n-1===eph.decanIdx;
+              const isFractal=fractal.levels.some(l=>l.idx===dec.n-1);
+              const isNat=natalPos&&Object.entries(natalPos).filter(([pk])=>P[pk]).some(([,np])=>np.decanIdx===dec.n-1);
+              return (
+                <div key={dec.n} onClick={()=>setSel(dec.n-1)} style={{borderRadius:10,background:isSel?`${rc}18`:isSolar?`${rc}0C`:"rgba(8,5,22,0.7)",border:`1.5px solid ${isSel?rc+"70":isSolar?rc+"35":isFractal?`${rc}28`:"rgba(200,175,100,0.08)"}`,padding:"10px 11px",cursor:"pointer",position:"relative",transition:"border-color 0.15s",minHeight:88}}>
+                  {/* Status dots */}
+                  <div style={{position:"absolute",top:7,right:8,display:"flex",gap:3}}>
+                    {isSolar&&<div style={{width:5,height:5,borderRadius:3,background:"#D4AF6A"}}/>}
+                    {isFractal&&!isSolar&&<div style={{width:5,height:5,borderRadius:3,background:rc,opacity:0.7}}/>}
+                    {isNat&&<div style={{width:5,height:5,borderRadius:3,background:"#FFD700"}}/>}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
+                    <span style={{fontSize:11,color:rc}}>{P[dec.ruler].sym}</span>
+                    <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)"}}>{dec.sym} {dec.n}</span>
+                  </div>
+                  <div style={{fontFamily:F,fontSize:11,color:isSel?"#D4AF6A":isSolar?rc:"#C4A870",lineHeight:1.2,marginBottom:3}}>{dec.name}</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)"}}>{dec.tarot}</div>
                 </div>
-                <div style={{fontFamily:F,fontSize:8,color:DIGNITY_COL[np.dignity]}}>{np.dignity.toUpperCase()}</div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -1875,67 +1985,125 @@ function NatalScreen({natalData,setNatalData,eph,fractal,natalPos}){
 // FRACTAL SCREEN
 // ═══════════════════════════════════════════════════════════════════════
 function FractalScreen({fractal,natalPos,mode,setMode}){
-  const [selLevel,setSelLevel]=useState(null);
   const {levels,cosmicCoherence,secToThreshold}=fractal;
   const personalDecans=natalPos?Object.entries(natalPos).filter(([pk])=>P[pk]).map(([,np])=>np.decanIdx):[];
-  const L_META=[
-    {w:"Atziluth",p:"Election · Talismanic harvest"},
-    {w:"Beriah",p:"Ritual design · Working day"},
-    {w:"Yetzirah",p:"Single act · Meditation"},
-    {w:"Assiah · The Breath",p:"One vowel · One breath"}
+  const VOWELS={"moon":"AH","mercury":"EH","venus":"AY","sun":"EE","mars":"OH","jupiter":"EUW","saturn":"OHW"};
+  // Layer practical descriptions
+  const LAYER=[
+    {scale:"10-Day Current",world:"Atziluth",label:"Season & Election Layer",hint:"The underlying current of this 10-day period. Time major rituals, talisman elections, and multi-day operations to this backdrop."},
+    {scale:"~6.7-Hour Quality",world:"Beriah",label:"Day & Ritual Layer",hint:"The quality window for this block of the day. Optimal layer for single ritual operations, petitions, and active workings."},
+    {scale:"~11-Min Pulse",world:"Yetzirah",label:"Moment & Act Layer",hint:"The immediate energetic pulse. Use for the peak moment of invocation, consecration, or focused meditation."},
+    {scale:"~19-Sec Breath",world:"Assiah",label:"Breath & Sound Layer",hint:"The instantaneous vibration. Speak the planet's sacred vowel on a single breath aligned to this flash."},
   ];
-  const L_DUR_L=["~10.1 days","~6.76 hours","~11.3 min","~18.8 sec"];
+  // Coherence interpretation
+  const coherenceMsg=["","Single layer active — baseline resonance.","Two layers aligned — the current is strengthening.","Three layers converge — heightened coherence. Work with intention.","All four worlds align — peak cosmic coherence. This moment is rare."][cosmicCoherence]||"";
+  const coherenceCol=["","#6A5030","#8A7040","#C4A870","#D4AF6A"][cosmicCoherence]||"#6A5030";
+  // Dominant planet across active layers
+  const rulerCounts={};levels.forEach(l=>rulerCounts[l.decan.ruler]=(rulerCounts[l.decan.ruler]||0)+1);
+  const dominantPlanet=Object.entries(rulerCounts).sort((a,b)=>b[1]-a[1])[0]?.[0]||"sun";
+  const dp=P[dominantPlanet];
   return (
-    <div style={{flex:1,overflowY:"auto",paddingBottom:20}}>
-      <div style={{padding:"16px 18px 10px"}}>
-        <div style={L()}>Fractal Decan System</div>
-        <div style={T(20)}>The Nested Faces</div>
-        <div style={{fontFamily:F,fontSize:10,color:"#6A5030",fontStyle:"italic",marginTop:3}}>36⁴ = 1,679,616 divisions of the year · Four Kabbalistic worlds</div>
+    <div style={{flex:1,overflowY:"auto",paddingBottom:24}}>
+      {/* Header */}
+      <div style={{padding:"20px 24px 14px",borderBottom:"1px solid rgba(200,175,100,0.07)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div>
+            <div style={L()}>Fractal Clock</div>
+            <div style={T(22)}>Nested Decan Time</div>
+            <div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.7,maxWidth:500}}>
+              The solar year divides into 36 decans, and each decan into 36 sub-decans — four levels deep. At every scale, a decan face is active. When multiple levels share the same face, <em>cosmic coherence</em> amplifies that decan's power.
+            </div>
+          </div>
+          <div style={{textAlign:"right",flexShrink:0,marginLeft:20}}>
+            <div style={{fontFamily:F,fontSize:36,color:coherenceCol,lineHeight:1}}>{cosmicCoherence}<span style={{fontSize:14,color:"rgba(200,175,100,0.3)"}}>/4</span></div>
+            <div style={L(coherenceCol,7)}>Coherence</div>
+            {cosmicCoherence>=2&&<div style={{fontFamily:F,fontSize:9,color:coherenceCol,fontStyle:"italic",marginTop:4,maxWidth:120,lineHeight:1.5}}>{coherenceMsg}</div>}
+          </div>
+        </div>
+        {/* Dominant current summary */}
+        <div style={{marginTop:12,padding:"10px 14px",borderRadius:10,background:`${dp.col}08`,border:`1px solid ${dp.col}20`,display:"flex",alignItems:"center",gap:12}}>
+          <span style={{fontSize:20,color:dp.col}}>{dp.sym}</span>
+          <div>
+            <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase"}}>Dominant Current · {dp.name}</div>
+            <div style={{fontFamily:F,fontSize:12,color:dp.col,marginTop:1}}>
+              {Object.entries(rulerCounts).filter(([,c])=>c>1).length>0
+                ? `${dp.name} energy resonates across ${rulerCounts[dominantPlanet]} active layers`
+                : `Four distinct faces active — no dominant current`}
+            </div>
+          </div>
+          <div style={{marginLeft:"auto",textAlign:"right"}}>
+            <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.4)"}}>Next L1 shift</div>
+            <div style={{fontFamily:F,fontSize:14,color:"#C4A870"}}>{fmtTime(secToThreshold)}</div>
+          </div>
+        </div>
       </div>
-      <div style={{padding:"0 14px 10px",display:"flex",gap:8}}>
-        {["A","B"].map(m=>(
-          <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:"10px 0",borderRadius:12,background:mode===m?"rgba(212,175,106,0.1)":"rgba(8,5,22,0.5)",border:`1px solid ${mode===m?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.09)"}`,cursor:"pointer"}}>
-            <div style={L(mode===m?"#D4AF6A":"#5A4020",8)}>Option {m}</div>
-            <div style={{fontFamily:F,fontSize:10,color:mode===m?"#C4A870":"#4A3020",fontStyle:"italic",marginTop:2}}>{m==="A"?"Wave · Navigator":"Particle · Initiator"}</div>
-          </button>
-        ))}
-      </div>
-      {levels.map((lev,i)=>{
-        const col=P[lev.decan.ruler].col,isCoherent=lev.idx===levels[0].idx,isPersonal=personalDecans.includes(lev.idx),isActive=selLevel===i,secLeft=lev.dur-lev.secIn;
-        return (
-          <div key={i} onClick={()=>setSelLevel(isActive?null:i)} style={{margin:"0 14px 8px",borderRadius:15,background:isCoherent?"rgba(212,175,106,0.07)":"rgba(8,5,22,0.65)",border:`1px solid ${isCoherent?"rgba(212,175,106,0.28)":isPersonal?"rgba(255,215,0,0.12)":"rgba(200,175,100,0.09)"}`,padding:"12px 14px",cursor:"pointer",backdropFilter:"blur(16px)"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <div style={{width:32,height:32,borderRadius:16,background:`${col}12`,border:`1px solid ${col}35`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F,fontSize:10,color:col,flexShrink:0}}>{"IIII".slice(0,i+1)}</div>
-                <div>
-                  <div style={{display:"flex",alignItems:"center",gap:5}}>
-                    <div style={L("rgba(200,175,100,0.35)",7)}>{L_META[i].w} · {L_DUR_L[i]}</div>
-                    {isCoherent&&i>0&&<span style={{fontFamily:F,fontSize:7,color:"#D4AF6A",letterSpacing:1}}>COSMIC ✦</span>}
-                    {isPersonal&&!isCoherent&&<span style={{fontFamily:F,fontSize:7,color:"#FFD700",letterSpacing:1}}>NATAL ✦</span>}
+      {/* Four layers */}
+      <div style={{padding:"16px 24px",display:"flex",flexDirection:"column",gap:10}}>
+        {levels.map((lev,i)=>{
+          const col=P[lev.decan.ruler].col;
+          const secLeft=lev.dur-lev.secIn;
+          const pct=Math.round(lev.pos*100);
+          const isCoherent=lev.idx===levels[0].idx;
+          const isPersonal=personalDecans.includes(lev.idx);
+          const isL4=i===3;
+          return (
+            <div key={i} style={{borderRadius:14,background:isCoherent?"rgba(212,175,106,0.06)":"rgba(8,5,22,0.6)",border:`1px solid ${isCoherent?`${col}35`:isPersonal?"rgba(255,215,0,0.18)":"rgba(200,175,100,0.09)"}`,overflow:"hidden",backdropFilter:"blur(16px)"}}>
+              {/* Progress bar at top */}
+              <div style={{height:2,background:"rgba(200,175,100,0.06)"}}><div style={{height:"100%",width:`${pct}%`,background:`linear-gradient(90deg,${col}60,${col})`,transition:i>=2?"none":"width 2s ease"}}/></div>
+              <div style={{padding:"14px 18px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12}}>
+                  {/* Left: layer info */}
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                      <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)",letterSpacing:2,textTransform:"uppercase"}}>{LAYER[i].scale}</div>
+                      {isCoherent&&i>0&&<span style={{fontFamily:F,fontSize:7,color:"#D4AF6A",letterSpacing:1,padding:"1px 5px",background:"rgba(212,175,106,0.12)",borderRadius:3}}>COHERENT ✦</span>}
+                      {isPersonal&&<span style={{fontFamily:F,fontSize:7,color:"#FFD700",letterSpacing:1,padding:"1px 5px",background:"rgba(255,215,0,0.08)",borderRadius:3}}>NATAL ✦</span>}
+                    </div>
+                    <div style={{display:"flex",alignItems:"baseline",gap:8}}>
+                      <div style={{fontFamily:F,fontSize:i===0?20:i===1?18:16,color:isCoherent?"#D4AF6A":col,lineHeight:1.1}}>{lev.decan.name}</div>
+                    </div>
+                    <div style={{fontFamily:F,fontSize:10,color:`${col}70`,marginTop:3}}>
+                      <span style={{marginRight:8}}>{lev.decan.sym} {lev.decan.sign}</span>
+                      <span>{P[lev.decan.ruler].sym} {lev.decan.ruler.charAt(0).toUpperCase()+lev.decan.ruler.slice(1)}</span>
+                      <span style={{color:"rgba(200,175,100,0.3)",marginLeft:8}}>· {lev.decan.tarot}</span>
+                    </div>
+                    <div style={{fontFamily:F,fontSize:10,color:"#7A6040",fontStyle:"italic",marginTop:6,lineHeight:1.7,maxWidth:500}}>{lev.decan.magic}</div>
+                    {/* Practical guidance */}
+                    <div style={{marginTop:8,padding:"6px 10px",borderRadius:7,background:"rgba(0,0,0,0.25)",border:"1px solid rgba(200,175,100,0.07)"}}>
+                      <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",letterSpacing:1.5,textTransform:"uppercase",marginBottom:2}}>{LAYER[i].label}</div>
+                      <div style={{fontFamily:F,fontSize:9,color:"#8A7050",fontStyle:"italic",lineHeight:1.6}}>{LAYER[i].hint}</div>
+                    </div>
+                    {/* Vowel for L4 */}
+                    {isL4&&<div style={{marginTop:10,display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{padding:"8px 16px",borderRadius:8,background:"rgba(0,0,0,0.3)",border:`1px solid ${col}20`,textAlign:"center"}}>
+                        <div style={{fontFamily:"Georgia,serif",fontSize:24,color:"#D4AF6A",letterSpacing:6}}>{VOWELS[lev.decan.ruler]}</div>
+                        <div style={{fontFamily:F,fontSize:8,color:"#5A4020",fontStyle:"italic",marginTop:2}}>Speak now · one breath</div>
+                      </div>
+                    </div>}
                   </div>
-                  <div style={T(14,isCoherent?"#D4AF6A":col)}>{lev.decan.name}</div>
-                  <div style={{fontFamily:F,fontSize:9,color:`${col}70`,marginTop:1}}>{lev.decan.sym} {lev.decan.sign} · {lev.decan.ruler.charAt(0).toUpperCase()+lev.decan.ruler.slice(1)}</div>
+                  {/* Right: time */}
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <div style={{fontFamily:F,fontSize:i<=1?18:14,color:col}}>{fmtTime(secLeft)}</div>
+                    <div style={{fontFamily:F,fontSize:7,color:"#4A3020",letterSpacing:1,marginTop:1}}>remaining</div>
+                    <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.2)",marginTop:4}}>{pct}% elapsed</div>
+                  </div>
                 </div>
               </div>
-              <div style={{textAlign:"right",flexShrink:0}}>
-                <div style={{fontFamily:F,fontSize:12,color:col}}>{fmtTime(secLeft)}</div>
-                <div style={{fontFamily:F,fontSize:6,color:"#4A3020",letterSpacing:1}}>remaining</div>
-              </div>
             </div>
-            <div style={{marginTop:9,height:2,background:"rgba(200,175,100,0.07)",borderRadius:1}}><div style={{height:"100%",width:`${lev.pos*100}%`,background:col,borderRadius:1,transition:i>=3?"width 0.2s":"width 1.5s"}}/></div>
-            {isActive&&(
-              <div style={{marginTop:12,paddingTop:12,borderTop:`1px solid ${col}15`}}>
-                <div style={{fontFamily:F,fontSize:9,color:`${col}60`,fontStyle:"italic",marginTop:3,lineHeight:1.7}}>{L_META[i].p}</div>
-                <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:5,lineHeight:1.7}}>{mode==="A"?"Wave mode: The full zodiacal drama replays from Aries I through this container. Navigate the wave.":"Particle mode: This level opened on its parent's face. The threshold is the moment of maximum coherence."}</div>
-                {i===3&&<div style={{marginTop:10,padding:"9px 11px",borderRadius:10,background:"rgba(0,0,0,0.3)",border:`1px solid ${col}15`,textAlign:"center"}}><div style={{fontFamily:"serif",fontSize:20,color:"#D4AF6A",letterSpacing:8,marginBottom:4}}>{{"moon":"AH","mercury":"EH","venus":"AY","sun":"EE","mars":"OH","jupiter":"EUW","saturn":"OHW"}[lev.decan.ruler]}</div><div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic"}}>Sound now · one breath · one face</div></div>}
-              </div>
-            )}
-          </div>
-        );
-      })}
-      <div className="card" style={{margin:"0 14px",display:"flex",gap:12,justifyContent:"space-between"}}>
-        <div style={{textAlign:"center"}}><div style={L("rgba(200,175,100,0.4)",7)}>Cosmic Levels</div><div style={{fontFamily:F,fontSize:24,color:cosmicCoherence>=3?"#D4AF6A":"#6A5030",marginTop:4}}>{cosmicCoherence}</div></div>
-        <div style={{textAlign:"center"}}><div style={L("rgba(200,175,100,0.4)",7)}>Next {mode==="B"?"Threshold":"Coherence"}</div><div style={{fontFamily:F,fontSize:16,color:"#C4A870",marginTop:4}}>{fmtTime(secToThreshold)}</div></div>
+          );
+        })}
+      </div>
+      {/* Mode toggle — moved to bottom as advanced option */}
+      <div style={{padding:"0 24px 8px"}}>
+        <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)",letterSpacing:2,textTransform:"uppercase",marginBottom:8}}>Advanced · Sub-Decan Mode</div>
+        <div style={{display:"flex",gap:8}}>
+          {["A","B"].map(m=>(
+            <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:"8px 0",borderRadius:10,background:mode===m?"rgba(212,175,106,0.08)":"rgba(8,5,22,0.5)",border:`1px solid ${mode===m?"rgba(212,175,106,0.25)":"rgba(200,175,100,0.07)"}`,cursor:"pointer"}}>
+              <div style={{fontFamily:F,fontSize:9,color:mode===m?"#D4AF6A":"#4A3020"}}>{m==="A"?"Wave Mode — Zodiacal":"Particle Mode — Relative"}</div>
+              <div style={{fontFamily:F,fontSize:8,color:mode===m?"#8A7050":"#3A2015",fontStyle:"italic",marginTop:1}}>{m==="A"?"L2 counts from Aries I each time":"L2 inherits parent decan index"}</div>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -2080,7 +2248,9 @@ function AIScreen({now,eph,fractal,natalPos,hour,profile}){
     setMessages(m=>[...m,userMsg]);
     setInput("");setLoading(true);
     const context=buildContext();
-    const systemPrompt=buildSystemPrompt(profile,context);
+    const isHerbQ=HERB_KEYWORDS.some(kw=>input.toLowerCase().includes(kw));
+    const herbCtx=isHerbQ?searchHerbalism(input):"";
+    const systemPrompt=buildSystemPrompt(profile,context+(herbCtx?"\n\n"+herbCtx:""));
     const apiKey=profile?.apiKey||"";
     if(!apiKey){setMessages(m=>[...m,{role:"assistant",content:"No API key configured. Go to Profile → Anthropic API Key to enter your key from console.anthropic.com."}]);setLoading(false);return;}
     try{
@@ -2124,6 +2294,116 @@ function AIScreen({now,eph,fractal,natalPos,hour,profile}){
       <div style={{padding:"8px 14px",borderTop:"1px solid rgba(200,175,100,0.07)",display:"flex",gap:8}}>
         <textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}}} placeholder="Describe your goal and deadline…" rows={2} style={{flex:1,resize:"none",fontSize:12,lineHeight:1.6}}/>
         <button onClick={send} disabled={!input.trim()||loading} style={{padding:"0 14px",borderRadius:10,background:input.trim()?"rgba(212,175,106,0.15)":"rgba(0,0,0,0.3)",border:`1px solid ${input.trim()?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:10,color:input.trim()?"#D4AF6A":"#4A3020",letterSpacing:2,cursor:input.trim()?"pointer":"default",alignSelf:"flex-end",height:38}}>SEND</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// HERBARIUM SCREEN
+// ═══════════════════════════════════════════════════════════════════════
+const HERB_CATEGORIES = ["All", ...Array.from(new Set(HERBALISM_DATA.resources.map(r=>r.category))).sort()];
+const GOLD = "#D4AF6A";
+
+function HerbariumScreen({profile}) {
+  const [cat, setCat] = useState("All");
+  const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState(null);
+  const [aiResult, setAiResult] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiQuery, setAiQuery] = useState("");
+
+  const filtered = HERBALISM_DATA.resources.filter(r => {
+    const matchCat = cat === "All" || r.category === cat;
+    if (!matchCat) return false;
+    if (!query.trim()) return true;
+    const q = query.toLowerCase();
+    return r.title.toLowerCase().includes(q) || r.text.toLowerCase().includes(q) || r.category.toLowerCase().includes(q);
+  });
+
+  const askAI = async () => {
+    if (!aiQuery.trim() || aiLoading) return;
+    const apiKey = profile?.apiKey || "";
+    if (!apiKey) { setAiResult("Configure your Anthropic API key in Profile first."); return; }
+    setAiLoading(true); setAiResult("");
+    const herbCtx = searchHerbalism(aiQuery, 4000);
+    const sys = `You are a master herbalist and alchemist with deep knowledge of spagyric and Galenic traditions. You have access to the following herbalism library excerpts. Draw on them specifically when answering.\n\n${herbCtx || "No specific matching excerpts found — draw on general knowledge."}`;
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:700,system:sys,messages:[{role:"user",content:aiQuery}]})});
+      const data = await resp.json();
+      setAiResult(data.content?.[0]?.text || data.error?.message || "An error occurred.");
+    } catch(e) { setAiResult("Unable to connect to the API."); }
+    setAiLoading(false);
+  };
+
+  return (
+    <div style={{flex:1,overflowY:"auto",paddingBottom:24}}>
+      <div style={{padding:"16px 18px 10px",borderBottom:"1px solid rgba(200,175,100,0.07)"}}>
+        <div style={L()}>Alchemical Herb Library</div>
+        <div style={T(20)}>Herbarium ⚘</div>
+        <div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",marginTop:3,lineHeight:1.7}}>{HERBALISM_DATA.total} resources · Spagyrics · Sacred Plants · Fermentation · Materia Medica</div>
+      </div>
+
+      {/* AI Herb Advisor */}
+      <div className="card" style={{margin:"12px 14px 4px"}}>
+        <div style={L()}>Herb Advisor</div>
+        <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",marginBottom:8,marginTop:2}}>Ask about herbs, spagyrics, planetary correspondences, preparations…</div>
+        <div style={{display:"flex",gap:7}}>
+          <input value={aiQuery} onChange={e=>setAiQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")askAI();}} placeholder="Which herbs correspond to Venus?" style={{flex:1,fontSize:11}}/>
+          <button onClick={askAI} disabled={!aiQuery.trim()||aiLoading} style={{padding:"0 12px",borderRadius:8,background:aiQuery.trim()?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${aiQuery.trim()?"rgba(212,175,106,0.28)":"rgba(200,175,100,0.08)"}`,fontFamily:F,fontSize:8,color:aiQuery.trim()?"#D4AF6A":"#4A3020",letterSpacing:1,cursor:aiQuery.trim()?"pointer":"default",flexShrink:0}}>ASK</button>
+        </div>
+        {aiLoading && <div style={{display:"flex",gap:4,padding:"10px 0"}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}</div>}
+        {aiResult && <div style={{fontFamily:F,fontSize:11,color:"#C4A870",lineHeight:1.9,marginTop:10,whiteSpace:"pre-wrap",borderTop:"1px solid rgba(200,175,100,0.08)",paddingTop:10}}>{aiResult}</div>}
+      </div>
+
+      {/* Search */}
+      <div style={{padding:"8px 14px"}}>
+        <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search titles and text…" style={{width:"100%",fontSize:11}}/>
+      </div>
+
+      {/* Category filter */}
+      <div style={{display:"flex",gap:5,padding:"0 14px 10px",overflowX:"auto",flexShrink:0}}>
+        {HERB_CATEGORIES.map(c=>(
+          <button key={c} onClick={()=>setCat(c)} style={{padding:"3px 10px",borderRadius:6,background:cat===c?"rgba(212,175,106,0.15)":"none",border:`1px solid ${cat===c?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.12)"}`,fontFamily:F,fontSize:8,color:cat===c?GOLD:"rgba(200,175,100,0.4)",letterSpacing:1,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0}}>{c.toUpperCase()}</button>
+        ))}
+      </div>
+
+      {/* Resource list */}
+      <div style={{padding:"0 14px"}}>
+        {filtered.length===0 && <div style={{fontFamily:F,fontSize:11,color:"rgba(200,175,100,0.3)",padding:"20px 0",textAlign:"center"}}>No resources match.</div>}
+        {filtered.map((r,i)=>{
+          const isOpen = expanded === i;
+          const hasText = r.text && r.text.length > 10;
+          return (
+            <div key={i} className="card" style={{marginBottom:8,cursor:"pointer"}} onClick={()=>setExpanded(isOpen?null:i)}>
+              <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+                <div style={{fontSize:15,color:"rgba(200,175,100,0.3)",flexShrink:0,marginTop:1}}>
+                  {r.type==="image"?"🖼":r.type==="epub"?"📖":r.category==="Evolutionary Herbalism"?"⚗":r.category==="Sacred Plants"?"✦":r.category==="Magical Herbalism"?"✧":r.category==="Fermentation & Brewing"?"⊕":"⚘"}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontFamily:F,fontSize:12,color:"#C4A870",lineHeight:1.3}}>{r.title}</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)",letterSpacing:1.5,textTransform:"uppercase",marginTop:2}}>{r.category}</div>
+                  {!isOpen && hasText && <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.4)",marginTop:5,lineHeight:1.6,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{r.text.slice(0,120)}…</div>}
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6,alignItems:"flex-end",flexShrink:0}}>
+                  {isTauri && <button onClick={e=>{e.stopPropagation();openHerbalFile(r.path);}} style={{padding:"3px 8px",borderRadius:5,background:"rgba(212,175,106,0.08)",border:"1px solid rgba(212,175,106,0.2)",fontFamily:F,fontSize:7,color:"rgba(212,175,106,0.6)",letterSpacing:1,cursor:"pointer"}}>OPEN</button>}
+                  <span style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.2)"}}>{isOpen?"▲":"▼"}</span>
+                </div>
+              </div>
+              {isOpen && hasText && (
+                <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(200,175,100,0.07)"}}>
+                  <div style={{fontFamily:F,fontSize:10.5,color:"#9A8060",lineHeight:1.95,whiteSpace:"pre-wrap"}}>{r.text.slice(0,1200)}{r.text.length>1200?"…":""}</div>
+                </div>
+              )}
+              {isOpen && !hasText && (
+                <div style={{marginTop:8,paddingTop:8,borderTop:"1px solid rgba(200,175,100,0.07)"}}>
+                  <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",fontStyle:"italic"}}>{r.type==="image"?"Visual chart — click OPEN to view.":r.type==="epub"?"EPUB — click OPEN to read.":"No text preview available."}</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.2)",marginTop:4,wordBreak:"break-all"}}>{r.path}</div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -3167,8 +3447,76 @@ export default function App(){
     setOracleCtx(buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile));
     setOracleOpen(true);
   },[tab,now,eph,fractal,natalPos,hour,profile]);
+  const screens = (
+    <>
+      {tab==="sky"     &&<SkyScreen     now={now} hour={hour} eph={eph} fractal={fractal} natalPos={natalPos} onWork={openWork}/>}
+      {tab==="aspects" &&<AspectsScreen eph={eph}/>}
+      {tab==="decans"  &&<DecansScreen  eph={eph} fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode}/>}
+      {tab==="fractal" &&<FractalScreen fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode}/>}
+      {tab==="planets" &&<PlanetsScreen eph={eph} natalPos={natalPos} now={now}/>}
+      {tab==="stars"   &&<StarsScreen   eph={eph} natalPos={natalPos}/>}
+      {tab==="natal"   &&<NatalScreen   natalData={natalData} setNatalData={setNatalData} eph={eph} fractal={fractal} natalPos={natalPos}/>}
+      {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph}/>}
+      {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}
+      {tab==="journal" &&<JournalScreen  profile={profile}/>}
+      {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile}/>}
+      {tab==="grimoire"&&<GrimoireScreen profile={profile}/>}
+      {tab==="herbarium"&&<HerbariumScreen profile={profile}/>}
+      {tab==="learn"   &&<LearnScreen   profile={profile}/>}
+      {tab==="work"    &&<WorkScreen    eph={eph} initPlanet={workPlanet} natalPos={natalPos} profile={profile} now={now}/>}
+      {tab==="ai"      &&<AIScreen      now={now} eph={eph} fractal={fractal} natalPos={natalPos} hour={hour} profile={profile}/>}
+      {tab==="profile" &&<ProfileScreen profile={profile} setProfile={setProfile}/>}
+    </>
+  );
+
+  const oracleBtn = tab!=="ai"&&tab!=="profile"&&(
+    <button onClick={openOracle} style={{position:"fixed",bottom:24,right:24,width:46,height:46,borderRadius:23,background:"rgba(4,4,18,0.92)",border:"1px solid rgba(200,175,100,0.25)",backdropFilter:"blur(16px)",boxShadow:"0 4px 24px rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",zIndex:400,transition:"border-color 0.2s,transform 0.15s",fontSize:17,color:"#D4AF6A"}}
+      onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(212,175,106,0.55)";e.currentTarget.style.transform="scale(1.08)";}}
+      onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(200,175,100,0.25)";e.currentTarget.style.transform="scale(1)";}}>
+      ✧
+    </button>
+  );
+
+  const BG = "radial-gradient(ellipse at 20% 10%,rgba(60,40,120,0.25) 0%,transparent 50%),radial-gradient(ellipse at 80% 90%,rgba(160,120,30,0.15) 0%,transparent 50%),#04060F";
+
+  if (isDesktop) {
+    return (
+      <div style={{height:"100vh",background:BG,display:"flex",fontFamily:F,color:"#D4AF6A",overflow:"hidden"}}>
+        <style>{CSS}</style>
+        {/* Permanent left sidebar */}
+        <Sidebar tab={tab} setTab={setTab} hour={hour} eph={eph} open={true} setOpen={()=>{}} permanent={true}/>
+        {/* Main content column */}
+        <div style={{flex:1,display:"flex",flexDirection:"column",minWidth:0,height:"100vh"}}>
+          {/* Desktop topbar */}
+          <div style={{height:44,background:"rgba(4,4,16,0.97)",backdropFilter:"blur(28px)",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 24px",flexShrink:0,borderBottom:"1px solid rgba(200,175,100,0.07)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:16}}>
+              <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",letterSpacing:3,textTransform:"uppercase"}}>
+                {NAV_SECTIONS.find(s=>s.id===tab)?.icon} {NAV_SECTIONS.find(s=>s.id===tab)?.label}
+                <span style={{color:"rgba(200,175,100,0.18)",margin:"0 8px"}}>—</span>
+                {NAV_SECTIONS.find(s=>s.id===tab)?.desc}
+              </div>
+              {eph.voc?.isVoC&&<div style={{fontFamily:F,fontSize:7,color:"#E09060",letterSpacing:2}}>⚠ MOON VoC</div>}
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:12}}>
+              {profile?.name&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",letterSpacing:2}}>{profile.name}</div>}
+              <div style={{fontFamily:F,fontSize:11,color:"rgba(200,175,100,0.4)"}}>{now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>
+              <span style={{fontSize:13,color:P[hour.planet].col}}>{P[hour.planet].sym}</span>
+            </div>
+          </div>
+          {/* Screen content */}
+          <div style={{flex:1,overflow:"hidden",overflowY:"auto"}}>
+            {screens}
+          </div>
+        </div>
+        {oracleBtn}
+        <OraclePanel open={oracleOpen} onClose={()=>setOracleOpen(false)} context={oracleCtx} profile={profile}/>
+      </div>
+    );
+  }
+
+  // Mobile layout (unchanged)
   return (
-    <div style={{minHeight:"100vh",background:"radial-gradient(ellipse at 20% 10%,rgba(60,40,120,0.25) 0%,transparent 50%),radial-gradient(ellipse at 80% 90%,rgba(160,120,30,0.15) 0%,transparent 50%),#04060F",display:"flex",justifyContent:"center",fontFamily:F,color:"#D4AF6A"}}>
+    <div style={{minHeight:"100vh",background:BG,display:"flex",justifyContent:"center",fontFamily:F,color:"#D4AF6A"}}>
       <style>{CSS}</style>
       <div style={{width:"100%",maxWidth:430,minHeight:"100vh",display:"flex",flexDirection:"column",position:"relative"}}>
         <Sidebar tab={tab} setTab={setTab} hour={hour} eph={eph} open={sidebarOpen} setOpen={setSidebarOpen}/>
@@ -3192,31 +3540,9 @@ export default function App(){
           {eph.voc?.isVoC&&<div style={{marginLeft:"auto",fontFamily:F,fontSize:7,color:"#E09060",letterSpacing:2}}>⚠ MOON VoC</div>}
         </div>
         <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",overflowY:"auto"}}>
-          {tab==="sky"     &&<SkyScreen     now={now} hour={hour} eph={eph} fractal={fractal} natalPos={natalPos} onWork={openWork}/>}
-          {tab==="aspects" &&<AspectsScreen eph={eph}/>}
-          {tab==="decans"  &&<DecansScreen  eph={eph} fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode}/>}
-          {tab==="fractal" &&<FractalScreen fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode}/>}
-          {tab==="planets" &&<PlanetsScreen eph={eph} natalPos={natalPos} now={now}/>}
-          {tab==="stars"   &&<StarsScreen   eph={eph} natalPos={natalPos}/>}
-          {tab==="natal"   &&<NatalScreen   natalData={natalData} setNatalData={setNatalData} eph={eph} fractal={fractal} natalPos={natalPos}/>}
-          {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph}/>}
-          {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}
-          {tab==="journal" &&<JournalScreen  profile={profile}/>}
-          {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile}/>}
-          {tab==="grimoire"&&<GrimoireScreen profile={profile}/>}
-          {tab==="learn"   &&<LearnScreen   profile={profile}/>}
-          {tab==="work"    &&<WorkScreen    eph={eph} initPlanet={workPlanet} natalPos={natalPos} profile={profile} now={now}/>}
-          {tab==="ai"      &&<AIScreen      now={now} eph={eph} fractal={fractal} natalPos={natalPos} hour={hour} profile={profile}/>}
-          {tab==="profile" &&<ProfileScreen profile={profile} setProfile={setProfile}/>}
+          {screens}
         </div>
-        {/* Floating Oracle Button — visible on all screens except ai+profile */}
-        {tab!=="ai"&&tab!=="profile"&&(
-          <button onClick={openOracle} style={{position:"fixed",bottom:24,right:24,width:46,height:46,borderRadius:23,background:"rgba(4,4,18,0.92)",border:"1px solid rgba(200,175,100,0.25)",backdropFilter:"blur(16px)",boxShadow:"0 4px 24px rgba(0,0,0,0.6)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",zIndex:400,transition:"border-color 0.2s,transform 0.15s",fontSize:17,color:"#D4AF6A"}}
-            onMouseEnter={e=>{e.currentTarget.style.borderColor="rgba(212,175,106,0.55)";e.currentTarget.style.transform="scale(1.08)";}}
-            onMouseLeave={e=>{e.currentTarget.style.borderColor="rgba(200,175,100,0.25)";e.currentTarget.style.transform="scale(1)";}}>
-            ✧
-          </button>
-        )}
+        {oracleBtn}
         <OraclePanel open={oracleOpen} onClose={()=>setOracleOpen(false)} context={oracleCtx} profile={profile}/>
       </div>
     </div>
