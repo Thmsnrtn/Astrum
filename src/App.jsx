@@ -460,6 +460,36 @@ function calcL2Forecast(fractal,now,mode){
   }
   return forecast;
 }
+// ─── Outer planet approximate positions (linear from J2000.0) ───────────────
+const OUTER_EPOCHS={
+  uranus: {lon0:316.5,rate:360/30589},
+  neptune:{lon0:304.3,rate:360/60190},
+  pluto:  {lon0:250.1,rate:360/90582},
+};
+const J2000_MS=946728000000;
+function outerPlanetLon(planet,date){
+  const days=(date.getTime()-J2000_MS)/86400000;
+  const ep=OUTER_EPOCHS[planet];
+  return norm(ep.lon0+ep.rate*days);
+}
+// Jupiter-Saturn conjunctions (historical + projected)
+const JS_CONJUNCTIONS=[
+  {date:"2000-05-28",sign:"Taurus",   lon:22.8, label:"Earth Mutation ends"},
+  {date:"2020-12-21",sign:"Aquarius", lon:0.5,  label:"Air Mutation begins"},
+  {date:"2040-10-31",sign:"Libra",    lon:17.6, label:"Air continues"},
+  {date:"2060-04-07",sign:"Gemini",   lon:10.2, label:"Air continues"},
+];
+// Pre-computed outer planet sign ingresses 2024-2035
+const DECADE_FORECAST=[
+  {year:2025,month:4, planet:"uranus",  sign:"Gemini",    lon:60,  event:"Uranus ingresses Gemini"},
+  {year:2025,month:3, planet:"neptune", sign:"Aries",     lon:0,   event:"Neptune ingresses Aries"},
+  {year:2024,month:1, planet:"pluto",   sign:"Aquarius",  lon:300, event:"Pluto in Aquarius (full)"},
+  {year:2026,month:1, planet:"saturn",  sign:"Aries",     lon:0,   event:"Saturn ingresses Aries"},
+  {year:2027,month:6, planet:"jupiter", sign:"Scorpio",   lon:210, event:"Jupiter ingresses Scorpio"},
+  {year:2028,month:6, planet:"jupiter", sign:"Sagittarius",lon:240,event:"Jupiter ingresses Sagittarius"},
+  {year:2033,month:3, planet:"neptune", sign:"Taurus",    lon:30,  event:"Neptune ingresses Taurus"},
+  {year:2034,month:8, planet:"uranus",  sign:"Cancer",    lon:90,  event:"Uranus ingresses Cancer"},
+];
 
 // ═══════════════════════════════════════════════════════════════════════
 // EPHEMERIS HOOK
@@ -1135,6 +1165,7 @@ const NAV_SECTIONS = [
   {id:"journal", icon:"✎", label:"Journal",    desc:"Practice record"},
   {id:"sigils",  icon:"⟁", label:"Sigils",     desc:"Sigil workshop"},
   {id:"grimoire",icon:"📖", label:"Grimoire",   desc:"Personal book of shadows"},
+  {id:"cycles",  icon:"⟳", label:"Cycles",     desc:"Macro cycles & generational timing"},
   {id:"learn",   icon:"⬡", label:"Learn",      desc:"AI magical education"},
   {id:"ai",      icon:"✧", label:"Planner",    desc:"AI working builder"},
   {id:"profile", icon:"◉", label:"Profile",    desc:"Practitioner settings"},
@@ -1337,6 +1368,7 @@ const TRADITIONS = {
   "traditional-witchcraft": {label:"Traditional Witchcraft", desc:"Wheel of Year, lunar cycles, hedge-crossing", icon:"⁕", prompt:"You speak from the current of Traditional Witchcraft: the Old Craft, the crooked path, and the arte. Your timing is lunar — phases, mansions, the Wheel of the Year. Your spirit relationships are with genius loci, ancestors, and familiar spirits. You understand hedge-crossing, the fetch, and the red thread."},
   "hellenism":          {label:"Hellenism / Neoplatonism", desc:"Theurgic practice, Orphic hymns, decan magic", icon:"Ψ", prompt:"You speak from the Hellenistic and Neoplatonic current: Iamblichean theurgy, the Orphic hymns, the daimons of Plato, and the decan magic of the Hermetic papyri. Your spirit framework includes Olympic spirits, planetary daimons, and the Titan forces. The soul's ascent through the planetary spheres is your central metaphor."},
   "folk":               {label:"Folk / Rootwork",      desc:"Moon timing, saint devotion, ancestor work",    icon:"✿", prompt:"You speak from the folk magic current: simple and direct, rooted in land, season, and ancestor. Your timing is the moon's phase and sign, the day of the week, and the saint's feast day. Your materia are what grows locally, what the kitchen holds, what the churchyard offers. Ancestor reverence is your foundation."},
+  "animism":            {label:"Animism / Relational Magic", desc:"Magic as relationship with living world-persons", icon:"🌿", prompt:"You speak from a relational animist framework. Magic is relationship — with land, ancestors, plants, rivers, stars, and the unnamed presences that share this world. There is no hierarchy of spirits, only kin of varying power and temperament. You draw on practical animism, the lore of place, and the principle of reciprocity as the foundation of all magical work. Your timing draws on the seasons, the moon, and what the local land is doing."},
   "custom":             {label:"Custom / Eclectic",    desc:"User-defined system",                          icon:"◌", prompt:"You adapt to whatever magical system the practitioner describes. You meet them where they are, drawing on whichever classical or contemporary sources are relevant to their stated framework. You do not impose a tradition — you serve the practitioner's own system."},
 };
 
@@ -2190,7 +2222,7 @@ const INTENTS={
   binding:{label:"Binding",planet:"saturn",icon:"♄",col:"#C4A870",reqs:["Saturn in dignity","Waning Moon","Moon applies to Saturn","Fixed sign Ascendant","Saturday Saturn hour"]},
 };
 
-function ElectScreen({now,natalPos,eph}){
+function ElectScreen({now,natalPos,eph,profile}){
   const [ik,setIk]=useState("money");
   const [planet,setPlanet]=useState("jupiter");
   const [scanning,setScanning]=useState(false);
@@ -2199,6 +2231,11 @@ function ElectScreen({now,natalPos,eph}){
   const [days,setDays]=useState(30);
   const [view,setView]=useState("live");
   const [showAll,setShowAll]=useState(false);
+  // Season planning state
+  const [seasonDomain,setSeasonDomain]=useState("wealth");
+  const [seasonHorizon,setSeasonHorizon]=useState(6);
+  const [seasonReport,setSeasonReport]=useState(null);
+  const [seasonLoading,setSeasonLoading]=useState(false);
   const meta=INTENTS[ik]||INTENTS.money;
   useEffect(()=>{setPlanet(meta.planet);setElections([]);setSelIdx(null);},[ik]);
   const live=assessElection(now,planet,natalPos);
@@ -2207,7 +2244,36 @@ function ElectScreen({now,natalPos,eph}){
   const gCol=g=>g.includes("DISQ")?"#8B4040":g.includes("Talismanic")?"#FFD700":g.includes("Excellent")?"#5CA85C":g.includes("Good")?"#D4AF6A":"#8A7050";
   const fmtD=d=>{const diff=Math.floor((d-now)/86400000),t=d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});if(diff===0)return"Today "+t;if(diff===1)return"Tomorrow "+t;if(diff<8)return DAY_NAMES[d.getDay()]+" "+t;return d.toLocaleDateString("en-US",{month:"short",day:"numeric"})+" "+t;};
   const runScan=()=>{setScanning(true);setElections([]);setSelIdx(null);const snap=new Date(now);setTimeout(()=>{setElections(scanElections(snap,days,planet,natalPos));setScanning(false);},300);};
-  const TABS=[{id:"live",label:"Live"},{id:"scan",label:"Scan"},{id:"intents",label:"Intents"},{id:"theory",label:"Theory"}];
+  const SEASON_DOMAINS=[
+    {id:"wealth",  label:"Wealth",   icon:"✦", col:"#D4AF6A"},
+    {id:"health",  label:"Health",   icon:"⊕", col:"#5CA87C"},
+    {id:"love",    label:"Love",     icon:"♡", col:"#C878A8"},
+    {id:"creative",label:"Creative", icon:"◈", col:"#78A8C8"},
+    {id:"spiritual",label:"Spiritual",icon:"☽",col:"#A888D8"},
+    {id:"protection",label:"Protection",icon:"⊗",col:"#C87858"},
+  ];
+  const generateSeasonReport=async()=>{
+    const apiKey=profile?.apiKey||"";
+    if(!apiKey){setSeasonReport("Configure your Anthropic API key in Profile to generate a season report.");return;}
+    setSeasonLoading(true);setSeasonReport(null);
+    const trad=profile?.traditions?.map(t=>TRADITIONS[t]?.label||t).join(", ")||"Western Ceremonial";
+    const jupPos=eph?.pos?.jupiter?`Jupiter ${eph.pos.jupiter.zodiac.degree}° ${eph.pos.jupiter.zodiac.name}`:"";
+    const satPos=eph?.pos?.saturn?`Saturn ${eph.pos.saturn.zodiac.degree}° ${eph.pos.saturn.zodiac.name}`:"";
+    const moonPos=eph?.pos?.moon?`Moon ${eph.pos.moon.zodiac.degree}° ${eph.pos.moon.zodiac.name} (${eph.moonPhase}${eph.voc?.isVoC?" — VoC":""})`:"";
+    const outerStr=Object.keys(OUTER_EPOCHS).map(p=>{const lon=outerPlanetLon(p,now);const sn=SIGN_NAMES[Math.floor(lon/30)%12];return`${OUTER_META[p].name} in ${sn}`;}).join(", ");
+    const jsYrs=(((now.getTime()-new Date("2020-12-21").getTime())/(365.25*86400000))).toFixed(1);
+    const domain=SEASON_DOMAINS.find(d=>d.id===seasonDomain);
+    const natalStr=natalPos?Object.entries(natalPos).filter(([pk])=>P[pk]).map(([pk,np])=>`Natal ${P[pk].name}: ${np.decan.name} (${np.zodiac.degree}° ${np.zodiac.name})`).join("; "):"No natal chart.";
+    const sys=`You are a master of electional astrology and magical timing. Generate a practical season planning report for a practitioner working in the ${trad} tradition.`;
+    const userMsg=`Generate a ${seasonHorizon}-month Season Planning Report for the domain of ${domain.label.toUpperCase()} in the ${trad} tradition.\n\nCurrent sky: ${moonPos}. ${jupPos}. ${satPos}. Outer planets: ${outerStr}. Air Mutation (Jupiter-Saturn 2020): ${jsYrs} years in.\n\nNatal context: ${natalStr}\n\nStructure your report as:\n1. **Overview** — The quality of this ${seasonHorizon}-month period for ${domain.label} work. What is the broad signature?\n2. **Peak Windows** — Name 2-3 specific time periods (month + rough timing) that are especially favorable for ${domain.label} workings and why.\n3. **Cautions** — What conditions to watch for or avoid. When to hold back.\n4. **Recommended Practice** — One concrete magical practice or focus that fits this season in the ${trad} tradition.\n\nBe specific and practical. 4-5 tight paragraphs.`;
+    try{
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:900,system:sys,messages:[{role:"user",content:userMsg}]})});
+      const data=await resp.json();
+      setSeasonReport(data.content?.[0]?.text||data.error?.message||"An error occurred.");
+    }catch(e){setSeasonReport("Season report unavailable — check connection.");}
+    setSeasonLoading(false);
+  };
+  const TABS=[{id:"live",label:"Live"},{id:"scan",label:"Scan"},{id:"intents",label:"Intents"},{id:"season",label:"Season"},{id:"theory",label:"Theory"}];
   const THEORY=[
     {title:"The Moon",text:"The Moon is the most important factor in all election astrology. She carries every planet's virtue to earth. Before anything else: is she void of course? In Via Combusta? Besieged? Dorotheus: Look always to the Moon."},
     {title:"Via Combusta",text:"15 Libra to 15 Scorpio — the Burnt Path. Sun falls in Libra, Moon falls in Scorpio. Both malefics hold power here. Multiple malefic fixed stars cluster here. Moon in Via Combusta vitiates any election."},
@@ -2294,6 +2360,36 @@ function ElectScreen({now,natalPos,eph}){
             {meta.reqs.map((r,i)=><div key={i} style={{display:"flex",gap:7,padding:"4px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}><span style={{color:meta.col+"50",fontSize:9,marginTop:1,width:14}}>{i+1}.</span><div style={{fontFamily:F,fontSize:10,color:"#C4A870",fontStyle:"italic",lineHeight:1.6}}>{r}</div></div>)}
           </div>
         </>}
+        {view==="season"&&(
+          <div style={{paddingTop:4}}>
+            <div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",lineHeight:1.7,marginBottom:10}}>Choose your domain and horizon. The AI generates a practical season planning report — peak windows, cautions, and recommended practice.</div>
+            <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",letterSpacing:3,marginBottom:5}}>DOMAIN</div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4,marginBottom:10}}>
+              {SEASON_DOMAINS.map(d=>(
+                <button key={d.id} onClick={()=>setSeasonDomain(d.id)} style={{padding:"7px 5px",borderRadius:10,background:seasonDomain===d.id?d.col+"14":"rgba(8,5,22,0.5)",border:"1px solid "+(seasonDomain===d.id?d.col+"45":"rgba(200,175,100,0.1)"),fontFamily:F,fontSize:9,color:seasonDomain===d.id?d.col:"#7A6030",cursor:"pointer",textAlign:"center"}}>
+                  <div style={{fontSize:14,marginBottom:2}}>{d.icon}</div>
+                  <div style={{fontSize:7,letterSpacing:1}}>{d.label}</div>
+                </button>
+              ))}
+            </div>
+            <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",letterSpacing:3,marginBottom:5}}>HORIZON</div>
+            <div style={{display:"flex",gap:4,marginBottom:12}}>
+              {[3,6,12].map(h=>(
+                <button key={h} onClick={()=>setSeasonHorizon(h)} style={{flex:1,padding:"7px 0",borderRadius:9,background:seasonHorizon===h?"rgba(212,175,106,0.13)":"rgba(8,5,22,0.5)",border:"1px solid "+(seasonHorizon===h?"rgba(212,175,106,0.38)":"rgba(200,175,100,0.1)"),fontFamily:F,fontSize:9,color:seasonHorizon===h?"#D4AF6A":"#6A5030",cursor:"pointer"}}>
+                  {h === 12 ? "1 year" : `${h} months`}
+                </button>
+              ))}
+            </div>
+            <button onClick={generateSeasonReport} disabled={seasonLoading} style={{width:"100%",padding:"13px",borderRadius:13,background:"rgba(212,175,106,0.07)",border:"1px solid rgba(212,175,106,0.22)",fontFamily:F,fontSize:11,color:seasonLoading?"rgba(200,175,100,0.4)":"#D4AF6A",letterSpacing:2,cursor:seasonLoading?"default":"pointer",marginBottom:10}}>
+              {seasonLoading?"READING THE SEASON…":"◈ GENERATE SEASON REPORT"}
+            </button>
+            {seasonReport&&(
+              <div style={{borderRadius:13,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(200,175,100,0.1)",padding:"14px 15px"}}>
+                <div style={{fontFamily:F,fontSize:11,color:"#C4A870",lineHeight:1.95,whiteSpace:"pre-wrap"}}>{seasonReport}</div>
+              </div>
+            )}
+          </div>
+        )}
         {view==="theory"&&THEORY.map(({title,text})=><div key={title} style={{marginBottom:8,borderRadius:13,background:"rgba(8,5,22,0.65)",border:"1px solid rgba(200,175,100,0.09)",padding:"13px 14px"}}><div style={{fontFamily:F,fontSize:13,color:"#D4AF6A",marginBottom:5}}>{title}</div><div style={{fontFamily:F,fontSize:11,color:"#9A8060",fontStyle:"italic",lineHeight:1.9}}>{text}</div></div>)}
       </div>
     </div>
@@ -3452,6 +3548,165 @@ function FractalScreen({fractal,natalPos,mode,setMode,now}){
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// CYCLES SCREEN — Blended Cycle Model
+// ═══════════════════════════════════════════════════════════════════════
+const OUTER_META={
+  uranus: {name:"Uranus",  sym:"♅", col:"#78C8D8", period:84,  theme:"Revolution · Technology · Sudden change · Collective awakening"},
+  neptune:{name:"Neptune", sym:"♆", col:"#7888E8", period:165, theme:"Dissolution · Mysticism · Collective dreaming · Spiritual hunger"},
+  pluto:  {name:"Pluto",   sym:"♇", col:"#C878A8", period:248, theme:"Death & rebirth · Power structures · Transformation · Purging"},
+};
+const SIGN_NAMES=["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"];
+const SIGN_ELEMS=["Fire","Earth","Air","Water","Fire","Earth","Air","Water","Fire","Earth","Air","Water"];
+function CyclesScreen({now,profile,eph}){
+  const [aiReport,setAiReport]=useState(null);
+  const [aiLoading,setAiLoading]=useState(false);
+  const nowDate=now||new Date();
+  // Calculate outer planet positions
+  const outerPos={};
+  Object.keys(OUTER_EPOCHS).forEach(p=>{
+    const lon=outerPlanetLon(p,nowDate);
+    const signIdx=Math.floor(lon/30)%12;
+    const degree=(lon%30).toFixed(1);
+    const meta=OUTER_META[p];
+    // years in current sign = (lon % 30) / (360/period) / 365.25
+    const period=meta.period;
+    const degPerYear=360/period;
+    const yearsInSign=(lon%30)/degPerYear;
+    const yearsRemainingInSign=(30-(lon%30))/degPerYear;
+    outerPos[p]={lon,signIdx,sign:SIGN_NAMES[signIdx],elem:SIGN_ELEMS[signIdx],degree,yearsInSign:yearsInSign.toFixed(1),yearsRemaining:yearsRemainingInSign.toFixed(1)};
+  });
+  // Jupiter-Saturn Great Mutation
+  const lastJS=JS_CONJUNCTIONS[JS_CONJUNCTIONS.length-2]; // 2020
+  const nextJS=JS_CONJUNCTIONS[JS_CONJUNCTIONS.length-1]; // 2040
+  const jsStart=new Date(lastJS.date).getTime();
+  const jsEnd=new Date(nextJS.date).getTime();
+  const jsElapsed=Math.max(0,Math.min(1,(nowDate.getTime()-jsStart)/(jsEnd-jsStart)));
+  const jsYearsElapsed=((nowDate.getTime()-jsStart)/(365.25*86400000)).toFixed(1);
+  const jsYearsRemaining=(((jsEnd-nowDate.getTime())/(365.25*86400000))).toFixed(1);
+  // Upcoming decade forecast (filter to future only)
+  const upcoming=DECADE_FORECAST.filter(e=>{
+    const d=new Date(e.year,e.month-1,1);
+    return d>nowDate;
+  }).sort((a,b)=>a.year-b.year||a.month-b.month).slice(0,5);
+  const generateReport=async()=>{
+    const apiKey=profile?.apiKey||"";
+    if(!apiKey){setAiReport("Configure your Anthropic API key in Profile to generate a cycle report.");return;}
+    setAiLoading(true);setAiReport(null);
+    const trad=profile?.traditions?.map(t=>TRADITIONS[t]?.label||t).join(", ")||"Western Ceremonial";
+    const outerStr=Object.entries(outerPos).map(([p,d])=>`${OUTER_META[p].name}: ${d.degree}° ${d.sign} (${d.yearsInSign}yr in sign, ${d.yearsRemaining}yr remaining)`).join("; ");
+    const jupStr=eph?.pos?.jupiter?`Jupiter: ${eph.pos.jupiter.zodiac.degree}° ${eph.pos.jupiter.zodiac.name}`:"";
+    const satStr=eph?.pos?.saturn?`Saturn: ${eph.pos.saturn.zodiac.degree}° ${eph.pos.saturn.zodiac.name}`:"";
+    const jsMutation=`Great Mutation of 2020 (Aquarius): ${jsYearsElapsed} years elapsed (${(jsElapsed*100).toFixed(0)}% through to 2040 Libra conjunction)`;
+    const sys=`You are a master of mundane and predictive astrology — blending macro-historical cycles (Uranus, Neptune, Pluto, Jupiter-Saturn Great Mutation) with the practitioner's personal timing and magical tradition. You synthesize the outer, slow cycles with the immediate. Draw on Rudhyar, Charles Harvey, the Hermetic tradition, and practical magical timing.`;
+    const userMsg=`I practice ${trad}. Give me a Blended Cycle Model synthesis: where are we in the great cycles, what does this mean historically, and what is the magical opportunity in this moment?\n\nOuter planets: ${outerStr}.\n${jupStr}. ${satStr}.\n${jsMutation}.\n\nGive me:\n1. Where we are in each outer planet's cycle (the historical-generational flavor)\n2. What the 2020 Jupiter-Saturn Air Mutation means for magical work over the next decade\n3. The specific magical opportunity this configuration opens (1-3 concrete recommendations)\nKeep it to 4-5 paragraphs — dense, practical, no padding.`;
+    try{
+      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:900,system:sys,messages:[{role:"user",content:userMsg}]})});
+      const data=await resp.json();
+      setAiReport(data.content?.[0]?.text||data.error?.message||"An error occurred.");
+    }catch(e){setAiReport("Cycles report unavailable — check connection.");}
+    setAiLoading(false);
+  };
+  const GOLD="#D4AF6A";const G=`rgba(200,175,100,`;
+  return(
+    <div style={{flex:1,overflowY:"auto",paddingBottom:32}}>
+      <div style={{padding:"16px 18px 10px"}}>
+        <div style={{fontFamily:F,fontSize:9,color:"#8A7040",letterSpacing:3.5,textTransform:"uppercase"}}>Uranus · Neptune · Pluto · Great Mutation</div>
+        <div style={T(20)}>Macro Cycles ⟳</div>
+        <div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",marginTop:3,lineHeight:1.7}}>Where we stand in the slow revolutions of history — and what the practitioner can do with that position.</div>
+      </div>
+
+      {/* ── Outer Planet Cards ── */}
+      <div style={{padding:"0 14px",display:"flex",flexDirection:"column",gap:8,marginBottom:10}}>
+        {Object.entries(outerPos).map(([pk,d])=>{
+          const m=OUTER_META[pk];
+          const pct=parseFloat(d.yearsInSign)/(parseFloat(d.yearsInSign)+parseFloat(d.yearsRemaining));
+          return(
+            <div key={pk} style={{borderRadius:14,background:"rgba(8,5,22,0.7)",border:`1px solid ${m.col}22`,padding:"13px 14px",borderLeft:`3px solid ${m.col}60`}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:7}}>
+                <span className="planet-orb" style={{fontSize:18,color:m.col,padding:"4px 7px"}}>{m.sym}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:F,fontSize:14,color:m.col}}>{m.name}</div>
+                  <div style={{fontFamily:F,fontSize:9,color:G+"0.35)",letterSpacing:1}}>{m.period}-year cycle · {d.elem} element</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontFamily:F,fontSize:16,color:m.col}}>{d.degree}°</div>
+                  <div style={{fontFamily:F,fontSize:10,color:G+"0.5)"}}>{d.sign}</div>
+                </div>
+              </div>
+              <div style={{height:3,background:G+"0.08)",borderRadius:2,marginBottom:5}}>
+                <div style={{height:"100%",width:`${pct*100}%`,background:m.col,borderRadius:2,opacity:0.6}}/>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                <div style={{fontFamily:F,fontSize:8,color:G+"0.3)"}}>{d.yearsInSign}yr in {d.sign}</div>
+                <div style={{fontFamily:F,fontSize:8,color:G+"0.3)"}}>{d.yearsRemaining}yr until {d.sign==="Pisces"?"Aries":SIGN_NAMES[(SIGN_NAMES.indexOf(d.sign)+1)%12]}</div>
+              </div>
+              <div style={{fontFamily:F,fontSize:9,color:G+"0.4)",fontStyle:"italic",lineHeight:1.6}}>{m.theme}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Great Mutation Panel ── */}
+      <div style={{padding:"0 14px",marginBottom:10}}>
+        <div style={{borderRadius:14,background:"rgba(8,5,22,0.85)",border:"1px solid rgba(200,175,100,0.15)",padding:"14px 15px"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:9}}>
+            <span style={{fontSize:18}}>♃♄</span>
+            <div>
+              <div style={{fontFamily:F,fontSize:13,color:GOLD}}>Great Mutation · Air Triplicity</div>
+              <div style={{fontFamily:F,fontSize:9,color:G+"0.35)",letterSpacing:1}}>Jupiter-Saturn Conjunction Cycle</div>
+            </div>
+          </div>
+          <div style={{fontFamily:F,fontSize:10,color:G+"0.6)",marginBottom:8,lineHeight:1.8}}>
+            Dec 21, 2020 — {lastJS.sign} {lastJS.lon.toFixed(1)}° — <span style={{color:GOLD}}>{lastJS.label}</span>
+          </div>
+          <div style={{height:3,background:G+"0.08)",borderRadius:2,marginBottom:5}}>
+            <div style={{height:"100%",width:`${jsElapsed*100}%`,background:"linear-gradient(90deg,#D4AF6A,#78A8C8)",borderRadius:2}}/>
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+            <div style={{fontFamily:F,fontSize:8,color:G+"0.4)"}}>{jsYearsElapsed}yr elapsed</div>
+            <div style={{fontFamily:F,fontSize:8,color:G+"0.4)"}}>{(jsElapsed*100).toFixed(0)}%</div>
+            <div style={{fontFamily:F,fontSize:8,color:G+"0.4)"}}>{jsYearsRemaining}yr to 2040 Libra</div>
+          </div>
+          <div style={{fontFamily:F,fontSize:9,color:G+"0.45)",fontStyle:"italic",lineHeight:1.7}}>The first Air Mutation since 1226 CE. Mental, communicative, and mercurial operations are historically favored. The dissolution of fixed material hierarchies continues. Work with ideas, networks, and transmission.</div>
+        </div>
+      </div>
+
+      {/* ── Decade Forecast ── */}
+      {upcoming.length>0&&(
+        <div style={{padding:"0 14px",marginBottom:10}}>
+          <div style={{fontFamily:F,fontSize:8,color:G+"0.3)",letterSpacing:3,textTransform:"uppercase",marginBottom:6}}>Upcoming Ingresses</div>
+          {upcoming.map((e,i)=>{
+            const pName=e.planet==="uranus"?"♅":e.planet==="neptune"?"♆":e.planet==="pluto"?"♇":e.planet==="saturn"?"♄":"♃";
+            const pCol=e.planet==="uranus"?"#78C8D8":e.planet==="neptune"?"#7888E8":e.planet==="pluto"?"#C878A8":e.planet==="saturn"?"#78A888":"#D4AF6A";
+            return(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 12px",borderRadius:10,background:"rgba(8,5,22,0.5)",border:"1px solid rgba(200,175,100,0.07)",marginBottom:4}}>
+                <span style={{fontSize:16,color:pCol}}>{pName}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:F,fontSize:11,color:G+"0.8)"}}>{e.event}</div>
+                </div>
+                <div style={{fontFamily:F,fontSize:10,color:G+"0.4)"}}>{e.year}</div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── AI Synthesis Button ── */}
+      <div style={{padding:"0 14px",marginBottom:10}}>
+        <button onClick={generateReport} disabled={aiLoading} style={{width:"100%",padding:"13px",borderRadius:13,background:"rgba(212,175,106,0.07)",border:"1px solid rgba(212,175,106,0.22)",fontFamily:F,fontSize:11,color:aiLoading?G+"0.4)":GOLD,letterSpacing:2,cursor:aiLoading?"default":"pointer",transition:"all 0.2s"}}>
+          {aiLoading?"READING THE CYCLES…":"✦ WHAT DO THESE CYCLES MEAN FOR ME?"}
+        </button>
+        {aiReport&&(
+          <div style={{marginTop:8,borderRadius:13,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(200,175,100,0.1)",padding:"14px 15px"}}>
+            <div style={{fontFamily:F,fontSize:11,color:"#C4A870",lineHeight:1.95,whiteSpace:"pre-wrap"}}>{aiReport}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // JOURNAL SCREEN
 // ═══════════════════════════════════════════════════════════════════════
 function JournalScreen({profile}){
@@ -3662,6 +3917,15 @@ const LEARN_TOPICS=[
   {id:"theurgy",         label:"Theurgic Practice",      desc:"Iamblichean theurgy — ascending through the spheres",traditions:["hellenism"], level:"advanced"},
   {id:"candle-magic",    label:"Candle & Petition Work",  desc:"Simple, direct folk working methods",               traditions:["folk"],        level:"beginner"},
   {id:"rootwork",        label:"Materia & Curios",        desc:"Plants, stones, and curios of the folk tradition", traditions:["folk"],        level:"intermediate"},
+  {id:"animism-foundation",label:"Animism Foundations",  desc:"The world as a community of persons — relational magic", traditions:["animism","all"],level:"beginner"},
+  {id:"ancestor-work",   label:"Ancestor Work",           desc:"Building the ancestor current — reciprocity with the dead", traditions:["animism","folk","traditional-witchcraft","all"],level:"beginner"},
+  {id:"spirits-allies",  label:"Spirits & Allies",        desc:"Contact, relationship, and reciprocity with non-human persons", traditions:["animism","traditional-witchcraft","all"],level:"intermediate"},
+  {id:"sacrifice-reciprocity",label:"Sacrifice & Reciprocity", desc:"The economy of the spirit world — giving to receive", traditions:["animism","folk","hellenism","all"],level:"intermediate"},
+  {id:"dream-work",      label:"Dream Work",              desc:"Incubation, liminal sleep practice, and dream interpretation", traditions:["animism","hellenism","traditional-witchcraft","all"],level:"intermediate"},
+  {id:"fortune-divination",label:"Fortune & Divination",  desc:"Reading patterns in time and space — geomancy, lots, omens", traditions:["all"],        level:"beginner"},
+  {id:"saints-holy-dead",label:"Saints & the Holy Dead",  desc:"Working with the canonized current and the beloved dead", traditions:["folk","animism"],level:"intermediate"},
+  {id:"liminal-entities",label:"Liminal Entities",        desc:"Threshold beings, guardians, and hedge-crossing", traditions:["animism","traditional-witchcraft","folk"],level:"advanced"},
+  {id:"blended-cycle",   label:"Blended Cycle Model",     desc:"Placing your magic in historical and generational time", traditions:["all"],        level:"intermediate"},
 ];
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -4642,16 +4906,25 @@ function GrimoireScreen({profile}){
 // ═══════════════════════════════════════════════════════════════════════
 // LEARN SCREEN
 // ═══════════════════════════════════════════════════════════════════════
+const FOUNDATIONS=[
+  {id:"f1",title:"Animism & the Living World",subtitle:"How the world is made of relationships, not objects",lessons:5,topics:["animism-foundation","spirits-allies","liminal-entities"],icon:"🌿",color:"#5CA87C"},
+  {id:"f2",title:"Timing & the Sky",subtitle:"Planetary hours, lunar cycles, and elections",lessons:7,topics:["planetary-hours","lunar-timing","electional"],icon:"☽",color:"#D4AF6A"},
+  {id:"f3",title:"The Dead & the Ancestors",subtitle:"Working with the ancestor current and the holy dead",lessons:4,topics:["ancestor-work","saints-holy-dead"],icon:"⚰",color:"#8A78C8"},
+  {id:"f4",title:"Divination & Fortune",subtitle:"Reading the patterns — omens, lots, and the future",lessons:5,topics:["fortune-divination","dream-work"],icon:"◈",color:"#C87878"},
+  {id:"f5",title:"The Blended Cycle Model",subtitle:"Placing your magic in historical time",lessons:3,topics:["blended-cycle"],icon:"⟳",color:"#78A8C8"},
+];
 function LearnScreen({profile}){
+  const [learnMode,setLearnMode]=useState("topics"); // "foundations" | "topics"
   const [topic,setTopic]=useState(null);
   const [msgs,setMsgs]=useState([]);
   const [input,setInput]=useState("");
   const [loading,setLoading]=useState(false);
   const [testMode,setTestMode]=useState(false);
+  const [foundProgress,setFoundProgress]=useState(()=>{try{return JSON.parse(localStorage.getItem("astrum_foundations")||"{}");}catch{return{};}});
   const bottomRef=useRef(null);
   const userTraditions=profile?.traditions||["western-ceremonial"];
-  const lvl=profile?.level||"intermediate";
   const filteredTopics=LEARN_TOPICS.filter(t=>t.traditions.includes("all")||userTraditions.some(ut=>t.traditions.includes(ut)));
+  const saveFP=(fp)=>{setFoundProgress(fp);try{localStorage.setItem("astrum_foundations",JSON.stringify(fp));}catch(e){}};
   const sendMsg=async(text,history)=>{
     if(loading)return;
     const apiKey=profile?.apiKey||"";
@@ -4669,69 +4942,138 @@ function LearnScreen({profile}){
     setLoading(false);
     setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:"smooth"}),100);
   };
-  const startTopic=(t)=>{
-    setTopic(t);setMsgs([]);setInput("");setTestMode(false);setLoading(false);
+  const startTopic=(t,fromFoundation)=>{
+    setTopic({...t,fromFoundation});setMsgs([]);setInput("");setTestMode(false);setLoading(false);
     const prompt=`I want to learn about: ${t.label}. Topic context: ${t.desc}. Please begin the lesson.`;
     setTimeout(()=>sendMsg(prompt,[]),80);
+  };
+  const startFoundationModule=(mod)=>{
+    const firstTopicId=mod.topics[0];
+    const t=LEARN_TOPICS.find(lt=>lt.id===firstTopicId)||{id:firstTopicId,label:mod.title,desc:mod.subtitle,level:"beginner"};
+    const fp={...foundProgress,[mod.id]:{started:true,lessonsComplete:foundProgress[mod.id]?.lessonsComplete||0}};
+    saveFP(fp);
+    startTopic(t,mod.id);
+  };
+  const markLessonComplete=(foundationId)=>{
+    if(!foundationId)return;
+    const cur=foundProgress[foundationId]||{started:true,lessonsComplete:0};
+    const mod=FOUNDATIONS.find(f=>f.id===foundationId);
+    const next={...foundProgress,[foundationId]:{...cur,lessonsComplete:Math.min(mod.lessons,(cur.lessonsComplete||0)+1)}};
+    saveFP(next);
   };
   const sendFollow=()=>{if(!input.trim()||loading)return;const i=input;setInput("");sendMsg(i,msgs);};
   const switchMode=()=>{
     const nm=!testMode;setTestMode(nm);
     sendMsg(nm?"Switch to test mode — ask me a question about what we've covered so far.":"Return to lesson mode — continue the lesson from where we left off.",msgs);
   };
-  if(!topic){
+  // Lesson view (shared between both modes)
+  if(topic){
     return(
-      <div style={{flex:1,overflowY:"auto",paddingBottom:20}}>
-        <div style={{padding:"16px 18px 10px"}}>
-          <div style={L()}>Magical Education</div>
-          <div style={T(20)}>Learn ⬡</div>
-          <div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",marginTop:3,lineHeight:1.7}}>Choose a topic. The AI teaches through Socratic dialogue — asking questions, responding to your answers, building understanding from the inside out.</div>
-        </div>
-        {["beginner","intermediate","advanced"].filter(l=>filteredTopics.some(t=>t.level===l)).map(l=>(
-          <div key={l}>
-            <div style={{padding:"8px 18px 4px",fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",letterSpacing:3,textTransform:"uppercase"}}>{l}</div>
-            {filteredTopics.filter(t=>t.level===l).map(t=>(
-              <button key={t.id} onClick={()=>startTopic(t)} style={{width:"100%",padding:"11px 18px",background:"none",border:"none",borderBottom:"1px solid rgba(200,175,100,0.05)",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
-                <span style={{fontSize:20,color:"rgba(200,175,100,0.2)",flexShrink:0}}>⬡</span>
-                <div style={{flex:1}}>
-                  <div style={{fontFamily:F,fontSize:13,color:"rgba(200,175,100,0.8)"}}>{t.label}</div>
-                  <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",marginTop:2}}>{t.desc}</div>
-                </div>
-                <span style={{color:"rgba(200,175,100,0.2)",fontSize:14}}>›</span>
-              </button>
-            ))}
+      <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:0}}>
+        <div style={{padding:"12px 16px 10px",borderBottom:"1px solid rgba(200,175,100,0.07)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <button onClick={()=>{setTopic(null);setMsgs([]);}} style={{background:"none",border:"none",color:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:10,letterSpacing:1,cursor:"pointer",padding:0}}>←</button>
+            <span style={{color:"rgba(200,175,100,0.15)"}}>|</span>
+            <div style={{fontFamily:F,fontSize:12,color:"#D4AF6A"}}>{topic.label}</div>
           </div>
-        ))}
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            {topic.fromFoundation&&(
+              <button onClick={()=>markLessonComplete(topic.fromFoundation)} style={{padding:"5px 9px",borderRadius:8,background:"rgba(92,168,92,0.12)",border:"1px solid rgba(92,168,92,0.3)",fontFamily:F,fontSize:7,color:"#5CA87C",letterSpacing:1,cursor:"pointer"}}>✓ DONE</button>
+            )}
+            <button onClick={switchMode} disabled={loading||msgs.length<2} style={{padding:"6px 10px",borderRadius:8,background:testMode?"rgba(212,175,106,0.15)":"rgba(0,0,0,0.3)",border:`1px solid ${testMode?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.12)"}`,fontFamily:F,fontSize:8,color:testMode?"#D4AF6A":"rgba(200,175,100,0.4)",letterSpacing:1,cursor:"pointer"}}>
+              {testMode?"LESSON":"TEST ME"}
+            </button>
+          </div>
+        </div>
+        <div style={{flex:1,overflowY:"auto",padding:"14px 16px 8px"}}>
+          {loading&&msgs.length<=1&&<div style={{display:"flex",gap:5,padding:"32px 0",justifyContent:"center"}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}</div>}
+          {msgs.filter(m=>m.role!=="user"||msgs.indexOf(m)>0).map((m,i)=>(
+            <div key={i} style={{marginBottom:14}}>
+              {m.role==="user"&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",marginBottom:4,letterSpacing:1}}>YOU</div>}
+              <div style={{fontFamily:F,fontSize:11.5,color:m.role==="user"?"#9A8060":"#C4A870",lineHeight:1.95,whiteSpace:"pre-wrap"}}>{m.content}</div>
+            </div>
+          ))}
+          {loading&&msgs.length>1&&<div style={{display:"flex",gap:5,padding:"8px 0"}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}</div>}
+          <div ref={bottomRef}/>
+        </div>
+        <div style={{padding:"8px 12px 16px",borderTop:"1px solid rgba(200,175,100,0.06)",display:"flex",gap:8,flexShrink:0}}>
+          <textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendFollow();}}} placeholder={testMode?"Answer the question…":"Ask a question or respond…"} rows={2} style={{flex:1,resize:"none",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:11}}/>
+          <button onClick={sendFollow} disabled={!input.trim()||loading} style={{padding:"0 12px",borderRadius:10,background:input.trim()?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(input.trim()?"rgba(212,175,106,0.28)":"rgba(200,175,100,0.08)"),fontFamily:F,fontSize:9,color:input.trim()?"#D4AF6A":"#4A3020",letterSpacing:1,cursor:input.trim()?"pointer":"default",height:36,alignSelf:"flex-end"}}>SEND</button>
+        </div>
       </div>
     );
   }
   return(
-    <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:0}}>
-      <div style={{padding:"12px 16px 10px",borderBottom:"1px solid rgba(200,175,100,0.07)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <button onClick={()=>{setTopic(null);setMsgs([]);}} style={{background:"none",border:"none",color:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:10,letterSpacing:1,cursor:"pointer",padding:0}}>← Topics</button>
-          <span style={{color:"rgba(200,175,100,0.15)"}}>|</span>
-          <div style={{fontFamily:F,fontSize:12,color:"#D4AF6A"}}>{topic.label}</div>
-        </div>
-        <button onClick={switchMode} disabled={loading||msgs.length<2} style={{padding:"6px 10px",borderRadius:8,background:testMode?"rgba(212,175,106,0.15)":"rgba(0,0,0,0.3)",border:`1px solid ${testMode?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.12)"}`,fontFamily:F,fontSize:8,color:testMode?"#D4AF6A":"rgba(200,175,100,0.4)",letterSpacing:1,cursor:"pointer"}}>
-          {testMode?"LESSON":"TEST ME"}
-        </button>
+    <div style={{flex:1,overflowY:"auto",paddingBottom:20}}>
+      <div style={{padding:"16px 18px 10px"}}>
+        <div style={L()}>Magical Education</div>
+        <div style={T(20)}>Learn ⬡</div>
       </div>
-      <div style={{flex:1,overflowY:"auto",padding:"14px 16px 8px"}}>
-        {loading&&msgs.length<=1&&<div style={{display:"flex",gap:5,padding:"32px 0",justifyContent:"center"}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}</div>}
-        {msgs.filter(m=>m.role!=="user"||msgs.indexOf(m)>0).map((m,i)=>(
-          <div key={i} style={{marginBottom:14}}>
-            {m.role==="user"&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",marginBottom:4,letterSpacing:1}}>YOU</div>}
-            <div style={{fontFamily:F,fontSize:11.5,color:m.role==="user"?"#9A8060":"#C4A870",lineHeight:1.95,whiteSpace:"pre-wrap"}}>{m.content}</div>
-          </div>
+      {/* Mode Toggle */}
+      <div style={{padding:"0 14px 10px",display:"flex",gap:5}}>
+        {[{id:"foundations",label:"Foundations Path"},{id:"topics",label:"Topics Library"}].map(m=>(
+          <button key={m.id} onClick={()=>setLearnMode(m.id)} style={{flex:1,padding:"8px 0",borderRadius:10,background:learnMode===m.id?"rgba(212,175,106,0.13)":"rgba(8,5,22,0.5)",border:"1px solid "+(learnMode===m.id?"rgba(212,175,106,0.38)":"rgba(200,175,100,0.1)"),fontFamily:F,fontSize:9,color:learnMode===m.id?"#D4AF6A":"#6A5030",letterSpacing:1,cursor:"pointer"}}>{m.label}</button>
         ))}
-        {loading&&msgs.length>1&&<div style={{display:"flex",gap:5,padding:"8px 0"}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}</div>}
-        <div ref={bottomRef}/>
       </div>
-      <div style={{padding:"8px 12px 16px",borderTop:"1px solid rgba(200,175,100,0.06)",display:"flex",gap:8,flexShrink:0}}>
-        <textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendFollow();}}} placeholder={testMode?"Answer the question…":"Ask a question or respond…"} rows={2} style={{flex:1,resize:"none",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:11}}/>
-        <button onClick={sendFollow} disabled={!input.trim()||loading} style={{padding:"0 12px",borderRadius:10,background:input.trim()?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(input.trim()?"rgba(212,175,106,0.28)":"rgba(200,175,100,0.08)"),fontFamily:F,fontSize:9,color:input.trim()?"#D4AF6A":"#4A3020",letterSpacing:1,cursor:input.trim()?"pointer":"default",height:36,alignSelf:"flex-end"}}>SEND</button>
-      </div>
+      {/* Foundations Path */}
+      {learnMode==="foundations"&&(
+        <div>
+          <div style={{padding:"0 18px 10px",fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",lineHeight:1.7}}>Five foundational modules — work through them in sequence. Each builds on the last. The AI teaches through Socratic dialogue.</div>
+          {FOUNDATIONS.map((mod,i)=>{
+            const prog=foundProgress[mod.id]||{started:false,lessonsComplete:0};
+            const pct=(prog.lessonsComplete||0)/mod.lessons;
+            const started=prog.started||false;
+            return(
+              <div key={mod.id} style={{margin:"0 14px 8px",borderRadius:14,background:"rgba(8,5,22,0.7)",border:`1px solid ${mod.color}25`,borderLeft:`3px solid ${mod.color}${started?"80":"30"}`}}>
+                <div style={{padding:"13px 14px"}}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:10,marginBottom:8}}>
+                    <span style={{fontSize:20,flexShrink:0,opacity:started?1:0.4}}>{mod.icon}</span>
+                    <div style={{flex:1}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}>
+                        <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",letterSpacing:2}}>MODULE {i+1}</span>
+                        {pct>=1&&<span style={{fontFamily:F,fontSize:7,color:"#5CA87C",letterSpacing:1,background:"rgba(92,168,92,0.12)",border:"1px solid rgba(92,168,92,0.25)",borderRadius:4,padding:"1px 5px"}}>COMPLETE</span>}
+                      </div>
+                      <div style={{fontFamily:F,fontSize:13,color:started?mod.color:"rgba(200,175,100,0.5)"}}>{mod.title}</div>
+                      <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.35)",marginTop:2,lineHeight:1.5}}>{mod.subtitle}</div>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{height:2,background:"rgba(200,175,100,0.08)",borderRadius:1,marginBottom:8}}>
+                    <div style={{height:"100%",width:`${pct*100}%`,background:mod.color,borderRadius:1,opacity:0.7,transition:"width 0.4s ease"}}/>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)"}}>{prog.lessonsComplete||0} / {mod.lessons} lessons</div>
+                    <button onClick={()=>startFoundationModule(mod)} style={{padding:"6px 14px",borderRadius:9,background:`${mod.color}14`,border:`1px solid ${mod.color}40`,fontFamily:F,fontSize:9,color:mod.color,cursor:"pointer"}}>
+                      {started?(pct>=1?"Review":"Continue"):"Begin →"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {/* Topics Library */}
+      {learnMode==="topics"&&(
+        <div>
+          <div style={{padding:"0 18px 8px",fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",lineHeight:1.7}}>Choose any topic. The AI teaches through Socratic dialogue — asking questions, building understanding from the inside out.</div>
+          {["beginner","intermediate","advanced"].filter(l=>filteredTopics.some(t=>t.level===l)).map(l=>(
+            <div key={l}>
+              <div style={{padding:"8px 18px 4px",fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",letterSpacing:3,textTransform:"uppercase"}}>{l}</div>
+              {filteredTopics.filter(t=>t.level===l).map(t=>(
+                <button key={t.id} onClick={()=>startTopic(t,null)} style={{width:"100%",padding:"11px 18px",background:"none",border:"none",borderBottom:"1px solid rgba(200,175,100,0.05)",cursor:"pointer",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+                  <span style={{fontSize:20,color:"rgba(200,175,100,0.2)",flexShrink:0}}>⬡</span>
+                  <div style={{flex:1}}>
+                    <div style={{fontFamily:F,fontSize:13,color:"rgba(200,175,100,0.8)"}}>{t.label}</div>
+                    <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",marginTop:2}}>{t.desc}</div>
+                  </div>
+                  <span style={{color:"rgba(200,175,100,0.2)",fontSize:14}}>›</span>
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -5059,7 +5401,8 @@ export default function App(){
           {tab==="natal"   &&<NatalScreen   natalData={natalData} setNatalData={setNatalData} eph={eph} fractal={fractal} natalPos={natalPos} profile={profile}/>}
           {tab==="transits"&&<TransitsScreen natalPos={natalPos} now={now}/>}
           {tab==="ephemeris"&&<EphemerisScreen now={now}/>}
-          {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph}/>}
+          {tab==="cycles"  &&<CyclesScreen  now={now} profile={profile} eph={eph}/>}
+          {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph} profile={profile}/>}
           {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}
           {tab==="journal" &&<JournalScreen  profile={profile}/>}
           {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile}/>}
