@@ -17,6 +17,13 @@ if (!window.storage) {
     delete: async (key) => {
       try { localStorage.removeItem(key) } catch {}
     },
+    // Sync shims — some legacy call sites expect the localStorage interface
+    getItem: (key) => {
+      try { return localStorage.getItem(key) } catch { return null }
+    },
+    setItem: (key, value) => {
+      try { localStorage.setItem(key, value) } catch {}
+    },
   }
 }
 

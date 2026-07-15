@@ -1,4 +1,7 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
+import { askClaude } from "./ai/client.js";
+import { loadJSON, saveJSON } from "./lib/storage.js";
+import { exportAll, importAll, markExported, lastExportedAt, backupFilename, downloadText, shareOnNative, copyToClipboard } from "./lib/backup.js";
 
 // ═══════════════════════════════════════════════════════════════════════
 // PLATFORM DETECTION
@@ -2323,10 +2326,8 @@ function ElectScreen({now,natalPos,eph,profile}){
     const sys=`You are a master of electional astrology and magical timing. Generate a practical season planning report for a practitioner working in the ${trad} tradition.`;
     const userMsg=`Generate a ${seasonHorizon}-month Season Planning Report for the domain of ${domain.label.toUpperCase()} in the ${trad} tradition.\n\nCurrent sky: ${moonPos}. ${jupPos}. ${satPos}. Outer planets: ${outerStr}. Air Mutation (Jupiter-Saturn 2020): ${jsYrs} years in.\n\nNatal context: ${natalStr}\n\nStructure your report as:\n1. **Overview** — The quality of this ${seasonHorizon}-month period for ${domain.label} work. What is the broad signature?\n2. **Peak Windows** — Name 2-3 specific time periods (month + rough timing) that are especially favorable for ${domain.label} workings and why.\n3. **Cautions** — What conditions to watch for or avoid. When to hold back.\n4. **Recommended Practice** — One concrete magical practice or focus that fits this season in the ${trad} tradition.\n\nBe specific and practical. 4-5 tight paragraphs.`;
     try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:900,system:sys,messages:[{role:"user",content:userMsg}]})});
-      const data=await resp.json();
-      setSeasonReport(data.content?.[0]?.text||data.error?.message||"An error occurred.");
-    }catch(e){setSeasonReport("Season report unavailable — check connection.");}
+      setSeasonReport(await askClaude({apiKey,system:sys,messages:[{role:"user",content:userMsg}],maxTokens:900}));
+    }catch(e){setSeasonReport(e.message||"Season report unavailable — check connection.");}
     setSeasonLoading(false);
   };
   const TABS=[{id:"live",label:"Live"},{id:"scan",label:"Scan"},{id:"intents",label:"Intents"},{id:"season",label:"Season"},{id:"theory",label:"Theory"}];
@@ -2569,10 +2570,8 @@ function WorkScreen({eph,initPlanet,natalPos,profile,now}){
     const sys=`You are a master practitioner of ${trad}, deeply versed in the classical sources of magical timing and operation.\n\nTRADITION:\n${tPrompts}\n\nGenerate a complete, practical magical operation plan. Be specific — give exact dates, exact materia, exact words. Format with clear section headers. This is actionable instruction, not theory.`;
     const userMsg=`Current sky (${dateStr}): ${positions}\nMoon: ${eph.moonPhase}${eph.voc?.isVoC?" — VOID":""}\n${nd}\n\nMy goal: ${genGoal}\nTimeline: ${genTimeline||"flexible"}\nNotes/constraints: ${genNotes||"none"}\n${planet?`Primary planet in mind: ${P[planet].name}`:"Let the tradition determine the best planet."}\n\nGenerate a complete ritual plan with these sections:\n1. PLANETARY CHOICE — which sphere and why\n2. ELECTION WINDOW — specific best date/time within my timeline\n3. MATERIA — complete list (incense, herbs, stones, metals, colors, day, hour)\n4. RITUAL STRUCTURE — step-by-step procedure in ${trad} style\n5. INVOCATION — opening prayer or calling\n6. CONSECRATION — how to seal the working\n7. FOLLOW-UP — maintenance timing, what to observe\n8. CAUTIONS — what to avoid`;
     try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:1400,system:sys,messages:[{role:"user",content:userMsg}]})});
-      const data=await resp.json();
-      setGenPlan(data.content?.[0]?.text||data.error?.message||"An error occurred.");
-    }catch(e){setGenPlan("Generator unavailable — check connection.");}
+      setGenPlan(await askClaude({apiKey,system:sys,messages:[{role:"user",content:userMsg}],maxTokens:1400}));
+    }catch(e){setGenPlan(e.message||"Generator unavailable — check connection.");}
     setGenLoading(false);
   };
   const saveToGrimoire=async()=>{
@@ -3573,13 +3572,13 @@ function FractalScreen({fractal,natalPos,mode,setMode,now}){
             const isC=lev.idx===l1Idx;
             const col=P[lev.decan.ruler].col;
             return(
-              <React.Fragment key={i}>
+              <Fragment key={i}>
                 <div style={{textAlign:"center"}}>
                   <div style={{width:32,height:32,borderRadius:16,background:isC?`${col}22`:"rgba(0,0,0,0.3)",border:`2px solid ${isC?col:"rgba(200,175,100,0.1)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:F,fontSize:9,color:isC?col:"rgba(200,175,100,0.2)",boxShadow:isC?`0 0 10px ${col}40`:"none",transition:"all 0.4s"}}>{ROMAN[i]}</div>
                   <div style={{fontFamily:F,fontSize:6,color:isC?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.15)",marginTop:3,letterSpacing:0.5}}>{isC?"●":"○"}</div>
                 </div>
                 {i<3&&<div style={{flex:1,height:1,background:`rgba(200,175,100,${isC&&levels[i+1]?.idx===l1Idx?0.3:0.07})`}}/>}
-              </React.Fragment>
+              </Fragment>
             );
           })}
           <div style={{marginLeft:8,textAlign:"right"}}>
@@ -3741,10 +3740,8 @@ function CyclesScreen({now,profile,eph}){
     const sys=`You are a master of the Blended Cycle Model — synthesizing macro-historical cycles (Uranus 84yr, Neptune 165yr, Pluto 248yr, Jupiter-Saturn 20yr/200yr mutation) with the practitioner's personal timing, magical tradition, and spirit ecology. You draw on Gordon White's Rune Soup framework, Rudhyar, Charles Harvey, and the animist principle that macro-cycles describe the civilizational weather within which all individual magical work occurs. Historical parallels: Pluto in Aquarius last occurred 1778-1798 (American/French Revolutions, end of absolute monarchy); Neptune entering Aries last occurred 1861-1875 (Civil War, spiritualism explosion, Theosophy); Uranus in Gemini last occurred 1942-1949 (atomic age, computing, communication revolution); the Air Mutation of 2020 is the first since 1226 CE. Apply the animist principle: we are in the putrefactory phase of Western civilisation — the alchemical nigredo — and 'nothing is going wrong.' The appropriate response is wyrd-building, ancestor cultivation, and positioning for volatility.`;
     const userMsg=`I practice ${trad}. Give me a PhD-level Blended Cycle Model synthesis.\n\nOuter planets: ${outerStr}.\n${jupStr}. ${satStr}.\n${jsMutation}.\n\nHistorical context provided — do not repeat it, synthesize from it.\n\nGive me:\n1. The civilizational signature of this specific confluence (what era are we in, historically?)\n2. What the Air Mutation means for magical operations in the ${trad} tradition specifically\n3. Which spirits, entities, or planetary intelligences are most amplified by this configuration\n4. The concrete "ours to do" — 2-3 specific magical practices or priorities for this era\n5. What to discard (traditions or approaches the current weather makes obsolete or ineffective)\nDense, practical, no padding. 5 paragraphs maximum.`;
     try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:900,system:sys,messages:[{role:"user",content:userMsg}]})});
-      const data=await resp.json();
-      setAiReport(data.content?.[0]?.text||data.error?.message||"An error occurred.");
-    }catch(e){setAiReport("Cycles report unavailable — check connection.");}
+      setAiReport(await askClaude({apiKey,system:sys,messages:[{role:"user",content:userMsg}],maxTokens:900}));
+    }catch(e){setAiReport(e.message||"Cycles report unavailable — check connection.");}
     setAiLoading(false);
   };
   const GOLD="#D4AF6A";const G=`rgba(200,175,100,`;
@@ -3877,10 +3874,8 @@ function JournalScreen({profile}){
     const sys=`You are an analytical magical advisor reviewing a practitioner's journal. Look for patterns: which planets appear most often, success vs. failure patterns, timing observations, seasonal patterns, repeating intentions. Be specific — cite exact data from the journal. Give actionable recommendations. Tradition: ${trad}.`;
     const userMsg=`Here is my magical practice journal (${entries.length} entries). Analyze it for patterns and give me your honest assessment and recommendations:\n\n${entrySummary}`;
     try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:900,system:sys,messages:[{role:"user",content:userMsg}]})});
-      const data=await resp.json();
-      setReflection(data.content?.[0]?.text||data.error?.message||"An error occurred.");
-    }catch(e){setReflection("Reflection unavailable — check connection.");}
+      setReflection(await askClaude({apiKey,system:sys,messages:[{role:"user",content:userMsg}],maxTokens:900}));
+    }catch(e){setReflection(e.message||"Reflection unavailable — check connection.");}
     setReflecting(false);
   };
   return(
@@ -3934,11 +3929,8 @@ function JournalScreen({profile}){
 // ═══════════════════════════════════════════════════════════════════════
 // KNOWLEDGE BASE — persistent nodes injected into AI context
 // ═══════════════════════════════════════════════════════════════════════
-function loadKnowledge(){
-  try{const raw=window.storage.getItem("astrum_knowledge");if(raw)return JSON.parse(raw);}catch{}
-  return[];
-}
-function saveKnowledge(nodes){window.storage.setItem("astrum_knowledge",JSON.stringify(nodes));}
+function loadKnowledge(){return loadJSON("astrum_knowledge",[]);}
+function saveKnowledge(nodes){saveJSON("astrum_knowledge",nodes);}
 
 // Build dynamic system prompt from profile, knowledge nodes, and optional sky context
 function buildSystemPrompt(profile,extraContext){
@@ -3995,12 +3987,10 @@ function AIScreen({now,eph,fractal,natalPos,hour,profile}){
     const apiKey=profile?.apiKey||"";
     if(!apiKey){setMessages(m=>[...m,{role:"assistant",content:"No API key configured. Go to Profile → Anthropic API Key to enter your key from console.anthropic.com."}]);setLoading(false);return;}
     try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:1500,system:systemPrompt,messages:[...messages,userMsg].filter(m=>m.role!=="assistant"||messages.indexOf(m)>0).map(m=>({role:m.role,content:m.content}))})});
-      const data=await resp.json();
-      const txt=data.content?.[0]?.text||data.error?.message||"An error occurred — check API key configuration.";
+      const txt=await askClaude({apiKey,system:systemPrompt,maxTokens:1500,messages:[...messages,userMsg].filter(m=>m.role!=="assistant"||messages.indexOf(m)>0).map(m=>({role:m.role,content:m.content}))});
       setMessages(m=>[...m,{role:"assistant",content:txt}]);
     }catch(e){
-      setMessages(m=>[...m,{role:"assistant",content:"Unable to connect to the API. This feature requires a valid Anthropic API key configured server-side."}]);
+      setMessages(m=>[...m,{role:"assistant",content:e.message||"Unable to connect to the API."}]);
     }
     setLoading(false);
     setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:"smooth"}),100);
@@ -4132,11 +4122,9 @@ function OraclePanel({open,onClose,context,profile}){
     if(!apiKey){setMsgs(m=>[...m,{role:"assistant",content:"Configure your Anthropic API key in Profile → API Key to activate the Oracle."}]);setLoading(false);return;}
     const sys=buildSystemPrompt(profile,"You are the Oracle — an embedded advisor in a magical practice app. Speak directly to what the practitioner is currently observing. Be concise and specific (2-4 paragraphs for readings, shorter for follow-ups). Reference exact data given. No generalities — address the specific conditions described.");
     try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:800,system:sys,messages:newMsgs.map(m=>({role:m.role,content:m.content}))})});
-      const data=await resp.json();
-      const txt=data.content?.[0]?.text||data.error?.message||"An error occurred.";
+      const txt=await askClaude({apiKey,system:sys,maxTokens:800,messages:newMsgs.map(m=>({role:m.role,content:m.content}))});
       setMsgs(m=>[...m,{role:"assistant",content:txt}]);
-    }catch(e){setMsgs(m=>[...m,{role:"assistant",content:"Oracle unavailable — check connection."}]);}
+    }catch(e){setMsgs(m=>[...m,{role:"assistant",content:e.message||"Oracle unavailable — check connection."}]);}
     setLoading(false);
     setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:"smooth"}),100);
   };
@@ -4658,9 +4646,9 @@ function SigilScreen({eph,profile}){
   const [savedSvg,setSavedSvg]=useState(null);
 
   useEffect(()=>{
-    try{const raw=window.storage.getItem("astrum_sigils");if(raw)setSigils(JSON.parse(raw));}catch{}
+    setSigils(loadJSON("astrum_sigils",[]));
   },[]);
-  const save=(list)=>{setSigils(list);window.storage.setItem("astrum_sigils",JSON.stringify(list));};
+  const save=(list)=>{setSigils(list);saveJSON("astrum_sigils",list);};
 
   // Build SVG path for rose cross method
   const buildRosePath=(text)=>{
@@ -4736,13 +4724,10 @@ function SigilScreen({eph,profile}){
     setAiLoading(true);setAiNote("");
     const pl=P[sigil.planet];
     const now=new Date();
-    const body={model:"claude-sonnet-4-5",max_tokens:300,
-      system:`You are an expert in electional astrology and talismanic timing. Give a brief, practical 2-3 sentence note on current timing for charging a ${pl.name} sigil. Current sky: Sun at ${eph.pos?.sun?.lon?.toFixed(1)}°, Moon at ${eph.pos?.moon?.lon?.toFixed(1)}°. Be specific and actionable.`,
-      messages:[{role:"user",content:`When is the best time in the next 48 hours to charge a ${pl.name} sigil? Current moment: ${now.toLocaleString()}.`}]};
     try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"x-api-key":key,"anthropic-version":"2023-06-01","content-type":"application/json","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body)});
-      const data=await resp.json();
-      const note=data.content?.[0]?.text||"";
+      const note=await askClaude({apiKey:key,maxTokens:300,
+        system:`You are an expert in electional astrology and talismanic timing. Give a brief, practical 2-3 sentence note on current timing for charging a ${pl.name} sigil. Current sky: Sun at ${eph.pos?.sun?.lon?.toFixed(1)}°, Moon at ${eph.pos?.moon?.lon?.toFixed(1)}°. Be specific and actionable.`,
+        messages:[{role:"user",content:`When is the best time in the next 48 hours to charge a ${pl.name} sigil? Current moment: ${now.toLocaleString()}.`}]});
       setAiNote(note);
       // Save note to sigil
       const next=sigils.map(s=>s.id===sigil.id?{...s,aiNote:note}:s);
@@ -5102,11 +5087,9 @@ function LearnScreen({profile}){
     const modeNote=testMode?"You are in TEST MODE. Ask the student a specific question about the topic they have been learning. Wait for their answer, then evaluate it: affirm what is correct, gently correct what is wrong, and deepen the teaching. Then ask another question.":"You are in LESSON MODE. Teach using the Socratic method: introduce a key concept, ask the student a thought-provoking question, respond to their answer with deeper insight. Keep your turns to 2-3 paragraphs maximum. Guide discovery rather than simply lecturing.";
     const sys=buildSystemPrompt(profile,`You are a master teacher of magical tradition and esoteric knowledge.\n\n${modeNote}`);
     try{
-      const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},body:JSON.stringify({model:"claude-sonnet-4-5",max_tokens:700,system:sys,messages:newMsgs.map(m=>({role:m.role,content:m.content}))})});
-      const data=await resp.json();
-      const txt=data.content?.[0]?.text||data.error?.message||"An error occurred.";
+      const txt=await askClaude({apiKey,system:sys,maxTokens:700,messages:newMsgs.map(m=>({role:m.role,content:m.content}))});
       setMsgs(m=>[...m,{role:"assistant",content:txt}]);
-    }catch(e){setMsgs(m=>[...m,{role:"assistant",content:"Learn unavailable — check connection."}]);}
+    }catch(e){setMsgs(m=>[...m,{role:"assistant",content:e.message||"Learn unavailable — check connection."}]);}
     setLoading(false);
     setTimeout(()=>bottomRef.current?.scrollIntoView({behavior:"smooth"}),100);
   };
@@ -5320,6 +5303,67 @@ function KnowledgeBase(){
   );
 }
 
+function BackupCard(){
+  const [msg,setMsg]=useState("");
+  const [showPaste,setShowPaste]=useState(false);
+  const [pasteText,setPasteText]=useState("");
+  const [mergeMode,setMergeMode]=useState(true);
+  const fileRef=useRef(null);
+  const last=lastExportedAt();
+  const daysSince=last?Math.floor((Date.now()-last.getTime())/86400000):null;
+  const stale=last==null||daysSince>30;
+  const doExport=async()=>{
+    const json=exportAll();
+    const name=backupFilename();
+    if(await shareOnNative(name,json)){markExported();setMsg("✓ Backup handed to share sheet");return;}
+    if(downloadText(name,json)){markExported();setMsg(`✓ Downloaded ${name}`);return;}
+    if(await copyToClipboard(json)){markExported();setMsg("✓ Backup copied to clipboard — paste it somewhere safe");return;}
+    setMsg("✗ Export failed — no delivery method available");
+  };
+  const doCopy=async()=>{
+    if(await copyToClipboard(exportAll())){markExported();setMsg("✓ Backup copied to clipboard");}
+    else setMsg("✗ Clipboard unavailable");
+  };
+  const restore=(text)=>{
+    try{
+      const s=importAll(text,{merge:mergeMode});
+      setMsg(`✓ Restored ${s.keysRestored} stores${mergeMode?` (+${s.entriesAdded} entries)`:""} — reloading…`);
+      setTimeout(()=>window.location.reload(),1200);
+    }catch(e){setMsg("✗ "+(e.message||"Import failed"));}
+  };
+  const onFile=async(e)=>{
+    const f=e.target.files?.[0];if(!f)return;
+    restore(await f.text());
+    e.target.value="";
+  };
+  const BTN=(active=true)=>({padding:"9px 12px",borderRadius:10,background:active?"rgba(212,175,106,0.1)":"rgba(0,0,0,0.3)",border:"1px solid "+(active?"rgba(212,175,106,0.28)":"rgba(200,175,100,0.1)"),fontFamily:F,fontSize:9,color:active?"#D4AF6A":"#5A4020",letterSpacing:1.5,textTransform:"uppercase",cursor:"pointer",flex:1});
+  return(
+    <div className="card" style={{margin:"0 14px 10px"}}>
+      <div style={L()}>Backup & Restore</div>
+      <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Your journal, grimoire, sigils, and castings live only on this device. Export regularly — the practice record is irreplaceable.</div>
+      {stale&&<div style={{fontFamily:F,fontSize:9,color:"#9B5050",marginTop:6,lineHeight:1.5}}>{last?`⚠ Last backup ${daysSince} days ago`:"⚠ No backup has ever been exported"}</div>}
+      {last&&!stale&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.35)",marginTop:6}}>Last export: {last.toLocaleDateString()}</div>}
+      <div style={{display:"flex",gap:6,marginTop:10}}>
+        <button onClick={doExport} style={BTN()}>Export All</button>
+        <button onClick={doCopy} style={BTN()}>Copy</button>
+      </div>
+      <div style={{display:"flex",gap:6,marginTop:6}}>
+        <button onClick={()=>fileRef.current?.click()} style={BTN()}>Import File</button>
+        <button onClick={()=>setShowPaste(s=>!s)} style={BTN()}>{showPaste?"Hide Paste":"Paste Backup"}</button>
+      </div>
+      <input ref={fileRef} type="file" accept=".json,application/json" onChange={onFile} style={{display:"none"}}/>
+      <button onClick={()=>setMergeMode(m=>!m)} style={{marginTop:8,background:"none",border:"none",cursor:"pointer",fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.45)",letterSpacing:1,padding:0}}>
+        MODE: {mergeMode?"MERGE (existing entries kept, new ones added)":"REPLACE (imported data overwrites this device)"} — tap to switch
+      </button>
+      {showPaste&&<div style={{marginTop:8}}>
+        <textarea value={pasteText} onChange={e=>setPasteText(e.target.value)} rows={4} placeholder="Paste an Astrum backup JSON here…" style={{background:"rgba(0,0,0,0.45)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",width:"100%",fontSize:10,resize:"vertical",boxSizing:"border-box"}}/>
+        <button onClick={()=>pasteText.trim()&&restore(pasteText)} disabled={!pasteText.trim()} style={{...BTN(!!pasteText.trim()),width:"100%",marginTop:5}}>Restore From Paste</button>
+      </div>}
+      {msg&&<div style={{fontFamily:F,fontSize:9,color:msg.startsWith("✓")?"#7A9A7A":"#9B5050",marginTop:8,lineHeight:1.5}}>{msg}</div>}
+    </div>
+  );
+}
+
 function ProfileScreen({profile,setProfile}){
   const [name,setName]=useState(profile?.name||"");
   const [date,setDate]=useState(profile?.natal?.date||"");
@@ -5426,6 +5470,7 @@ function ProfileScreen({profile,setProfile}){
           <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)",marginTop:5}}>Obtain at console.anthropic.com — you pay only for what you use.</div>
         </div>
       </div>
+      <BackupCard/>
       <KnowledgeBase/>
       {/* Planetary Tint — Batch 3 */}
       <div className="card" style={{margin:"0 14px 10px"}}>
@@ -5506,12 +5551,6 @@ export default function App(){
     root.style.setProperty("--bg-grad2",t.grad2);
   },[activeTint]);
 
-  // ── Dynamic background: shift with planetary hour (Batch 1) ─────────
-  const hourTint=useMemo(()=>{
-    const cols={sun:"rgba(220,175,40,0.12)",moon:"rgba(160,180,220,0.12)",mercury:"rgba(100,160,100,0.10)",venus:"rgba(200,140,110,0.12)",mars:"rgba(180,50,40,0.14)",jupiter:"rgba(100,90,200,0.14)",saturn:"rgba(80,100,140,0.12)"};
-    return cols[hour?.planet]||"rgba(160,120,30,0.12)";
-  },[hour?.planet]);
-
   // ── ⌘K keyboard shortcut (Batch 2) ──────────────────────────────────
   useEffect(()=>{
     const handler=(e)=>{if((e.metaKey||e.ctrlKey)&&e.key==="k"){e.preventDefault();setCmdOpen(o=>!o);}if(e.key==="Escape")setCmdOpen(false);};
@@ -5523,6 +5562,12 @@ export default function App(){
   const hour=location?getPlanetaryHourUnequal(now,location.lat,location.lon):getPlanetaryHour(now);
   const eph=useEphemeris(now,location);
   const fractal=calcFractal(now,fractalMode);
+
+  // ── Dynamic background: shift with planetary hour (Batch 1) ─────────
+  const hourTint=useMemo(()=>{
+    const cols={sun:"rgba(220,175,40,0.12)",moon:"rgba(160,180,220,0.12)",mercury:"rgba(100,160,100,0.10)",venus:"rgba(200,140,110,0.12)",mars:"rgba(180,50,40,0.14)",jupiter:"rgba(100,90,200,0.14)",saturn:"rgba(80,100,140,0.12)"};
+    return cols[hour?.planet]||"rgba(160,120,30,0.12)";
+  },[hour?.planet]);
   const openWork=useCallback(pk=>{setWork(pk);setTab("work");},[]);
   const openOracle=useCallback((prefill)=>{
     if(!eph)return;
