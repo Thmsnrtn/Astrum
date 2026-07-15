@@ -111,6 +111,17 @@ export async function shareOnNative(filename, text) {
   } catch { return false; }
 }
 
+// Silent safety net: written to the app's Documents dir when iOS backgrounds
+// the app, since WKWebView may evict localStorage under storage pressure.
+export async function autoBackupNative() {
+  try {
+    if (!window.Capacitor?.isNativePlatform?.()) return false;
+    const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
+    await Filesystem.writeFile({ path: "astrum-autobackup.json", data: exportAll(), directory: Directory.Documents, encoding: Encoding.UTF8 });
+    return true;
+  } catch { return false; }
+}
+
 export async function copyToClipboard(text) {
   try { await navigator.clipboard.writeText(text); return true; }
   catch { return false; }

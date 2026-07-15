@@ -8,6 +8,9 @@ import { getMansion } from "./data/mansions.js";
 import { SEALS, getSeal } from "./data/seals.js";
 import MansionsScreen from "./screens/MansionsScreen.jsx";
 import HoraryScreen from "./screens/HoraryScreen.jsx";
+import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
+import { reschedule, ensurePermission } from "./lib/notify.js";
+import { autoBackupNative } from "./lib/backup.js";
 import ReviewScreen from "./screens/ReviewScreen.jsx";
 import { swPlanetLon, swDailyMotion, swTrueNode, swChiron, swLilith, swHouses, swFixstar, onSwephReady, engineInfo } from "./engine/sweph.js";
 
@@ -233,7 +236,7 @@ function nextIngress(planet,jd){
 const HOUR_ORDER=["saturn","jupiter","mars","sun","venus","mercury","moon"];
 const DAY_RULERS={0:"sun",1:"moon",2:"mars",3:"mercury",4:"jupiter",5:"venus",6:"saturn"};
 const DAY_NAMES=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-function getPlanetaryHour(date){
+export function getPlanetaryHour(date){
   const dow=date.getDay(),dr=DAY_RULERS[dow],ri=HOUR_ORDER.indexOf(dr);
   const mn=new Date(date);mn.setHours(0,0,0,0);
   const hn=Math.floor((date-mn)/3600000)%24,pi=(ri+hn)%7;
@@ -287,7 +290,7 @@ function calcPOF(asc,moonL,sunL,isDayChart){return norm(isDayChart?asc+moonL-sun
 // Part of Spirit: day chart = ASC + Sun - Moon; night chart = ASC + Moon - Sun
 function calcPOS(asc,moonL,sunL,isDayChart){return norm(isDayChart?asc+sunL-moonL:asc+moonL-sunL);}
 // True unequal planetary hours using local sunrise/sunset
-function getPlanetaryHourUnequal(now,lat,lon){
+export function getPlanetaryHourUnequal(now,lat,lon){
   const dow=now.getDay(),dr=DAY_RULERS[dow],ri=HOUR_ORDER.indexOf(dr);
   const todaySS=sunriseSetUTC(now,lat,lon);
   if(!todaySS)return getPlanetaryHour(now); // fallback for polar regions
@@ -1607,7 +1610,40 @@ function HourRing({hour,now}){
 // ═══════════════════════════════════════════════════════════════════════
 // SKY SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-function SkyScreen({now,hour,eph,fractal,natalPos,onWork}){
+function BriefingCard({now,eph,hour,profile}){
+  const [open,setOpen]=useState(false);
+  const [gloss,setGloss]=useState(null);
+  const [glossing,setGlossing]=useState(false);
+  const text=useMemo(()=>{
+    try{return composeBriefing({now,eph,hour,castings:loadCastings(),athanor:loadJSON("astrum_athanor",[])});}catch{return "";}
+    // eslint-disable-next-line
+  },[Math.floor(now.getTime()/60000),open]);
+  const getGloss=async()=>{
+    setGlossing(true);setGloss(null);
+    try{
+      setGloss(await askClaude({apiKey:profile?.apiKey||"",maxTokens:300,
+        system:buildSystemPrompt(profile,"You are the practitioner's morning advisor. Given today's sky briefing, respond with ONE short paragraph (3-4 sentences): the quality of the day, what kind of work it favors, and one concrete suggestion. No preamble."),
+        messages:[{role:"user",content:text}]}));
+    }catch(e){setGloss(e.message);}
+    setGlossing(false);
+  };
+  if(!text)return null;
+  return(
+    <div style={{margin:"0 14px 10px",borderRadius:13,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(200,175,100,0.12)"}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:"none",border:"none",cursor:"pointer"}}>
+        <span style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.55)",letterSpacing:3,textTransform:"uppercase"}}>☉ Today's Briefing</span>
+        <span style={{color:"rgba(200,175,100,0.35)",fontSize:11}}>{open?"▾":"▸"}</span>
+      </button>
+      {open&&<div style={{padding:"0 14px 12px"}}>
+        <div style={{fontFamily:F,fontSize:11,color:"#C4A870",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{text}</div>
+        {gloss?<div style={{marginTop:8,padding:"9px 11px",borderRadius:10,background:"rgba(20,15,40,0.7)",border:"1px solid rgba(100,80,160,0.25)",fontFamily:F,fontSize:10.5,color:"#B0A0D0",fontStyle:"italic",lineHeight:1.8}}>{gloss}</div>
+        :profile?.apiKey&&<button onClick={getGloss} disabled={glossing} style={{marginTop:8,padding:"6px 12px",borderRadius:9,background:"rgba(100,80,160,0.12)",border:"1px solid rgba(100,80,160,0.3)",fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.8)",letterSpacing:1.5,cursor:"pointer"}}>{glossing?"READING…":"✧ ORACLE'S GLOSS"}</button>}
+      </div>}
+    </div>
+  );
+}
+
+function SkyScreen({now,hour,eph,fractal,natalPos,onWork,profile}){
   const voc=eph.voc;
   return (
     <div style={{flex:1,overflowY:"auto",paddingBottom:20}}>
@@ -1620,6 +1656,7 @@ function SkyScreen({now,hour,eph,fractal,natalPos,onWork}){
           {voc?.isVoC && <div style={{fontFamily:F,fontSize:9,color:"#E09060",marginTop:2}}>⚠ Void of Course</div>}
         </div>
       </div>
+      <BriefingCard now={now} eph={eph} hour={hour} profile={profile}/>
       {voc?.isVoC && (
         <div style={{margin:"0 14px 10px",padding:"10px 14px",borderRadius:12,background:"rgba(180,100,50,0.12)",border:"1px solid rgba(200,120,60,0.3)"}}>
           <div style={L("#E09060",8)}>⚠ Moon Void of Course</div>
@@ -5410,6 +5447,57 @@ function KnowledgeBase(){
   );
 }
 
+function NotifyCard({notifyPrefs,setNotifyPrefs}){
+  const [msg,setMsg]=useState("");
+  const prefs=notifyPrefs||DEFAULT_NOTIFY_PREFS;
+  const update=(patch)=>{const next={...prefs,...patch,kinds:{...prefs.kinds,...(patch.kinds||{})}};saveNotifyPrefs(next);setNotifyPrefs(next);};
+  const toggleEnabled=async()=>{
+    if(!prefs.enabled){
+      const ok=await ensurePermission();
+      if(!ok){setMsg("✗ Notification permission denied — enable it in system settings.");return;}
+      setMsg("");update({enabled:true});
+    }else update({enabled:false});
+  };
+  const KINDS=[["hourChange","Planetary hour changes","for your chosen planets"],["voc","Void of course Moon","start and end"],["elections","Election reminders","24h and 1h before committed windows"],["briefing","Morning briefing","the day's sky at your chosen time"],["athanor","Athanor steps","when an operation's window opens"]];
+  const isWeb=!window.Capacitor?.isNativePlatform?.()&&!window.__TAURI_INTERNALS__;
+  return(
+    <div className="card" style={{margin:"0 14px 10px"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div style={L()}>Ambient Practice</div>
+        <button onClick={toggleEnabled} style={{padding:"6px 14px",borderRadius:9,background:prefs.enabled?"rgba(92,168,92,0.15)":"rgba(0,0,0,0.3)",border:`1px solid ${prefs.enabled?"rgba(92,168,92,0.4)":"rgba(200,175,100,0.15)"}`,fontFamily:F,fontSize:9,color:prefs.enabled?"#7AB07A":"rgba(200,175,100,0.5)",letterSpacing:1.5,cursor:"pointer"}}>{prefs.enabled?"ON":"OFF"}</button>
+      </div>
+      <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>The sky comes to you — hour changes, void Moon, election windows, the morning briefing.{isWeb?" On the web these fire only while a tab is open; the desktop and iOS apps deliver on schedule.":""}</div>
+      {msg&&<div style={{fontFamily:F,fontSize:9,color:"#9B5050",marginTop:6}}>{msg}</div>}
+      {prefs.enabled&&<>
+        <div style={{marginTop:10}}>
+          {KINDS.map(([k,lbl,sub])=>(
+            <button key={k} onClick={()=>update({kinds:{[k]:!prefs.kinds[k]}})} style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"7px 9px",borderRadius:9,background:prefs.kinds[k]?"rgba(212,175,106,0.07)":"rgba(0,0,0,0.2)",border:`1px solid ${prefs.kinds[k]?"rgba(212,175,106,0.25)":"rgba(200,175,100,0.07)"}`,cursor:"pointer",textAlign:"left",marginBottom:4}}>
+              <span style={{fontFamily:F,fontSize:11,color:prefs.kinds[k]?"#7AB07A":"rgba(200,175,100,0.3)",width:14}}>{prefs.kinds[k]?"✓":"○"}</span>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:F,fontSize:10.5,color:prefs.kinds[k]?"#D4AF6A":"rgba(200,175,100,0.45)"}}>{lbl}</div>
+                <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:1}}>{sub}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+        {prefs.kinds.hourChange&&<div style={{marginTop:8}}>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase",marginBottom:5}}>Hour Alerts For</div>
+          <div style={{display:"flex",gap:4}}>
+            {Object.keys(P).map(pk=>{const on=prefs.hourPlanets?.includes(pk);return(
+              <button key={pk} onClick={()=>update({hourPlanets:on?prefs.hourPlanets.filter(x=>x!==pk):[...(prefs.hourPlanets||[]),pk]})} style={{flex:1,padding:"7px 2px",borderRadius:8,background:on?P[pk].col+"18":"rgba(0,0,0,0.25)",border:`1px solid ${on?P[pk].col+"55":"rgba(200,175,100,0.08)"}`,cursor:"pointer"}}>
+                <div style={{fontSize:13,textAlign:"center",color:on?P[pk].col:"rgba(200,175,100,0.25)"}}>{P[pk].sym}</div>
+              </button>);})}
+          </div>
+        </div>}
+        {prefs.kinds.briefing&&<div style={{marginTop:10,display:"flex",alignItems:"center",gap:10}}>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase"}}>Briefing at</div>
+          <input type="time" value={prefs.briefingTime} onChange={e=>update({briefingTime:e.target.value})} style={{background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:9,color:"#C4A870",fontFamily:F,outline:"none",padding:"6px 9px",fontSize:11}}/>
+        </div>}
+      </>}
+    </div>
+  );
+}
+
 function BackupCard(){
   const [msg,setMsg]=useState("");
   const [showPaste,setShowPaste]=useState(false);
@@ -5471,7 +5559,7 @@ function BackupCard(){
   );
 }
 
-function ProfileScreen({profile,setProfile}){
+function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyPrefs}){
   const [name,setName]=useState(profile?.name||"");
   const [date,setDate]=useState(profile?.natal?.date||"");
   const [time,setTime]=useState(profile?.natal?.time||"");
@@ -5584,6 +5672,7 @@ function ProfileScreen({profile,setProfile}){
         </div>
         <div style={{fontFamily:F,fontSize:10,color:engineInfo()==="swiss"?"#7AB07A":"#C08050",letterSpacing:1,whiteSpace:"nowrap",marginLeft:10,textTransform:"uppercase"}}>{engineInfo()==="swiss"?"✓ Swiss":engineInfo()}</div>
       </div>
+      <NotifyCard notifyPrefs={notifyPrefs} setNotifyPrefs={setNotifyPrefs}/>
       <BackupCard/>
       <KnowledgeBase/>
       {/* Planetary Tint — Batch 3 */}
@@ -5857,6 +5946,39 @@ export default function App(){
   const eph=useEphemeris(now,location);
   const fractal=calcFractal(now,fractalMode);
 
+  // ── Ambient practice: plan + schedule notifications, refresh every 15 min
+  const [notifyPrefs,setNotifyPrefs]=useState(loadNotifyPrefs);
+  useEffect(()=>{
+    if(!notifyPrefs.enabled)return;
+    let cancelled=false,capSub=null;
+    const replan=()=>{
+      if(cancelled)return;
+      try{
+        const loc=profile?.natal?.lat&&profile?.natal?.lon?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
+        const plans=planUpcoming({now:new Date(),location:loc,prefs:notifyPrefs,castings:loadCastings(),athanor:loadJSON("astrum_athanor",[])});
+        reschedule(plans);
+      }catch(e){}
+    };
+    replan();
+    const iv=setInterval(replan,15*60000);
+    if(window.Capacitor?.isNativePlatform?.()){
+      import("@capacitor/app").then(({App:CapApp})=>{
+        capSub=CapApp.addListener("resume",replan);
+      }).catch(()=>{});
+    }
+    return()=>{cancelled=true;clearInterval(iv);Promise.resolve(capSub).then(s=>s?.remove?.()).catch(()=>{});};
+  },[notifyPrefs,profile?.natal?.lat,profile?.natal?.lon]); // eslint-disable-line
+
+  // ── Auto-backup the practice record when iOS backgrounds the app
+  useEffect(()=>{
+    if(!window.Capacitor?.isNativePlatform?.())return;
+    let capSub=null;
+    import("@capacitor/app").then(({App:CapApp})=>{
+      capSub=CapApp.addListener("pause",()=>{autoBackupNative();});
+    }).catch(()=>{});
+    return()=>{Promise.resolve(capSub).then(s=>s?.remove?.()).catch(()=>{});};
+  },[]);
+
   // ── Dynamic background: shift with planetary hour (Batch 1) ─────────
   const hourTint=useMemo(()=>{
     const cols={sun:"rgba(220,175,40,0.12)",moon:"rgba(160,180,220,0.12)",mercury:"rgba(100,160,100,0.10)",venus:"rgba(200,140,110,0.12)",mars:"rgba(180,50,40,0.14)",jupiter:"rgba(100,90,200,0.14)",saturn:"rgba(80,100,140,0.12)"};
@@ -5899,7 +6021,7 @@ export default function App(){
 
         {/* ── Screen content — slide transition on tab change (Batch 6) ── */}
         <div key={tab} style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",overflowY:"auto",animation:"slide-screen 0.2s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
-          {tab==="sky"     &&<SkyScreen     now={now} hour={hour} eph={eph} fractal={fractal} natalPos={natalPos} onWork={openWork}/>}
+          {tab==="sky"     &&<SkyScreen     now={now} hour={hour} eph={eph} fractal={fractal} natalPos={natalPos} onWork={openWork} profile={profile}/>}
           {tab==="aspects" &&<AspectsScreen eph={eph}/>}
           {tab==="decans"  &&<DecansScreen  eph={eph} fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode}/>}
           {tab==="fractal" &&<FractalScreen fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode} now={now}/>}
@@ -5921,7 +6043,7 @@ export default function App(){
           {tab==="learn"   &&<LearnScreen   profile={profile}/>}
           {tab==="work"    &&<WorkScreen    eph={eph} initPlanet={workPlanet} natalPos={natalPos} profile={profile} now={now}/>}
           {tab==="ai"      &&<AIScreen      now={now} eph={eph} fractal={fractal} natalPos={natalPos} hour={hour} profile={profile}/>}
-          {tab==="profile" &&<ProfileScreen profile={profile} setProfile={setProfile}/>}
+          {tab==="profile" &&<ProfileScreen profile={profile} setProfile={setProfile} notifyPrefs={notifyPrefs} setNotifyPrefs={setNotifyPrefs}/>}
         </div>
 
         {/* ── Astral Control Center (Batch 5 — replaces Oracle float button) ── */}
