@@ -8,6 +8,7 @@ import { getMansion } from "./data/mansions.js";
 import { SEALS, getSeal } from "./data/seals.js";
 import MansionsScreen from "./screens/MansionsScreen.jsx";
 import HoraryScreen from "./screens/HoraryScreen.jsx";
+import AthanorScreen from "./screens/AthanorScreen.jsx";
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
 import { reschedule, ensurePermission } from "./lib/notify.js";
 import { autoBackupNative } from "./lib/backup.js";
@@ -1197,6 +1198,7 @@ const NAV_SECTIONS = [
   {id:"horary",   icon:"?", label:"Horary",    desc:"Chart of the question"},
   {id:"work",    icon:"⚗", label:"Work",       desc:"Build a ritual"},
   {id:"talisman",icon:"◈", label:"Talisman",   desc:"Election → design → consecration"},
+  {id:"athanor", icon:"🜍", label:"Athanor",    desc:"Alchemical operations lab"},
   {id:"journal", icon:"✎", label:"Journal",    desc:"Practice record"},
   {id:"sigils",  icon:"⟁", label:"Sigils",     desc:"Sigil workshop"},
   {id:"grimoire",icon:"📖", label:"Grimoire",   desc:"Personal book of shadows"},
@@ -6035,6 +6037,7 @@ export default function App(){
           {tab==="mansions"&&<MansionsScreen eph={eph} now={now}/>}
           {tab==="horary"  &&<HoraryScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
+          {tab==="athanor" &&<AthanorScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}
           {tab==="journal" &&<JournalScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile} natalPos={natalPos}/>}
