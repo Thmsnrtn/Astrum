@@ -2,6 +2,10 @@ import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "rea
 import { askClaude } from "./ai/client.js";
 import { loadJSON, saveJSON } from "./lib/storage.js";
 import { exportAll, importAll, markExported, lastExportedAt, backupFilename, downloadText, shareOnNative, copyToClipboard } from "./lib/backup.js";
+import { captureConditions } from "./engine/snapshot.js";
+import { createCasting, loadCastings, addOutcome, closeCasting, migrateToCastings } from "./lib/castings.js";
+import { getMansion } from "./data/mansions.js";
+import ReviewScreen from "./screens/ReviewScreen.jsx";
 
 // ═══════════════════════════════════════════════════════════════════════
 // PLATFORM DETECTION
@@ -311,7 +315,7 @@ function getPlanetaryHourUnequal(now,lat,lon){
 // ═══════════════════════════════════════════════════════════════════════
 // PLANETARY DATA
 // ═══════════════════════════════════════════════════════════════════════
-const P = {
+export const P = {
   sun:{sym:"☉",name:"Sun",col:"#F5C518",glow:"rgba(245,197,24,0.35)",day:"Sunday",metal:"Gold",stone:"Amber · Topaz · Diamond",incense:"Frankincense · Bay · Saffron",oils:"Frankincense · Myrrh · Orange · Bergamot · Cinnamon",herbs:"Bay Laurel · Chamomile · St. John's Wort · Sunflower",color:"Gold · Yellow · Orange",number:6,angel:"Michael",intelligence:"Nakhiel",spirit:"Sorath",domains:["vitality","fame","authority","healing","the HGA","true will","kingship"],ritual:"Don your finest garments — the solar sphere receives only what honors it. Offer frankincense, saffron, or lignum aloes; the best wine or spirit you possess. Place the solar seal at the center of your altar. Work in the hour of the Sun on Sunday, facing east. Let the space be bright, warm, and ordered. The Sun rewards dignity: approach as a sovereign addressing another.",orphic:"Hear golden Titan, whose eternal eye with broad survey illumines all the sky. Self-born, unwearied in diffusing light, and to all eyes the mirror of delight.",vowelGreek:"Iota",vowel:"EE"},
   moon:{sym:"☽",name:"Moon",col:"#C8DDED",glow:"rgba(200,221,237,0.25)",day:"Monday",metal:"Silver",stone:"Moonstone · Pearl · Selenite",incense:"Camphor · White Poppy · Jasmine",oils:"Jasmine · Clary Sage · Sandalwood · Ylang Ylang · Rose",herbs:"Mugwort · White Willow · Poppy · Lotus",color:"Silver · White · Pale Blue",number:9,angel:"Gabriel",intelligence:"Malkah be-Tarshisim",spirit:"Hasmodai",domains:["dreams","travel","fertility","divination","tides","the astral","memory"],ritual:"Dress in silver or white. The Moon works best at night, beginning precisely at the lunar hour. Offer camphor, white poppy, or jasmine incense; pure water or white wine. Keep the space cool and quiet. The Moon favors a soft, receptive state of awareness — yield rather than force. For strongest results, repeat the working over three consecutive nights near the full or new Moon.",orphic:"Hear, goddess queen, diffusing silver light, bull-horned and wandering through the gloom of night. With stars surrounded, and with circuit wide night's torch extending, through the heavens you ride.",vowelGreek:"Alpha",vowel:"AH"},
   mercury:{sym:"☿",name:"Mercury",col:"#7CB8E0",glow:"rgba(124,184,224,0.25)",day:"Wednesday",metal:"Quicksilver · Tin alloys",stone:"Agate · Malachite · Citrine",incense:"Lavender · Mastic · Fennel",oils:"Lavender · Peppermint · Lemon · Rosemary · Eucalyptus",herbs:"Lavender · Dill · Fennel · Clover · Valerian",color:"Yellow · Orange · Violet · Mixed",number:8,angel:"Raphael",intelligence:"Tiriel",spirit:"Taphtartharath",domains:["eloquence","learning","commerce","writing","travel","memory","science","theft"],ritual:"Mercury accepts no particular dress — it is the quality of mind that matters, not the quality of garment. Work at the Mercury hour on Wednesday. Offer mixed aromatic incense: lavender, mastic, or a blend of communicating herbs. Mercury rewards cleverness; let the working be precise, elegant, and swift. Have everything prepared before the hour begins. Sharp, undivided attention is your greatest offering.",orphic:"Hermes, draw near, and to my prayer incline, angel of Jove, and Maia's son divine; president of contest, ruler of the pole, whose power the flight of words and thoughts control.",vowelGreek:"Epsilon",vowel:"EH"},
@@ -585,6 +589,16 @@ function calcNatal(bd,location){
   // Triplicities for each planet
   Object.entries(pos).forEach(([pk,p])=>{if(P[pk]&&p?.lon!=null)p.triplicity=getTriplicity(p.lon,isDayChart??true);});
   return{...pos,asc,mc,pof,isDayChart,northNode,southNode};
+}
+
+// Full conditions snapshot for a casting record at an arbitrary moment.
+// useEphemeris is a pure function despite the hook-style name, so this is
+// safe to call from event handlers and migrations.
+function conditionsFromProfile(date,profile,natalPos,election=null,approximate=false){
+  const location=profile?.natal?.lat&&profile?.natal?.lon?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
+  const eph=useEphemeris(date,location);
+  const hour=location?getPlanetaryHourUnequal(date,location.lat,location.lon):getPlanetaryHour(date);
+  return captureConditions({now:date,eph,hour,location,natalPos,election,approximate});
 }
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1134,10 +1148,10 @@ input:focus,textarea:focus{border-color:rgba(var(--tint-rgb),0.45);box-shadow:0 
 ::-webkit-scrollbar-thumb{background:rgba(var(--tint-rgb),0.22);border-radius:1px;}
 `;
 
-const F = "Georgia, 'Times New Roman', serif";
+export const F = "Georgia, 'Times New Roman', serif";
 const GOLD = "#D4AF6A";
-const L=(c="#7A6030",s=8)=>({fontFamily:F,fontSize:s,color:c,letterSpacing:3.5,textTransform:"uppercase"});
-const T=(s=18,c="#D4AF6A")=>({fontFamily:F,fontSize:s,color:c,lineHeight:1.2});
+export const L=(c="#7A6030",s=8)=>({fontFamily:F,fontSize:s,color:c,letterSpacing:3.5,textTransform:"uppercase"});
+export const T=(s=18,c="#D4AF6A")=>({fontFamily:F,fontSize:s,color:c,lineHeight:1.2});
 const B=(s=12,c="#8A7050")=>({fontFamily:F,fontSize:s,color:c,fontStyle:"italic",lineHeight:1.9});
 
 // ── Planetary Tint Presets ────────────────────────────────────────────────
@@ -1168,6 +1182,7 @@ const NAV_SECTIONS = [
   {id:"journal", icon:"✎", label:"Journal",    desc:"Practice record"},
   {id:"sigils",  icon:"⟁", label:"Sigils",     desc:"Sigil workshop"},
   {id:"grimoire",icon:"📖", label:"Grimoire",   desc:"Personal book of shadows"},
+  {id:"review",  icon:"◬", label:"Review",     desc:"Outcomes & practice statistics"},
   {id:"cycles",  icon:"⟳", label:"Cycles",     desc:"Macro cycles & generational timing"},
   {id:"learn",   icon:"⬡", label:"Learn",      desc:"AI magical education"},
   {id:"ai",      icon:"✧", label:"Planner",    desc:"AI working builder"},
@@ -1384,7 +1399,7 @@ CORE PHILOSOPHICAL AXIOMS (always apply these):
 10. EXTRADIMENSIONAL DIPLOMACY: Spirit work is "extradimensional diplomacy" — the spirits have their own agendas, expertise areas, and relational preferences. The seal or image is a contact protocol. The offering is the opening gesture of a relationship. Pact-making is a long-term commitment that constitutes a form of initiation.
 `;
 
-const TRADITIONS = {
+export const TRADITIONS = {
   "western-ceremonial": {
     label:"Western Ceremonial", desc:"Hermetic Kabbalah, grimoire tradition, talismanic art", icon:"✡",
     prompt:`You speak from the Western Ceremonial tradition — but grounded in its animist roots, not its Victorian-era bowdlerization. Your sources are the Hermetic corpus, Picatrix (Ghayat al-Hakim), Cornelius Agrippa's Three Books of Occult Philosophy, Marsilio Ficino's De Vita, and the grimoiric current (Grimorium Verum, Lemegeton, Book of Abramelin). The planetary spirits, intelligences, and angels are genuine entities with their own natures and agendas — not psychological projections. Spirit work is "extradimensional diplomacy." The Kabbalah is a cosmological map, not a self-help framework. You time your work by planetary hours, days, and electional astrology — the Moon is the most important factor in all elections. Consecration of a talisman requires: correct election, correct materia (the spirit's preferred signatures), sustained attention, and genuine invocation. The grimoire tradition is the deep root from which all Western magic grows; the 72 spirits of the Lemegeton are executives in their respective domains, not servants. Approach them as you would approach powerful but potentially capricious non-human persons. "Magic is, if anything, extradimensional diplomacy." Begin all major work with ancestral propitiation — the ancestor current provides stability that no amount of celestial timing can replace if it is absent.`
@@ -2296,8 +2311,18 @@ function ElectScreen({now,natalPos,eph,profile}){
   const [seasonReport,setSeasonReport]=useState(null);
   const [seasonLoading,setSeasonLoading]=useState(false);
   const meta=INTENTS[ik]||INTENTS.money;
+  const [committed,setCommitted]=useState(null);
   useEffect(()=>{setPlanet(meta.planet);setElections([]);setSelIdx(null);},[ik]);
   const live=assessElection(now,planet,natalPos);
+  // Operator's Loop: committing an election creates a casting record
+  const commitElection=(date,assess)=>{
+    try{
+      const c=createCasting({kind:"election",title:`${meta.label} election — ${P[planet].name}`,intent:meta.label,planet,
+        conditions:conditionsFromProfile(date,profile,natalPos,{score:assess.score,grade:assess.grade}),
+        links:{electionWindow:{start:date.toISOString(),score:assess.score,grade:assess.grade}}});
+      setCommitted(c.id);setTimeout(()=>setCommitted(null),3000);
+    }catch(e){}
+  };
   const sc=live.score;
   const sCol=s=>s>=90?"#FFD700":s>=75?"#5CA85C":s>=60?"#D4AF6A":s>=45?"#C08050":"#8B4040";
   const gCol=g=>g.includes("DISQ")?"#8B4040":g.includes("Talismanic")?"#FFD700":g.includes("Excellent")?"#5CA85C":g.includes("Good")?"#D4AF6A":"#8A7050";
@@ -2380,6 +2405,7 @@ function ElectScreen({now,natalPos,eph,profile}){
               {live.speed.fast&&<span style={{fontFamily:F,fontSize:8,color:"#D4AF6A",background:"rgba(212,175,106,0.1)",border:"1px solid rgba(212,175,106,0.2)",borderRadius:6,padding:"2px 7px"}}>Fast Moon {live.speed.speed}°/day</span>}
               {live.stars.map(s=><span key={s.name} style={{fontFamily:F,fontSize:8,color:s.col,background:"rgba(200,200,255,0.08)",border:"1px solid "+s.col+"25",borderRadius:6,padding:"2px 7px"}}>{s.name}</span>)}
             </div>
+            <button onClick={()=>commitElection(now,live)} style={{width:"100%",padding:"9px 0",borderRadius:9,marginBottom:6,background:committed?"rgba(92,168,92,0.15)":gCol(live.grade)+"14",border:"1px solid "+(committed?"rgba(92,168,92,0.4)":gCol(live.grade)+"40"),fontFamily:F,fontSize:9,color:committed?"#7AB07A":gCol(live.grade),letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>{committed?"✓ Recorded — judge it in Review":"⚑ Cast Now — Record This Sky"}</button>
             <button onClick={()=>setShowAll(!showAll)} style={{width:"100%",padding:"7px 0",borderRadius:9,background:"rgba(0,0,0,0.3)",border:"1px solid rgba(200,175,100,0.12)",fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.5)",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>{showAll?"HIDE":"SHOW"} ALL {live.criteria.length} CRITERIA</button>
             {showAll&&live.criteria.map(c=><div key={c.id} style={{display:"flex",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
               <span style={{fontSize:10,color:c.pass?"#5CA85C":"#8B4040",width:14}}>{c.pass?"✓":"✗"}</span>
@@ -2410,7 +2436,9 @@ function ElectScreen({now,natalPos,eph,profile}){
               <div style={{flex:1}}><div style={{fontFamily:F,fontSize:11,color:gc}}>{e.assess.grade}</div><div style={{fontFamily:F,fontSize:10,color:"#C4A870",fontStyle:"italic"}}>{fmtD(e.date)}</div><div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.45)",marginTop:1}}>{P[planet].name} {e.zodiac.degree}° {e.zodiac.sym}</div></div>
               <div style={{fontFamily:F,fontSize:30,color:gc,lineHeight:1}}>{e.assess.score}</div>
             </div>
-            {isSel&&<div style={{marginTop:9,paddingTop:9,borderTop:"1px solid "+gc+"20"}}>{e.assess.criteria.map(c=><div key={c.id} style={{display:"flex",gap:7,padding:"4px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}><span style={{fontSize:10,color:c.pass?"#5CA85C":"#8B4040",width:14}}>{c.pass?"✓":"✗"}</span><div style={{flex:1}}><div style={{fontFamily:F,fontSize:10,color:c.pass?"#C4A870":"#9A7060"}}>{c.label}</div><div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:1}}>{c.note}</div></div></div>)}</div>}
+            {isSel&&<div style={{marginTop:9,paddingTop:9,borderTop:"1px solid "+gc+"20"}}>
+              <button onClick={ev=>{ev.stopPropagation();commitElection(e.date,e.assess);}} style={{width:"100%",padding:"9px 0",borderRadius:9,marginBottom:7,background:committed?"rgba(92,168,92,0.15)":gc+"14",border:"1px solid "+(committed?"rgba(92,168,92,0.4)":gc+"40"),fontFamily:F,fontSize:9,color:committed?"#7AB07A":gc,letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>{committed?"✓ Recorded — judge it in Review":"⚑ Commit to This Window"}</button>
+              {e.assess.criteria.map(c=><div key={c.id} style={{display:"flex",gap:7,padding:"4px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}><span style={{fontSize:10,color:c.pass?"#5CA85C":"#8B4040",width:14}}>{c.pass?"✓":"✗"}</span><div style={{flex:1}}><div style={{fontFamily:F,fontSize:10,color:c.pass?"#C4A870":"#9A7060"}}>{c.label}</div><div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:1}}>{c.note}</div></div></div>)}</div>}
           </div>;})}
           {elections.length===0&&!scanning&&<div style={{textAlign:"center",padding:"30px 20px",fontFamily:F,fontSize:11,color:"#5A4020",fontStyle:"italic",lineHeight:1.8}}>Configure intent and planet, then scan. Only elections passing all 5 critical criteria shown.</div>}
         </>}
@@ -2581,6 +2609,10 @@ function WorkScreen({eph,initPlanet,natalPos,profile,now}){
       const existing=r?.value?JSON.parse(r.value):[];
       const entry={id:Date.now(),title:genGoal.slice(0,60)||(planet?`${P[planet].name} Working`:"Custom Working"),body:genPlan,planet:planet||"sun",tags:[planet||"custom","ai-generated"],date:now?now.toISOString().split("T")[0]:new Date().toISOString().split("T")[0],category:"ritual",type:"ai-generated"};
       await window.storage.set("astrum_grimoire",JSON.stringify([entry,...existing]));
+      try{
+        createCasting({kind:"working",title:entry.title,intent:genGoal,planet:planet||"sun",tradition:primaryTrad,
+          conditions:conditionsFromProfile(now||new Date(),profile,natalPos),links:{grimoireId:entry.id}});
+      }catch(e){}
       setGenSaved(true);
     }catch(e){}
   };
@@ -3852,7 +3884,7 @@ function CyclesScreen({now,profile,eph}){
 // ═══════════════════════════════════════════════════════════════════════
 // JOURNAL SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-function JournalScreen({profile}){
+function JournalScreen({profile,natalPos}){
   const [entries,setEntries]=useState([]);
   const [showNew,setShowNew]=useState(false);
   const [form,setForm]=useState({planet:"jupiter",intent:"",outcome:"",date:new Date().toISOString().split("T")[0]});
@@ -3863,6 +3895,14 @@ function JournalScreen({profile}){
     const e={id:Date.now(),...form};const ne=[e,...entries];setEntries(ne);setShowNew(false);
     setForm({planet:"jupiter",intent:"",outcome:"",date:new Date().toISOString().split("T")[0]});
     try{await window.storage.set("astrum_journal",JSON.stringify(ne));}catch(e){}
+    // Operator's Loop: every journal working becomes a casting record
+    try{
+      const today=new Date().toISOString().split("T")[0];
+      const at=e.date===today?new Date():new Date(`${e.date}T12:00:00`);
+      const casting=createCasting({kind:"working",title:(e.intent||"Journal working").slice(0,60),intent:e.intent,planet:e.planet,
+        conditions:conditionsFromProfile(at,profile,natalPos,null,e.date!==today),links:{journalId:e.id},createdAt:at.toISOString()});
+      if(e.outcome)addOutcome(casting.id,{verdict:"unknown",note:e.outcome});
+    }catch(err){}
   };
   const del=async(id)=>{const ne=entries.filter(e=>e.id!==id);setEntries(ne);try{await window.storage.set("astrum_journal",JSON.stringify(ne));}catch(e){}};
   const reflect=async()=>{
@@ -3933,7 +3973,7 @@ function loadKnowledge(){return loadJSON("astrum_knowledge",[]);}
 function saveKnowledge(nodes){saveJSON("astrum_knowledge",nodes);}
 
 // Build dynamic system prompt from profile, knowledge nodes, and optional sky context
-function buildSystemPrompt(profile,extraContext){
+export function buildSystemPrompt(profile,extraContext){
   const traditions=profile?.traditions?.length?profile.traditions:["western-ceremonial"];
   const t=traditions[0];
   const tradPrompt=TRADITIONS[t]?.prompt||TRADITIONS["western-ceremonial"].prompt;
@@ -4627,7 +4667,7 @@ function kamea_xy(num,planet,w=260,h=260){
 // Reduce multi-digit number to single digit for Kamea lookup (e.g. 26 → 8)
 function kamea_reduce(n,size){while(n>size*size)n-=size*size;return n;}
 
-function SigilScreen({eph,profile}){
+function SigilScreen({eph,profile,natalPos}){
   const [mode,setMode]=useState("list"); // list|create|view
   const [method,setMethod]=useState("rose"); // rose|kamea|free
   const [planet,setSigilPlanet]=useState("jupiter");
@@ -4704,6 +4744,11 @@ function SigilScreen({eph,profile}){
     };
     const next=[entry,...sigils];
     save(next);setSel(entry);setMode("view");
+    // Operator's Loop: record the casting with the full sky
+    try{
+      createCasting({kind:"sigil",title:(intent||word||"Sigil").slice(0,60),intent,planet,
+        conditions:conditionsFromProfile(now,profile,natalPos),links:{sigilId:entry.id}});
+    }catch(e){}
     setWord("");setIntent("");setPaths([]);setSavedSvg(null);
   };
 
@@ -4711,6 +4756,15 @@ function SigilScreen({eph,profile}){
     const next=sigils.map(s=>s.id===id?{...s,status:st}:s);
     save(next);
     if(sel?.id===id)setSel(prev=>({...prev,status:st}));
+    // Reflect sigil lifecycle into its casting record
+    try{
+      const casting=loadCastings().find(c=>c.links?.sigilId===id);
+      if(casting){
+        if(st==="fulfilled"){addOutcome(casting.id,{verdict:"hit",note:"Sigil marked fulfilled"});closeCasting(casting.id);}
+        else if(st==="retired"){addOutcome(casting.id,{verdict:"unknown",note:"Sigil retired"});closeCasting(casting.id);}
+        else addOutcome(casting.id,{verdict:"unknown",note:`Sigil ${st}`});
+      }
+    }catch(e){}
   };
 
   const deleteSigil=(id)=>{
@@ -5539,6 +5593,14 @@ export default function App(){
     }else setNatalPos(null);
   },[natalData,profile]);
 
+  // ── Operator's Loop migration: build castings from legacy journal/sigils
+  useEffect(()=>{
+    if(!profile)return;
+    try{
+      migrateToCastings({computeConditionsAt:d=>conditionsFromProfile(d,profile,natalPos,null,true)});
+    }catch(e){}
+  },[profile]); // eslint-disable-line
+
   // ── Tint system: inject CSS custom properties (Batch 3) ─────────────
   const activeTint=profile?.tint||"solar";
   useEffect(()=>{
@@ -5617,9 +5679,10 @@ export default function App(){
           {tab==="cycles"  &&<CyclesScreen  now={now} profile={profile} eph={eph}/>}
           {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph} profile={profile}/>}
           {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}
-          {tab==="journal" &&<JournalScreen  profile={profile}/>}
-          {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile}/>}
+          {tab==="journal" &&<JournalScreen  profile={profile} natalPos={natalPos}/>}
+          {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile} natalPos={natalPos}/>}
           {tab==="grimoire"&&<GrimoireScreen profile={profile}/>}
+          {tab==="review"  &&<ReviewScreen   profile={profile}/>}
           {tab==="learn"   &&<LearnScreen   profile={profile}/>}
           {tab==="work"    &&<WorkScreen    eph={eph} initPlanet={workPlanet} natalPos={natalPos} profile={profile} now={now}/>}
           {tab==="ai"      &&<AIScreen      now={now} eph={eph} fractal={fractal} natalPos={natalPos} hour={hour} profile={profile}/>}
