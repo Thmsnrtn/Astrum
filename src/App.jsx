@@ -17,6 +17,7 @@ import { OPERATION_TEMPLATES as ATHANOR_TEMPLATES } from "./data/operations.js";
 import MansionsScreen from "./screens/MansionsScreen.jsx";
 import HoraryScreen from "./screens/HoraryScreen.jsx";
 import AthanorScreen from "./screens/AthanorScreen.jsx";
+import AlmanacScreen from "./screens/AlmanacScreen.jsx";
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
 import { reschedule, ensurePermission } from "./lib/notify.js";
 import { autoBackupNative } from "./lib/backup.js";
@@ -1187,6 +1188,7 @@ const NAV_SECTIONS = [
   {id:"mansions", icon:"☾", label:"Mansions",  desc:"28 lunar stations"},
   {id:"elect",    icon:"◈", label:"Elections",  desc:"Optimal windows"},
   {id:"calendar", icon:"◫", label:"Calendar",  desc:"Election planning grid"},
+  {id:"almanac",  icon:"❋", label:"Almanac",   desc:"Liturgical month — sky, elections & timing letters"},
   {id:"horary",   icon:"?", label:"Horary",    desc:"Chart of the question"},
   {id:"work",    icon:"⚗", label:"Work",       desc:"Build a ritual"},
   {id:"talisman",icon:"◈", label:"Talisman",   desc:"Election → design → consecration"},
@@ -1236,6 +1238,7 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
     {id:"talisman",label:"New Talisman",desc:"Election → design → consecration pipeline",icon:"◈",screen:"talisman"},
     {id:"athanor",label:"The Athanor",desc:"Alchemical operations, season, and library",icon:"🜍",screen:"athanor"},
     {id:"review",label:"Review Outcomes",desc:"Judge castings and see practice statistics",icon:"◬",screen:"review"},
+    {id:"almanac",label:"Open the Almanac",desc:"Liturgical month — sky, elections, and timing letters",icon:"❋",screen:"almanac"},
   ].filter(c=>!q||c.label.toLowerCase().includes(q)||c.desc.toLowerCase().includes(q));
   const histItems=hist.filter(h=>!q||h.label?.toLowerCase().includes(q));
 
@@ -6209,6 +6212,7 @@ export default function App(){
           {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
           {tab==="athanor" &&<AthanorScreen  profile={profile} natalPos={natalPos} eph={eph} now={now}/>}
           {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}
+          {tab==="almanac" &&<AlmanacScreen  now={now} profile={profile}/>}
           {tab==="journal" &&<JournalScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile} natalPos={natalPos}/>}
           {tab==="grimoire"&&<GrimoireScreen profile={profile}/>}
