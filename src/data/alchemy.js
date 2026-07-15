@@ -100,6 +100,24 @@ export function alchemicalSeason(sunLon) {
   return ALCHEMICAL_ZODIAC[idx];
 }
 
+// Junius applies the same process-key to the MOON's sign for day-to-day
+// laboratory timing: "The position of the Moon for each day can be seen in
+// an ephemeris" (Practical Handbook, ch. 6). His table matches Pernety's
+// except Sagittarius, where he reads Incineration for Ceration.
+export function moonSignOperation(moonLon) {
+  const idx = Math.floor((((moonLon % 360) + 360) % 360) / 30);
+  const entry = ALCHEMICAL_ZODIAC[idx];
+  return idx === 8
+    ? { ...entry, process: "Incineration", lab: "Burning to ash — Junius reads the Archer's fire as incineration rather than ceration.", variant: "Junius variant" }
+    : entry;
+}
+
+// Junius's lunar-mansion laboratory notes (Practical Handbook, ch. 6).
+export const MANSION_LAB_NOTES = {
+  22: "The 22nd mansion (early Capricorn, doubly Saturnine) is favorable to the preparation of solid substances — especially the Stones.",
+  26: "The 26th mansion (al-Fargh al-Mukdim, late Aquarius–early Pisces) favors the preparation of liquid and volatile substances — the Circulata and Alkahests.",
+};
+
 // ── Ripley's Twelve Gates (The Compound of Alchymie, 1471) ──────────────
 // Gate names and order verbatim from the 1591 edition (McLean); the
 // original carries NO zodiac attributions — that overlay is Pernety's.
@@ -247,6 +265,102 @@ export const GLYPHS = [
   { g: "🝡", name: "Dissolve" }, { g: "🝣", name: "Purify" }, { g: "🝟", name: "Precipitate" },
   { g: "🝛", name: "Amalgam" }, { g: "🝮", name: "Hour" }, { g: "🝯", name: "Night" },
   { g: "🝰", name: "Day-night (24h)" }, { g: "🝱", name: "Month" },
+];
+
+// ── The four degrees of fire ────────────────────────────────────────────
+// Classical statement: John French, The Art of Distillation (1651), Bk. I.
+// Modern bath-names and temperatures per Bartlett, Real Alchemy (2007).
+export const FIRE_DEGREES = [
+  { n: 1, key: "balneum", name: "First Degree — Balneum Mariae", glyph: "🝫", temp: "≤ 100 °C (digestion 37–40 °C)",
+    french: "“Only a warmth, as is that of horse dung, of the sun, of warm water… which kind of heat serves for putrefaction and digestion.”",
+    use: "Putrefaction, digestion, circulation, rectifying spirits. The athanor's own heat — the hen on her egg. Digestion runs at the warmth of a brooding hen (~40 °C)." },
+  { n: 2, key: "cineris", name: "Second Degree — Balneum Cineris", glyph: "🝗", temp: "≈ 100–250 °C (ash bath)",
+    french: "“Of seething water and the vapor thereof, as also of ashes… serves to distill those things which are subtle and moist.”",
+    use: "Distilling the subtle and moist — hydrosols, vinegars, gentle evaporations above the boil." },
+  { n: 3, key: "arenae", name: "Third Degree — Balneum Arenae", glyph: "🝥", temp: "≈ 250–400 °C (sand bath)",
+    french: "“Of sand and filings of iron, which serves to distill things subtle and dry, or gross and moist.”",
+    use: "Oils and high-boiling matters; the sand steadies the vessel and forbids hot spots." },
+  { n: 4, key: "ignis", name: "Fourth Degree — Balneum Ignis", glyph: "🜂", temp: "naked flame, red heat +",
+    french: "“Of a naked fire — close, open or with a blast — which serves to distill metals and minerals and hard gummy things.”",
+    use: "Calcination and fusion. Plant-ash calcines slow and long at 400–500 °C — a slow calcination at low heat beats a short violent one (Junius)." },
+];
+export const FIRE_RULE = "Start with the lowest fire possible — one can always increase the heat. (Bartlett, after the whole tradition.)";
+
+// ── Timing doctrine of the laboratory ───────────────────────────────────
+export const TIMING_DOCTRINE = [
+  { rule: "Begin on the ruler's day, in the ruler's hour", source: "Agrippa I.29; Junius ch. 6; Bartlett ch. 2",
+    text: "Work each matter on the day of its ruling planet, preferably in the planet's hour — classically the hour after sunrise, which always belongs to the day's ruler. “Thou shalt do nothing without the assistance of the Moon” (Agrippa)." },
+  { rule: "The operation begins when the menstruum touches the matter", source: "Junius ch. 6 (documented election, 1978)",
+    text: "For an important work, cast a full election: ruler dignified and angular, Saturn's squares avoided, good Sun–Moon aspects. The elected minute is the minute of first contact." },
+  { rule: "Waning Moon: solve. Waxing Moon: coagula.", source: "Albertus lineage / Bartlett (modern convention)",
+    text: "The waning Moon favors separating the pure from the impure — calcination, extraction, putrefaction. The waxing favors enriching, circulating, recombining, exalting." },
+  { rule: "Begin great works at the New Moon — above all the first New Moon of Aries", source: "Junius ch. 6",
+    text: "The natural year begins when the Sun enters Aries; long magisteries are classically begun at that first New Moon." },
+  { rule: "Gather herbs under their dignified ruler", source: "Culpeper, English Physitian (1652), Epistle",
+    text: "“Let it be gathered when he is there [in his sign], the Moon applying to his good aspect; let it be gathered either in his hour, or in the hour of Jupiter, let Sol be angular… and you may happen to do wonders.”" },
+  { rule: "The Philosophical Month is forty days", source: "Junius; Pernety (1758)",
+    text: "The standard span of a digestion: forty days — “forty is related to darkness.” Barbault fermented at 40 °C for 40 days; plant stones mature for six months." },
+  { rule: "Dew is gathered under Aries and Taurus, before sunrise", source: "Mutus Liber (1677), plate 4; Canseliet; Barbault",
+    text: "The ram and the bull flank the collection field: late March through May, clear still nights, wrung from cloths before the Sun rises." },
+  { rule: "The 26th mansion favors the volatile", source: "Junius ch. 6",
+    text: "The lunar mansion al-Fargh al-Mukdim (late Aquarius–early Pisces) is held favorable for preparing liquid and volatile substances — the Circulata and Alkahests." },
+];
+
+// Which operations each planet's day/hour favors (modern codification of
+// the Albertus/Bartlett school — marked as practice convention, not canon).
+export const DAY_OPERATION_COUNSEL = {
+  saturn:  "Calcination, putrefaction, fixation — the works of lead, bone, and structure. What must die, dies well today.",
+  jupiter: "Cohobation and augmentation — feeding, enriching, multiplying what grows.",
+  mars:    "Separations requiring force — reductions, cutting the pure from the gross with an edge.",
+  sun:     "Circulation and exaltation — the gold works; charging, consecrating, completing.",
+  venus:   "Gentle extractions and balsams — the soft menstruums, the works of copper and the rose.",
+  mercury: "Distillation and rectification — the spirit caught, cleaned, and caught again.",
+  moon:    "Dissolutions and menstruum work — the waters; begin macerations, prepare the solvents.",
+};
+
+// ── Study-only paths (documented, never practiced) ─────────────────────
+// The historical record of emetic cups, sugar of lead, mercurialism, and
+// auric fever is exactly why these carry hard warnings. Reading is the
+// only safe apparatus for these works.
+export const STUDY_ONLY_PATHS = [
+  { key: "antimony", name: "The Antimony Work (Triumphal Chariot)", planet: "saturn",
+    source: "“Basil Valentine” (ed. Thölde, 1604); Newton/Starkey star-regulus tradition",
+    summary: "Stibnite roasted to calx, fused to the ruby glass of antimony; the martial regulus reduced with iron and nitre flux, purified until the surface crystallizes into the silver star — “unless you go over the star you will not have the right regulus for the work” (Newton). Valentine demands five things before all: invocation of God, contemplation of nature, true preparation, right dosage, observed utility.",
+    warning: "Antimony fume and dust are toxic; the roasting evolves sulfur dioxide; nitre fluxes deflagrate; stibine gas is lethal. The famous emetic cups were a catalogue of poisonings. Study only — never heat, grind, or ingest." },
+  { key: "lead-acetate", name: "The Saturnine Acetate Path (Hollandus)", planet: "saturn",
+    source: "pseudo-Johann Isaac Hollandus, Opus Saturni (c. 1560s–72)",
+    summary: "Lead calx dissolved in vinegar through repeated fourteen-day digestions to a white sweet powder (‘sugar of Saturn’), staged white→yellow→red heatings, distilled to a ‘Water of Paradise.’ The classical template of the acetate work — the copper variant exists precisely so this one need never be touched.",
+    warning: "Lead acetate is sweet, soluble, and cumulatively neurotoxic — the Hollandus recipe is, by modern knowledge, a poisoning protocol. Absolutely prohibited. Read it to understand the acetate path; work it only in copper." },
+  { key: "cinnabar", name: "Cinnabar and Quicksilver", planet: "mercury",
+    source: "the mercury–sulfur doctrine; Almadén's two thousand years",
+    summary: "The resurrection cycle — cinnabar roasted to running mercury, mercury and sulfur reunited to cinnabar — is the oldest chemical figure of death and rebirth, and the doctrinal root of the Mercury/Sulfur theory of metals.",
+    warning: "Mercury vapor is a cumulative neurotoxin; a single retort run can contaminate a dwelling permanently. Almadén was worked by convicts because mercurialism was expected. Doctrine only." },
+  { key: "vitriol-oil", name: "Oil of Vitriol", planet: "mars",
+    source: "pseudo-Valentine corpus (early 1600s); Karpenko & Norris (2002)",
+    summary: "Green vitriol distilled at great heat to the fuming oil — sulfuric acid, the sharpest of the classical menstruums, and the V.I.T.R.I.O.L. of the acrostic: the hidden stone found by rectifying.",
+    warning: "Requires >600 °C and evolves sulfur trioxide fume. The crystallization of green vitriol and its gentle calcination to red colcothar are practicable; the distillation is not. Study only." },
+  { key: "aurum-potabile", name: "Aurum Potabile", planet: "sun",
+    source: "Paracelsus; Francis Anthony (1610s); Barbault (1969)",
+    summary: "Drinkable gold — the solar medicine of the tradition, from aqua-regia solutions to colloidal preparations. Paracelsus listed it among the comforting medicines; Anthony was prosecuted over it; genuinely red historical potable golds were likely colloidal gold.",
+    warning: "The classical routes run through aqua regia (chlorine and nitrosyl chloride fumes) and the period record includes ‘auric fever’ and kidney damage. Study only; ingest no metallic preparation." },
+];
+
+// ── The laboratory record ────────────────────────────────────────────────
+// "The exact keeping of a laboratory diary should be the duty of every
+// practicing spagyrist." (Junius, ch. 5.) Starkey and Newton recorded
+// dates, ratios, colors, costs, and failures; Henshaw's 1665 May-dew paper
+// is the model observational record. The dreams-and-synchronicities field
+// is modern (Albertus/Bartlett lineage) — period notebooks recorded
+// chemistry, not dreams — but in this app the Operator's Loop wants both.
+export const LAB_RECORD_PROMPTS = [
+  "Planetary day + hour, Moon phase and sign (recorded automatically with each casting)",
+  "Matter: identity, provenance, weights and volumes before and after",
+  "Fire: which degree, what temperature, how long",
+  "Colors and their order — black to grey to white; the green of the Ens; the peacock moment",
+  "Smells, consistencies, sounds — the vessel is speaking",
+  "Yields of each principle: Mercury's proof, Sulfur's volume, Salt's weight",
+  "Failures and corrections — the orange-streaked salt goes back to the fire",
+  "Dreams and synchronicities during the work — the inner vessel keeps pace with the outer",
 ];
 
 // ── Lunar guidance for the laboratory ───────────────────────────────────

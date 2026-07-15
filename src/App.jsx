@@ -6,6 +6,9 @@ import { captureConditions } from "./engine/snapshot.js";
 import { createCasting, loadCastings, addOutcome, closeCasting, migrateToCastings } from "./lib/castings.js";
 import { getMansion } from "./data/mansions.js";
 import { SEALS, getSeal } from "./data/seals.js";
+import { alchemicalSeason, moonSignOperation, moonWorkGuidance, GREAT_WORK_STAGES } from "./data/alchemy.js";
+import { loadAthanor } from "./lib/athanor.js";
+import { OPERATION_TEMPLATES as ATHANOR_TEMPLATES } from "./data/operations.js";
 import MansionsScreen from "./screens/MansionsScreen.jsx";
 import HoraryScreen from "./screens/HoraryScreen.jsx";
 import AthanorScreen from "./screens/AthanorScreen.jsx";
@@ -4166,6 +4169,11 @@ const LEARN_TOPICS=[
   {id:"stellar-cult",    label:"Stellar Cult & Star.Ships", desc:"Gordon White's thesis: ancient stellar religion as the Laurasian wellspring of Western magic", traditions:["all"],level:"advanced"},
   {id:"headless-rite",   label:"The Headless / Bornless Rite",desc:"PGM VIII.1-63 — contacting the personal daimon, orienting to Orion", traditions:["hellenism","western-ceremonial","all"],level:"advanced"},
   {id:"spagyrics",       label:"Spagyrics & Plant Alchemy", desc:"Paracelsian three essentials, laboratory as devotional space, plant as person", traditions:["spagyric","all"],level:"intermediate"},
+  {id:"great-work",      label:"The Stages of the Great Work", desc:"Nigredo, albedo, citrinitas, rubedo — the color sequence in the vessel and in the soul; the peacock's tail", traditions:["all"],level:"intermediate"},
+  {id:"alchemical-zodiac",label:"The Alchemical Zodiac & Lab Timing", desc:"Pernety's twelve processes on the wheel of signs; Junius's Moon-key; planetary days and degrees of fire", traditions:["spagyric","all"],level:"intermediate"},
+  {id:"salt-work",       label:"The Salt Work", desc:"Calcine, dissolve, filter, coagulate — Lémery's salt of tartar and the craft beneath every other craft", traditions:["spagyric","all"],level:"beginner"},
+  {id:"mineral-study",   label:"The Mineral Paths (Study)", desc:"Acetate path, antimony, vitriol — what the texts say, what history warns, what may never be practiced", traditions:["spagyric","all"],level:"advanced"},
+  {id:"dew-work",        label:"Dew & the Mutus Liber", desc:"The wordless book — spring dew under Aries and Taurus, putrefaction, the two salts, Henshaw's Royal Society record", traditions:["spagyric","all"],level:"advanced"},
   {id:"fairy-doctor",    label:"Fairy Doctor Tradition",    desc:"The Irish bean feasa — mediating between human communities and the fair folk", traditions:["faerie","traditional-witchcraft"],level:"intermediate"},
   {id:"shamanic-cosmology",label:"Shamanic Cosmology",     desc:"Three worlds, power animals, teacher spirits, soul retrieval and extraction", traditions:["shamanism","all"],level:"beginner"},
   {id:"apocalyptic-nav", label:"Apocalyptic Navigation",   desc:"Magic in the putrefactory phase — wyrd-building, resilience, what to retain and discard", traditions:["all"],level:"intermediate"},
@@ -4199,6 +4207,21 @@ function buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile){
     case "work": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: Give a complete working recommendation for today. What planet or spirit entity should this practitioner work with? What is the specific materia required (by planetary correspondence)? What is the correct timing (hour, day, Moon condition)? What offering is appropriate? And critically: what is the narrative frame for this working — what story is the practitioner entering, and what role do they play in it? Include: the ancestor current that should be established first, the specific spirit relationship being invoked, and how the practitioner will recognize the call-and-response of a successful working.`;
     case "journal": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: The practitioner is reviewing their magical journal. What timing wisdom applies right now? What celestial and macrocycle conditions are worth recording as a snapshot for future reference? Specifically: what synchronicities should they be watching for as responses to past workings? How does the current moment fit into the larger story of their practice — what chapter are they in? What patterns in the journal would you, as an animist advisor, want to highlight?`;
     case "cycles": return `${base} ${macroCtx}\n${CYCLE_LORE.plutoCurrent}\n${CYCLE_LORE.neptuneCurrent}\n${CYCLE_LORE.uranusCurrent}\n${CYCLE_LORE.jsMutationCurrent}\n${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: Synthesize the macro-cycle picture into actionable magical guidance. We are at this specific confluence of Pluto in Aquarius, Neptune entering Aries, Uranus entering Gemini, and 5 years into the first Air Mutation since 1226 CE. What does this multi-layered configuration demand of the serious magical practitioner? Which traditions and practices are most amplified by this civilizational weather? What is "ours to do" in Gordon White's framing — what should we be building, which spirits should we be cultivating, and what are we in the putrefactory phase of completing?`;
+    case "athanor": {
+      const season=alchemicalSeason(eph.pos.sun.lon);
+      const moonOp=moonSignOperation(eph.pos.moon.lon);
+      const tide=moonWorkGuidance(eph.moonPhaseDeg);
+      let opsStr="No operations on the fire.";
+      try{
+        const activeOps=loadAthanor().filter(o=>o.status==="active");
+        if(activeOps.length)opsStr=activeOps.map(o=>{
+          const next=o.steps.find(s=>!s.completedAt);
+          const tpl=ATHANOR_TEMPLATES[o.template];
+          return `${o.name} (${tpl?.name||o.template}, ${P[o.planet].name}, ${o.steps.filter(s=>s.completedAt).length}/${o.steps.length} steps done${next?`, next: "${next.title}"${next.scheduledFor?` window ${new Date(next.scheduledFor).toLocaleString()}`:""}`:""})`;
+        }).join("; ");
+      }catch(e){}
+      return `${base} Alchemical season (Sun in ${season.sign}): ${season.process} — ${season.lab} Moon's operation-key (Junius): ${moonOp.process} in ${moonOp.sign}. Lunar tide: ${tide.phase} — ${tide.mode}: ${tide.counsel} Active operations: ${opsStr}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle and as an adept of the laboratory (Paracelsus, Frater Albertus, Junius, the spagyric tradition): Read the practitioner's Athanor. How do the current sky conditions serve or hinder the operations on the fire? What does the season's process and the Moon's operation-key counsel for today's laboratory work — and for the inner work that parallels it? If an operation is between steps, what should the practitioner attend to, observe, or prepare? Speak as one who knows that the vessel and the operator are worked together — ora et labora.`;
+    }
     default: return `${base} ${macroCtx} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: What wisdom is most relevant to this practitioner right now? Speak from the animist framework — magic as call and response, spirits as persons, the ancestor current as foundation, synchronicity as the primary channel of response.`;
   }
 }
@@ -6037,7 +6060,7 @@ export default function App(){
           {tab==="mansions"&&<MansionsScreen eph={eph} now={now}/>}
           {tab==="horary"  &&<HoraryScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
-          {tab==="athanor" &&<AthanorScreen  profile={profile} natalPos={natalPos}/>}
+          {tab==="athanor" &&<AthanorScreen  profile={profile} natalPos={natalPos} eph={eph} now={now}/>}
           {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}
           {tab==="journal" &&<JournalScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile} natalPos={natalPos}/>}

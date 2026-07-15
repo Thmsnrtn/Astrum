@@ -11,6 +11,7 @@
 
 import { getPlanetaryHour, getPlanetaryHourUnequal, checkVoC, dateToJD, P } from "../App.jsx";
 import { getMansion } from "../data/mansions.js";
+import { alchemicalSeason, moonSignOperation, moonWorkGuidance } from "../data/alchemy.js";
 import { loadJSON, saveJSON } from "./storage.js";
 
 export const DEFAULT_NOTIFY_PREFS = {
@@ -124,6 +125,12 @@ export function composeBriefing({ now, eph, hour, castings = [], athanor = [] })
     lines.push(`Moon ${eph.moonPhase} in ${moon.zodiac?.name}, mansion ${m.index} — ${m.arabic} (${m.nature}).`);
   }
   if (eph?.voc?.isVoC) lines.push(`⚠ Void of course — ${Math.round(eph.voc.hoursToIngress)}h until ingress. Hold new workings.`);
+  if (eph?.pos?.sun && moon) {
+    const season = alchemicalSeason(eph.pos.sun.lon);
+    const moonOp = moonSignOperation(moon.lon);
+    const tide = moonWorkGuidance(eph.moonPhaseDeg ?? 0);
+    lines.push(`🜂 Athanor: season of ${season.process} (Sun in ${season.sign}); the Moon keys ${moonOp.process}; tide runs ${tide.mode}.`);
+  }
   const openElections = castings.filter(c => c.kind === "election" && c.status === "open" && c.links?.electionWindow?.start && new Date(c.links.electionWindow.start) > now);
   openElections.slice(0, 2).forEach(c => lines.push(`◈ Committed: ${c.title} — ${new Date(c.links.electionWindow.start).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}.`));
   const dueSteps = athanor.filter(op => op.status === "active").flatMap(op => (op.steps || []).filter(s => !s.completedAt && s.scheduledFor && new Date(s.scheduledFor).toDateString() === now.toDateString()).map(s => ({ op, s })));
