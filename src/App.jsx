@@ -5,6 +5,9 @@ import { exportAll, importAll, markExported, lastExportedAt, backupFilename, dow
 import { captureConditions } from "./engine/snapshot.js";
 import { createCasting, loadCastings, addOutcome, closeCasting, migrateToCastings } from "./lib/castings.js";
 import { getMansion } from "./data/mansions.js";
+import { SEALS, getSeal } from "./data/seals.js";
+import MansionsScreen from "./screens/MansionsScreen.jsx";
+import HoraryScreen from "./screens/HoraryScreen.jsx";
 import ReviewScreen from "./screens/ReviewScreen.jsx";
 import { swPlanetLon, swDailyMotion, swTrueNode, swChiron, swLilith, swHouses, swFixstar, onSwephReady, engineInfo } from "./engine/sweph.js";
 
@@ -33,7 +36,7 @@ async function triggerHaptic(style="medium"){
 const D2R = Math.PI / 180, R2D = 180 / Math.PI;
 const norm = a => ((a % 360) + 360) % 360;
 
-function dateToJD(d) {
+export function dateToJD(d) {
   let Y=d.getUTCFullYear(),M=d.getUTCMonth()+1;
   const D=d.getUTCDate()+(d.getUTCHours()+d.getUTCMinutes()/60+d.getUTCSeconds()/3600)/24;
   if(M<=2){Y--;M+=12;}
@@ -90,7 +93,7 @@ function equationOfCenter(e,M){
   const Mr=M*D2R,e2=e*e,e3=e2*e,e4=e3*e,e5=e4*e;
   return R2D*((2*e-e3/4+5*e5/96)*Math.sin(Mr)+(5*e2/4-11*e4/24)*Math.sin(2*Mr)+(13*e3/12-43*e5/64)*Math.sin(3*Mr)+(103*e4/96)*Math.sin(4*Mr)+(1097*e5/960)*Math.sin(5*Mr));
 }
-function planetLon(name,jd){
+export function planetLon(name,jd){
   const sw=swPlanetLon(name,jd);if(sw!=null)return sw;
   if(name==="sun")return sunLon(jd);if(name==="moon")return moonLon(jd);
   const T=(jd-2451545)/36525,el=EL[name];if(!el)return 0;
@@ -107,13 +110,13 @@ function planetLon(name,jd){
   const eR=1.000001018*(1-ee*ee)/(1+ee*Math.cos(eM));
   return norm(R2D*Math.atan2(r*Math.sin(hL*D2R)-eR*Math.sin(eL*D2R),r*Math.cos(hL*D2R)-eR*Math.cos(eL*D2R)));
 }
-function dailyMotion(name,jd){const sw=swDailyMotion(name,jd);if(sw!=null)return sw;let d=planetLon(name,jd+0.5)-planetLon(name,jd-0.5);if(d>180)d-=360;if(d<-180)d+=360;return d;}
+export function dailyMotion(name,jd){const sw=swDailyMotion(name,jd);if(sw!=null)return sw;let d=planetLon(name,jd+0.5)-planetLon(name,jd-0.5);if(d>180)d-=360;if(d<-180)d+=360;return d;}
 const SIGNS=[{name:"Aries",sym:"♈",el:"fire",mod:"cardinal"},{name:"Taurus",sym:"♉",el:"earth",mod:"fixed"},{name:"Gemini",sym:"♊",el:"air",mod:"mutable"},{name:"Cancer",sym:"♋",el:"water",mod:"cardinal"},{name:"Leo",sym:"♌",el:"fire",mod:"fixed"},{name:"Virgo",sym:"♍",el:"earth",mod:"mutable"},{name:"Libra",sym:"♎",el:"air",mod:"cardinal"},{name:"Scorpio",sym:"♏",el:"water",mod:"fixed"},{name:"Sagittarius",sym:"♐",el:"fire",mod:"mutable"},{name:"Capricorn",sym:"♑",el:"earth",mod:"cardinal"},{name:"Aquarius",sym:"♒",el:"air",mod:"fixed"},{name:"Pisces",sym:"♓",el:"water",mod:"mutable"}];
-function lonToZodiac(lon){const l=norm(lon),si=Math.floor(l/30),deg=l%30;return{...SIGNS[si],signIndex:si,degree:Math.floor(deg),minutes:Math.floor((deg%1)*60)};}
+export function lonToZodiac(lon){const l=norm(lon),si=Math.floor(l/30),deg=l%30;return{...SIGNS[si],signIndex:si,degree:Math.floor(deg),minutes:Math.floor((deg%1)*60)};}
 
 const DOMICILE={sun:[4],moon:[3],mercury:[2,5],venus:[1,6],mars:[0,7],jupiter:[8,11],saturn:[9,10]};
 const EXALT={sun:{s:0},moon:{s:1},mercury:{s:5},venus:{s:11},mars:{s:9},jupiter:{s:3},saturn:{s:6}};
-function getDignity(planet,lon){
+export function getDignity(planet,lon){
   const si=Math.floor(norm(lon)/30);
   if(DOMICILE[planet]?.includes(si))return"domicile";
   if(EXALT[planet]?.s===si)return"exaltation";
@@ -190,7 +193,7 @@ function calcLotEros(asc,venusL,fortuneL){return norm(asc+venusL-fortuneL);}
 function calcLotNecessity(asc,marsL,fortuneL){return norm(asc+fortuneL-marsL);}
 function calcLotCourage(asc,marsL,venusL){return norm(asc+marsL-venusL);}
 
-function checkVoC(jd){
+export function checkVoC(jd){
   const moonL=moonLon(jd);
   const moonSign=Math.floor(moonL/30);
   const moonEndOfSign=(moonSign+1)*30;
@@ -601,7 +604,7 @@ function calcNatal(bd,location){
 // Full conditions snapshot for a casting record at an arbitrary moment.
 // useEphemeris is a pure function despite the hook-style name, so this is
 // safe to call from event handlers and migrations.
-function conditionsFromProfile(date,profile,natalPos,election=null,approximate=false){
+export function conditionsFromProfile(date,profile,natalPos,election=null,approximate=false){
   const location=profile?.natal?.lat&&profile?.natal?.lon?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
   const eph=useEphemeris(date,location);
   const hour=location?getPlanetaryHourUnequal(date,location.lat,location.lon):getPlanetaryHour(date);
@@ -1185,9 +1188,12 @@ const NAV_SECTIONS = [
   {id:"natal",    icon:"☽", label:"Natal",      desc:"Personal resonance"},
   {id:"transits", icon:"⟳", label:"Transits",  desc:"Transit hit list"},
   {id:"ephemeris",icon:"≡", label:"Ephemeris", desc:"Ingresses, stations, eclipses"},
+  {id:"mansions", icon:"☾", label:"Mansions",  desc:"28 lunar stations"},
   {id:"elect",    icon:"◈", label:"Elections",  desc:"Optimal windows"},
   {id:"calendar", icon:"◫", label:"Calendar",  desc:"Election planning grid"},
+  {id:"horary",   icon:"?", label:"Horary",    desc:"Chart of the question"},
   {id:"work",    icon:"⚗", label:"Work",       desc:"Build a ritual"},
+  {id:"talisman",icon:"◈", label:"Talisman",   desc:"Election → design → consecration"},
   {id:"journal", icon:"✎", label:"Journal",    desc:"Practice record"},
   {id:"sigils",  icon:"⟁", label:"Sigils",     desc:"Sigil workshop"},
   {id:"grimoire",icon:"📖", label:"Grimoire",   desc:"Personal book of shadows"},
@@ -1987,6 +1993,7 @@ function assessElection(date,pk,natalPos){
     {id:"phase",w:5,label:"Moon Phase",critical:false,pass:isWax,note:isWax?"Waxing":"Waning"},
     {id:"timing",w:6,label:"Day or Hour Aligned",critical:false,pass:dayMatch||hourMatch,note:dayMatch&&hourMatch?"Day + Hour":dayMatch?"Day":hourMatch?"Hour":"Neither"},
     {id:"moonrel",w:4,label:"Moon in Sympathetic Sign",critical:false,pass:moonRel.rel==="sympathetic",note:moonRel.rel},
+    (()=>{const mans=getMansion(mPos.lon);return{id:"mansion",w:6,label:"Lunar Mansion Favorable",critical:false,pass:mans.nature!=="unfavorable",note:`${mans.index}. ${mans.arabic} (${mans.nature})`};})(),
     {id:"stars",w:4,label:"Fixed Stars",critical:false,pass:stars.length>0,note:stars.length?stars.map(s=>s.name).join(", "):"None conjunct"},
   ];
   const critFail=criteria.filter(c=>c.critical&&!c.pass);
@@ -4678,7 +4685,9 @@ function kamea_reduce(n,size){while(n>size*size)n-=size*size;return n;}
 
 function SigilScreen({eph,profile,natalPos}){
   const [mode,setMode]=useState("list"); // list|create|view
-  const [method,setMethod]=useState("rose"); // rose|kamea|free
+  const [method,setMethod]=useState("rose"); // rose|kamea|seal|free
+  const [sealKind,setSealKind]=useState("intelligence"); // intelligence|spirit
+  const [filter,setFilter_]=useState("all");
   const [planet,setSigilPlanet]=useState("jupiter");
   const [intent,setIntent]=useState("");
   const [word,setWord]=useState("");
@@ -4719,6 +4728,13 @@ function SigilScreen({eph,profile,natalPos}){
     }).filter(Boolean);
     return pts;
   };
+  // Build SVG path for an Agrippa spirit/intelligence seal (gematria trace on the kamea)
+  const buildSealPath=(pl,kind)=>{
+    const seal=getSeal(pl,kind);
+    if(!seal)return null;
+    const km=KAMEA[pl]||KAMEA.jupiter;
+    return seal.seq.map(n=>kamea_xy(kamea_reduce(n,km.size),pl)).filter(Boolean);
+  };
 
   const pathToSvgD=(pts)=>{
     if(!pts||pts.length<2)return"";
@@ -4731,6 +4747,7 @@ function SigilScreen({eph,profile,natalPos}){
 
   const createSigil=()=>{
     let svgData=null;
+    let sealName=null;
     if(method==="rose"){
       const pts=buildRosePath(word);
       if(!pts)return;
@@ -4739,13 +4756,18 @@ function SigilScreen({eph,profile,natalPos}){
       const pts=buildKameaPath(word,planet);
       if(!pts)return;
       svgData={method:"kamea",pts,word,planet};
+    } else if(method==="seal"){
+      const pts=buildSealPath(planet,sealKind);
+      if(!pts)return;
+      sealName=getSeal(planet,sealKind)?.name;
+      svgData={method:"kamea",pts,word:sealName,planet};
     } else {
       if(!paths.length)return;
       svgData={method:"free",paths};
     }
     const now=new Date();
     const entry={
-      id:Date.now(),planet,intent,word,method,
+      id:Date.now(),planet,intent:method==="seal"&&!intent?`Seal of ${sealName} (${sealKind} of ${P[planet].name})`:intent,word:method==="seal"?sealName:word,method,sealOf:method==="seal"?sealKind:undefined,
       svgData,status:"created",
       date:now.toISOString(),
       skySnap:eph?{moon:eph.pos?.moon?.lon,sun:eph.pos?.sun?.lon}:null,
@@ -4755,7 +4777,7 @@ function SigilScreen({eph,profile,natalPos}){
     save(next);setSel(entry);setMode("view");
     // Operator's Loop: record the casting with the full sky
     try{
-      createCasting({kind:"sigil",title:(intent||word||"Sigil").slice(0,60),intent,planet,
+      createCasting({kind:"sigil",title:(entry.intent||entry.word||"Sigil").slice(0,60),intent:entry.intent,planet,
         conditions:conditionsFromProfile(now,profile,natalPos),links:{sigilId:entry.id}});
     }catch(e){}
     setWord("");setIntent("");setPaths([]);setSavedSvg(null);
@@ -4886,8 +4908,8 @@ function SigilScreen({eph,profile,natalPos}){
         <div style={{display:"flex",gap:20,alignItems:"flex-start",marginBottom:24}}>
           <div style={{flexShrink:0}}><SigilPreview svgData={sel.svgData} size={140}/></div>
           <div style={{flex:1}}>
-            <div style={{fontSize:11,letterSpacing:3,color:"rgba(200,175,100,0.5)",marginBottom:4}}>{pl?.symbol} {pl?.name?.toUpperCase()}</div>
-            <div style={{fontSize:16,marginBottom:6,color:pl?.color||GOLD}}>{sel.intent||"(no intention)"}</div>
+            <div style={{fontSize:11,letterSpacing:3,color:"rgba(200,175,100,0.5)",marginBottom:4}}>{pl?.sym} {pl?.name?.toUpperCase()}</div>
+            <div style={{fontSize:16,marginBottom:6,color:pl?.col||GOLD}}>{sel.intent||"(no intention)"}</div>
             {sel.word&&<div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:8}}>WORD: {sel.word}</div>}
             <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.35)",marginBottom:12}}>{new Date(sel.date).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"})}</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
@@ -4912,7 +4934,8 @@ function SigilScreen({eph,profile,natalPos}){
   }
 
   if(mode==="create"){
-    const previewPts=method==="rose"?buildRosePath(word):method==="kamea"?buildKameaPath(word,planet):null;
+    const previewPts=method==="rose"?buildRosePath(word):method==="kamea"?buildKameaPath(word,planet):method==="seal"?buildSealPath(planet,sealKind):null;
+    const activeSeal=method==="seal"?getSeal(planet,sealKind):null;
     return(
       <div style={{padding:"28px 24px",fontFamily:F,color:GOLD,maxWidth:560,margin:"0 auto"}}>
         <button onClick={()=>setMode("list")} style={{background:"none",border:"none",color:"rgba(200,175,100,0.5)",fontFamily:F,fontSize:10,letterSpacing:2,cursor:"pointer",marginBottom:24,padding:0}}>← SIGILS</button>
@@ -4920,7 +4943,7 @@ function SigilScreen({eph,profile,natalPos}){
 
         {/* Method picker */}
         <div style={{display:"flex",gap:8,marginBottom:20}}>
-          {[["rose","Rose Cross"],["kamea","Kamea"],["free","Freehand"]].map(([m,lbl])=>(
+          {[["rose","Rose Cross"],["kamea","Kamea"],["seal","Seal"],["free","Freehand"]].map(([m,lbl])=>(
             <button key={m} onClick={()=>setMethod(m)} style={{flex:1,padding:"6px 0",border:`1px solid ${method===m?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.1)"}`,borderRadius:4,background:method===m?"rgba(200,175,100,0.06)":"transparent",color:method===m?GOLD:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>{lbl.toUpperCase()}</button>
           ))}
         </div>
@@ -4930,7 +4953,7 @@ function SigilScreen({eph,profile,natalPos}){
           <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:8}}>PLANET</div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {Object.keys(P).map(pk=>(
-              <button key={pk} onClick={()=>setSigilPlanet(pk)} style={{padding:"4px 12px",border:`1px solid ${planet===pk?P[pk].color:"rgba(200,175,100,0.1)"}`,borderRadius:10,background:planet===pk?`${P[pk].color}22`:"transparent",color:planet===pk?P[pk].color:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:10,cursor:"pointer"}}>{P[pk].symbol} {P[pk].name}</button>
+              <button key={pk} onClick={()=>setSigilPlanet(pk)} style={{padding:"4px 12px",border:`1px solid ${planet===pk?P[pk].col:"rgba(200,175,100,0.1)"}`,borderRadius:10,background:planet===pk?`${P[pk].col}22`:"transparent",color:planet===pk?P[pk].col:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:10,cursor:"pointer"}}>{P[pk].sym} {P[pk].name}</button>
             ))}
           </div>
         </div>
@@ -4957,14 +4980,36 @@ function SigilScreen({eph,profile,natalPos}){
             )}
           </div>
         )}
+        {method==="seal"&&(
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:6}}>AGRIPPA SEAL (Three Books II.22)</div>
+            <div style={{fontSize:9,color:"rgba(200,175,100,0.3)",marginBottom:8,lineHeight:1.6}}>The name of the {P[planet].name}'s {sealKind} traced by gematria across its kamea. The intelligence guides; the spirit is raw force — classically the talisman bears the intelligence to govern the spirit.</div>
+            <div style={{display:"flex",gap:8,marginBottom:12}}>
+              {[["intelligence","Intelligence"],["spirit","Spirit"]].map(([k,lbl])=>(
+                <button key={k} onClick={()=>setSealKind(k)} style={{flex:1,padding:"8px 0",border:`1px solid ${sealKind===k?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.12)"}`,borderRadius:4,background:sealKind===k?"rgba(200,175,100,0.07)":"transparent",color:sealKind===k?GOLD:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>{lbl.toUpperCase()}</button>
+              ))}
+            </div>
+            {activeSeal&&(
+              <div style={{textAlign:"center",marginBottom:10}}>
+                <div style={{fontFamily:F,fontSize:13,color:P[planet].col}}>{activeSeal.name} <span style={{fontSize:12,color:"rgba(200,175,100,0.5)"}}>{activeSeal.hebrew}</span></div>
+                {activeSeal.abbreviated&&<div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:2,fontStyle:"italic"}}>customary short form of the full name</div>}
+              </div>
+            )}
+            {previewPts&&(
+              <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+                <SigilPreview svgData={{method:"kamea",pts:previewPts,word:activeSeal?.name,planet}} size={200}/>
+              </div>
+            )}
+          </div>
+        )}
         {method==="free"&&(
           <div style={{marginBottom:20}}>
             <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:8}}>DRAW YOUR SIGIL</div>
             <div style={{position:"relative",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4,background:"rgba(0,0,0,0.4)",display:"inline-block",cursor:"crosshair",touchAction:"none"}}>
               <svg width={260} height={260} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
                 onTouchStart={e=>{e.preventDefault();onMouseDown(e);}} onTouchMove={e=>{e.preventDefault();onMouseMove(e);}} onTouchEnd={onMouseUp}>
-                {paths.map((path,i)=><polyline key={i} points={path.map(p=>p.join(",")).join(" ")} fill="none" stroke={P[planet].color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>)}
-                {curPath.length>1&&<polyline points={curPath.map(p=>p.join(",")).join(" ")} fill="none" stroke={P[planet].color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>}
+                {paths.map((path,i)=><polyline key={i} points={path.map(p=>p.join(",")).join(" ")} fill="none" stroke={P[planet].col} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>)}
+                {curPath.length>1&&<polyline points={curPath.map(p=>p.join(",")).join(" ")} fill="none" stroke={P[planet].col} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>}
               </svg>
             </div>
             <div style={{marginTop:8,display:"flex",gap:8}}>
@@ -4974,14 +5019,13 @@ function SigilScreen({eph,profile,natalPos}){
           </div>
         )}
 
-        <button onClick={createSigil} disabled={!intent||(method!=="free"&&word.length<2)||(method==="free"&&!paths.length)} style={{width:"100%",padding:"10px",border:`1px solid rgba(200,175,100,${intent?"0.4":"0.1"})`,borderRadius:4,background:"transparent",color:intent?GOLD:"rgba(200,175,100,0.3)",fontFamily:F,fontSize:10,letterSpacing:3,cursor:"pointer"}}>SEAL SIGIL</button>
+        <button onClick={createSigil} disabled={method==="seal"?false:(!intent||(method!=="free"&&word.length<2)||(method==="free"&&!paths.length))} style={{width:"100%",padding:"10px",border:`1px solid rgba(200,175,100,${intent||method==="seal"?"0.4":"0.1"})`,borderRadius:4,background:"transparent",color:intent||method==="seal"?GOLD:"rgba(200,175,100,0.3)",fontFamily:F,fontSize:10,letterSpacing:3,cursor:"pointer"}}>{method==="seal"?"INSCRIBE SEAL":"SEAL SIGIL"}</button>
       </div>
     );
   }
 
   // List view
   const statusFilter=["all","created","charged","deployed","fulfilled","retired"];
-  const [filter,setFilter_]=useState("all");
   const setFilter=(f)=>setFilter_(f);
   const shown=filter==="all"?sigils:sigils.filter(s=>s.status===filter);
 
@@ -5008,7 +5052,7 @@ function SigilScreen({eph,profile,natalPos}){
             return(
               <button key={s.id} onClick={()=>{setSel(s);setMode("view");setAiNote("");}} style={{background:"rgba(0,0,0,0.2)",border:`1px solid ${statusColors[s.status]||"rgba(200,175,100,0.12)"}22`,borderRadius:6,padding:12,cursor:"pointer",textAlign:"left",display:"flex",flexDirection:"column",gap:8}}>
                 <div style={{display:"flex",justifyContent:"center"}}><SigilPreview svgData={s.svgData} size={110}/></div>
-                <div style={{fontSize:8,letterSpacing:2,color:pl?.color||GOLD,opacity:0.7}}>{pl?.symbol} {pl?.name?.toUpperCase()}</div>
+                <div style={{fontSize:8,letterSpacing:2,color:pl?.col||GOLD,opacity:0.7}}>{pl?.sym} {pl?.name?.toUpperCase()}</div>
                 <div style={{fontSize:10,color:GOLD,lineHeight:1.3}}>{s.intent||"—"}</div>
                 <div style={{fontSize:8,letterSpacing:1,color:statusColors[s.status]||"rgba(200,175,100,0.3)",textTransform:"uppercase"}}>{s.status}</div>
               </button>
@@ -5570,6 +5614,174 @@ function ProfileScreen({profile,setProfile}){
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// TALISMAN WORKSHOP — election → design → consecration → record
+// ═══════════════════════════════════════════════════════════════════════
+// The full classical pipeline in one guided flow. Everything it produces is
+// linked into a single casting record (kind: talisman) so the Review screen
+// can close the loop on it.
+function KameaPreview({pts,planet,size=180}){
+  const km=KAMEA[planet]||KAMEA.jupiter;
+  const scale=size/260;
+  if(!pts||pts.length<2)return null;
+  const d=pts.map((p,i)=>`${i===0?"M":"L"}${(p[0]*scale).toFixed(1)} ${(p[1]*scale).toFixed(1)}`).join(" ");
+  return(
+    <svg width={size} height={size} style={{background:"rgba(0,0,0,0.4)",borderRadius:8,border:"1px solid rgba(200,175,100,0.15)"}}>
+      {Array.from({length:km.size}).map((_,r)=>Array.from({length:km.size}).map((_,c)=>{
+        const cell=size/(km.size+1),x=cell*(c+1),y=cell*(r+1);
+        return <circle key={`${r}-${c}`} cx={x} cy={y} r={1.2} fill="rgba(200,175,100,0.25)"/>;
+      })).flat()}
+      <path d={d} fill="none" stroke={P[planet].col} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx={pts[0][0]*scale} cy={pts[0][1]*scale} r={3.5} fill="none" stroke={P[planet].col} strokeWidth={1}/>
+      <line x1={pts[pts.length-1][0]*scale-4} y1={pts[pts.length-1][1]*scale-4} x2={pts[pts.length-1][0]*scale+4} y2={pts[pts.length-1][1]*scale+4} stroke={P[planet].col} strokeWidth={1.4}/>
+    </svg>
+  );
+}
+
+function TalismanScreen({eph,natalPos,profile,now}){
+  const [step,setStep]=useState(0);
+  const [intent,setIntent]=useState("");
+  const [planet,setPlanet]=useState("jupiter");
+  const [elections,setElections]=useState(null);
+  const [scanning,setScanning]=useState(false);
+  const [chosen,setChosen]=useState(null); // {date, assess, isNow}
+  const [design,setDesign]=useState("intelligence"); // intelligence|spirit|word
+  const [word,setWord]=useState("");
+  const [saved,setSaved]=useState(false);
+  const primaryTrad=profile?.traditions?.[0]||"western-ceremonial";
+  const STEPS=TRADITION_STEPS[primaryTrad]||TRADITION_STEPS["western-ceremonial"];
+  const km=KAMEA[planet]||KAMEA.jupiter;
+  const sealPts=(kind)=>{const s=getSeal(planet,kind);return s?s.seq.map(n=>kamea_xy(kamea_reduce(n,km.size),planet)).filter(Boolean):null;};
+  const wordPts=()=>{const letters=[...word.toUpperCase().replace(/[^A-Z]/g,"")];if(letters.length<2)return null;return letters.map(l=>{let n=kamea_letterNum(l);n=kamea_reduce(n,km.size);return kamea_xy(n<1?1:n,planet);}).filter(Boolean);};
+  const designPts=design==="word"?wordPts():sealPts(design);
+  const designName=design==="word"?word.toUpperCase():getSeal(planet,design)?.name;
+  const runScan=()=>{setScanning(true);setElections(null);setTimeout(()=>{setElections(scanElections(new Date(now),30,planet,natalPos));setScanning(false);},250);};
+  const fmtD=d=>d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})+" "+d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  const saveTalisman=async()=>{
+    if(saved)return;
+    try{
+      const castDate=chosen?.isNow?new Date(now):chosen?.date||new Date(now);
+      const assess=chosen?.assess||assessElection(castDate,planet,natalPos);
+      // 1. sigil record (shows up in the Sigil workshop)
+      const sigilEntry={id:Date.now(),planet,intent,word:designName,method:design==="word"?"kamea":"seal",sealOf:design!=="word"?design:undefined,
+        svgData:{method:"kamea",pts:designPts,word:designName,planet},status:"created",date:castDate.toISOString(),skySnap:eph?{moon:eph.pos?.moon?.lon,sun:eph.pos?.sun?.lon}:null,aiNote:""};
+      saveJSON("astrum_sigils",[sigilEntry,...loadJSON("astrum_sigils",[])]);
+      // 2. grimoire entry
+      const grimEntry={id:Date.now()+1,title:`${P[planet].name} Talisman — ${intent.slice(0,40)||designName}`,
+        body:`INTENT: ${intent}\nPLANET: ${P[planet].name}\nDESIGN: ${design==="word"?`Kamea sigil of "${designName}"`:`Seal of ${designName} (${design} of ${P[planet].name})`}\nELECTION: ${fmtD(castDate)} — score ${assess.score} (${assess.grade})\nMATERIA: ${P[planet].metal}; ${P[planet].stone}; ${P[planet].incense}; colors ${P[planet].color}\nCONSECRATION: ${STEPS.map((s,i)=>`${i+1}. ${s.t}`).join(" · ")}\nORPHIC HYMN: ${P[planet].orphic}`,
+        planet,tags:[planet,"talisman"],date:castDate.toISOString().split("T")[0],category:"ritual",type:"talisman"};
+      const r=await window.storage.get("astrum_grimoire");
+      await window.storage.set("astrum_grimoire",JSON.stringify([grimEntry,...(r?.value?JSON.parse(r.value):[])]));
+      // 3. the casting record that ties it together
+      createCasting({kind:"talisman",title:`${P[planet].name} talisman — ${(intent||designName).slice(0,50)}`,intent,planet,tradition:primaryTrad,
+        conditions:conditionsFromProfile(castDate,profile,natalPos,{score:assess.score,grade:assess.grade},!chosen?.isNow),
+        links:{sigilId:sigilEntry.id,grimoireId:grimEntry.id,electionWindow:{start:castDate.toISOString(),score:assess.score,grade:assess.grade}},
+        createdAt:new Date(now).toISOString()});
+      setSaved(true);
+    }catch(e){}
+  };
+  const IS={width:"100%",background:"rgba(0,0,0,0.45)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"9px 11px",fontSize:12,boxSizing:"border-box"};
+  const NEXT=(en,lbl="CONTINUE")=><button onClick={()=>setStep(step+1)} disabled={!en} style={{width:"100%",marginTop:12,padding:"12px 0",borderRadius:11,background:en?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${en?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:10,color:en?GOLD:"#5A4020",letterSpacing:3,textTransform:"uppercase",cursor:en?"pointer":"default"}}>{lbl}</button>;
+  const WIZ=["Intent","Election","Design","Consecration","Record"];
+  return(
+    <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:20}}>
+      <div style={{padding:"16px 18px 8px"}}>
+        <div style={{fontFamily:F,fontSize:9,color:"#8A7040",letterSpacing:3.5,textTransform:"uppercase"}}>Picatrix · Agrippa · The Complete Operation</div>
+        <div style={T(20)}>Talisman Workshop</div>
+      </div>
+      <div style={{display:"flex",gap:4,padding:"4px 14px 10px"}}>
+        {WIZ.map((w,i)=>(
+          <button key={w} onClick={()=>i<step&&setStep(i)} style={{flex:1,padding:"6px 0",borderRadius:8,background:i===step?"rgba(212,175,106,0.13)":"rgba(8,5,22,0.5)",border:"1px solid "+(i===step?"rgba(212,175,106,0.4)":i<step?"rgba(92,168,92,0.25)":"rgba(200,175,100,0.08)"),fontFamily:F,fontSize:7,color:i===step?GOLD:i<step?"#5CA85C":"#5A4020",letterSpacing:1,textTransform:"uppercase",cursor:i<step?"pointer":"default"}}>{i<step?"✓ ":""}{w}</button>
+        ))}
+      </div>
+      <div style={{flex:1,overflowY:"auto",padding:"0 14px"}}>
+        {step===0&&<div className="card">
+          <div style={L()}>What is this talisman for?</div>
+          <textarea value={intent} onChange={e=>setIntent(e.target.value)} rows={2} placeholder="Steady increase of income through my own work…" style={{...IS,marginTop:8,resize:"none"}}/>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase",margin:"12px 0 6px"}}>Under Which Sphere</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+            {Object.entries(P).map(([pk,pl])=>{
+              const pos=eph.pos[pk],a=planet===pk;
+              return(<button key={pk} onClick={()=>setPlanet(pk)} style={{padding:"9px 10px",borderRadius:10,background:a?pl.col+"14":"rgba(0,0,0,0.25)",border:`1px solid ${a?pl.col+"50":"rgba(200,175,100,0.08)"}`,cursor:"pointer",textAlign:"left"}}>
+                <span style={{fontSize:14,color:pl.col}}>{pl.sym}</span>
+                <span style={{fontFamily:F,fontSize:10,color:a?pl.col:"rgba(200,175,100,0.5)",marginLeft:6}}>{pl.name}</span>
+                <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.3)",marginTop:2,fontStyle:"italic"}}>{pl.domains.slice(0,3).join(" · ")}{pos?.dignity==="domicile"||pos?.dignity==="exaltation"?" · STRONG NOW":""}</div>
+              </button>);
+            })}
+          </div>
+          {NEXT(intent.trim().length>3)}
+        </div>}
+        {step===1&&<div className="card">
+          <div style={L()}>Elect the Moment</div>
+          <div style={{fontFamily:F,fontSize:9.5,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.7}}>Scan the next 30 days for windows when {P[planet].name} is dignified, direct, clear of the beams, and the Moon cooperates.</div>
+          <button onClick={runScan} disabled={scanning} style={{width:"100%",marginTop:10,padding:"11px 0",borderRadius:10,background:P[planet].col+"14",border:`1px solid ${P[planet].col}40`,fontFamily:F,fontSize:9,color:P[planet].col,letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>{scanning?"Scanning the heavens…":"Scan 30 Days"}</button>
+          {elections&&elections.length===0&&<div style={{fontFamily:F,fontSize:10,color:"#9A7060",fontStyle:"italic",marginTop:10,lineHeight:1.7}}>No qualifying window in the next 30 days — {P[planet].name} may be retrograde, combust, or out of dignity. Consider another sphere, or work the moment anyway below.</div>}
+          {elections&&elections.slice(0,8).map((e,i)=>{
+            const isSel=chosen&&!chosen.isNow&&chosen.date.getTime()===e.date.getTime();
+            const gc=e.assess.score>=90?"#FFD700":e.assess.score>=75?"#5CA85C":"#D4AF6A";
+            return(<button key={i} onClick={()=>setChosen({date:e.date,assess:e.assess})} style={{width:"100%",marginTop:7,padding:"10px 12px",borderRadius:11,background:isSel?gc+"14":"rgba(8,5,22,0.6)",border:`1px solid ${isSel?gc+"60":gc+"22"}`,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{textAlign:"left"}}>
+                <div style={{fontFamily:F,fontSize:11,color:"#C4A870"}}>{fmtD(e.date)}</div>
+                <div style={{fontFamily:F,fontSize:8.5,color:gc,marginTop:1}}>{e.assess.grade}</div>
+              </div>
+              <div style={{fontFamily:F,fontSize:22,color:gc}}>{e.assess.score}</div>
+            </button>);
+          })}
+          <button onClick={()=>setChosen({date:new Date(now),assess:assessElection(new Date(now),planet,natalPos),isNow:true})} style={{width:"100%",marginTop:8,padding:"9px 0",borderRadius:10,background:chosen?.isNow?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${chosen?.isNow?"rgba(212,175,106,0.4)":"rgba(200,175,100,0.12)"}`,fontFamily:F,fontSize:8.5,color:chosen?.isNow?GOLD:"rgba(200,175,100,0.45)",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Or: work this present moment</button>
+          {chosen&&<div style={{fontFamily:F,fontSize:9.5,color:"#7AB07A",marginTop:8,textAlign:"center"}}>Chosen: {fmtD(chosen.date)} — score {chosen.assess.score}</div>}
+          {NEXT(!!chosen)}
+        </div>}
+        {step===2&&<div className="card">
+          <div style={L()}>The Figure</div>
+          <div style={{display:"flex",gap:6,marginTop:10,marginBottom:10}}>
+            {[["intelligence","Intelligence Seal"],["spirit","Spirit Seal"],["word","Intent Sigil"]].map(([k,lbl])=>(
+              <button key={k} onClick={()=>setDesign(k)} style={{flex:1,padding:"8px 0",borderRadius:9,background:design===k?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.25)",border:`1px solid ${design===k?"rgba(212,175,106,0.4)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:8,color:design===k?GOLD:"rgba(200,175,100,0.4)",letterSpacing:1,textTransform:"uppercase",cursor:"pointer"}}>{lbl}</button>
+            ))}
+          </div>
+          {design==="word"&&<input value={word} onChange={e=>setWord(e.target.value)} placeholder="Key word of the intent, e.g. INCREASE" style={{...IS,marginBottom:10}}/>}
+          {design!=="word"&&<div style={{fontFamily:F,fontSize:9.5,color:"#5A4020",fontStyle:"italic",lineHeight:1.7,marginBottom:10}}>{design==="intelligence"?`${getSeal(planet,"intelligence")?.name} — the benevolent governing intelligence of ${P[planet].name}, traced by gematria on the ${km.size}×${km.size} kamea. The classical choice for a talisman.`:`${getSeal(planet,"spirit")?.name} — the raw daimonic force of ${P[planet].name}. Traditionally inscribed together with the intelligence, which directs it.`}</div>}
+          <div style={{display:"flex",justifyContent:"center"}}>
+            {designPts?<KameaPreview pts={designPts} planet={planet} size={190}/>:<div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",padding:"30px 0"}}>Enter at least two letters…</div>}
+          </div>
+          {designName&&designPts&&<div style={{textAlign:"center",fontFamily:F,fontSize:11,color:P[planet].col,marginTop:8}}>{designName}</div>}
+          {NEXT(!!designPts)}
+        </div>}
+        {step===3&&<div className="card">
+          <div style={L()}>Consecration — {TRADITIONS[primaryTrad]?.label||"Western Ceremonial"}</div>
+          <div style={{fontFamily:F,fontSize:9.5,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.7}}>At the elected moment{chosen?` — ${fmtD(chosen.date)}`:""} — work the sequence. Materia of {P[planet].name}: {P[planet].incense.split("·")[0].trim()} incense, {P[planet].metal.split("·")[0].trim()}, colors of {P[planet].color.split("·")[0].trim()}.</div>
+          <div style={{marginTop:10}}>
+            {STEPS.map((s,i)=>(
+              <div key={i} style={{display:"flex",gap:9,padding:"7px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
+                <span style={{fontFamily:F,fontSize:10,color:P[planet].col,width:16,flexShrink:0}}>{i+1}.</span>
+                <div>
+                  <div style={{fontFamily:F,fontSize:10.5,color:GOLD}}>{s.t}</div>
+                  <div style={{fontFamily:F,fontSize:9,color:"#8A7050",fontStyle:"italic",lineHeight:1.6,marginTop:2}}>{s.d}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{marginTop:10,padding:"9px 11px",borderRadius:9,background:"rgba(0,0,0,0.3)",border:`1px solid ${P[planet].col}20`,fontFamily:F,fontSize:9.5,color:"#9A8060",fontStyle:"italic",lineHeight:1.8}}>"{P[planet].orphic}"</div>
+          {NEXT(true)}
+        </div>}
+        {step===4&&<div className="card">
+          <div style={L()}>Seal the Record</div>
+          <div style={{fontFamily:F,fontSize:10,color:"#9A8060",fontStyle:"italic",marginTop:6,lineHeight:1.8}}>
+            Saving inscribes the figure into your Sigils, writes the complete operation into the Grimoire, and opens a casting record with the elected sky — the Review screen will ask you for the outcome when the time comes.
+          </div>
+          <div style={{margin:"10px 0",padding:"10px 12px",borderRadius:10,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(200,175,100,0.12)",fontFamily:F,fontSize:10,color:"#C4A870",lineHeight:1.9}}>
+            <div><span style={{color:"rgba(200,175,100,0.45)"}}>INTENT</span> {intent}</div>
+            <div><span style={{color:"rgba(200,175,100,0.45)"}}>SPHERE</span> {P[planet].name}</div>
+            <div><span style={{color:"rgba(200,175,100,0.45)"}}>FIGURE</span> {design==="word"?`Kamea sigil "${designName}"`:`Seal of ${designName}`}</div>
+            <div><span style={{color:"rgba(200,175,100,0.45)"}}>MOMENT</span> {chosen?fmtD(chosen.date):"—"} (score {chosen?.assess?.score})</div>
+          </div>
+          <button onClick={saveTalisman} style={{width:"100%",padding:"13px 0",borderRadius:12,background:saved?"rgba(92,168,92,0.15)":"rgba(212,175,106,0.12)",border:`1px solid ${saved?"rgba(92,168,92,0.4)":"rgba(212,175,106,0.35)"}`,fontFamily:F,fontSize:10,color:saved?"#7AB07A":GOLD,letterSpacing:3,textTransform:"uppercase",cursor:"pointer"}}>{saved?"✓ Talisman Recorded":"⚑ Record the Talisman"}</button>
+          {saved&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",textAlign:"center",marginTop:8,fontStyle:"italic"}}>Find it in Sigils, Grimoire, and Review.</div>}
+        </div>}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════
 function calcProfection(bd,now){
@@ -5698,6 +5910,9 @@ export default function App(){
           {tab==="ephemeris"&&<EphemerisScreen now={now}/>}
           {tab==="cycles"  &&<CyclesScreen  now={now} profile={profile} eph={eph}/>}
           {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph} profile={profile}/>}
+          {tab==="mansions"&&<MansionsScreen eph={eph} now={now}/>}
+          {tab==="horary"  &&<HoraryScreen  profile={profile} natalPos={natalPos}/>}
+          {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
           {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}
           {tab==="journal" &&<JournalScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile} natalPos={natalPos}/>}
