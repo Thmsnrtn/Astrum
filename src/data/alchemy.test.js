@@ -91,6 +91,23 @@ describe("decan images (Picatrix II.11 / Agrippa II.37)", () => {
   });
 });
 
+describe("learn primers", () => {
+  it("every foundation module has a primer; every topic primer maps to a real topic", async () => {
+    const { FOUNDATION_PRIMERS, TOPIC_PRIMERS } = await import("./primers.js");
+    const { FOUNDATIONS, LEARN_TOPICS } = await import("../App.jsx");
+    FOUNDATIONS.forEach(f => {
+      const p = FOUNDATION_PRIMERS[f.id];
+      expect(p, `primer for ${f.id} (${f.title})`).toBeTruthy();
+      expect(p.body.length).toBeGreaterThan(300);
+      expect(p.sources.length).toBeGreaterThanOrEqual(2);
+      expect(p.inApp).toBeTruthy();
+    });
+    const topicIds = new Set(LEARN_TOPICS.map(t => t.id));
+    Object.keys(TOPIC_PRIMERS).forEach(id => expect(topicIds.has(id), `topic ${id} exists`).toBe(true));
+    expect(Object.keys(TOPIC_PRIMERS).length).toBeGreaterThanOrEqual(14);
+  });
+});
+
 describe("extended dueRules", () => {
   it("sunSigns fast-forwards to the season (dew under Aries from July)", () => {
     const d = resolveDueRule({ sunSigns: [0, 1], preDawn: true }, NOW, LONDON, "sun");

@@ -10,6 +10,7 @@ import { alchemicalSeason, moonSignOperation, moonWorkGuidance, GREAT_WORK_STAGE
 import { DECAN_IMAGES, DECAN_DOCTRINE } from "./data/decanImages.js";
 import { getBehenian, BEHENIAN_DOCTRINE } from "./data/behenian.js";
 import { aspectMeaning } from "./data/aspectMeanings.js";
+import { FOUNDATION_PRIMERS, TOPIC_PRIMERS } from "./data/primers.js";
 import { loadAthanor } from "./lib/athanor.js";
 import { OPERATION_TEMPLATES as ATHANOR_TEMPLATES } from "./data/operations.js";
 import MansionsScreen from "./screens/MansionsScreen.jsx";
@@ -4122,7 +4123,7 @@ function AIScreen({now,eph,fractal,natalPos,hour,profile}){
 // ═══════════════════════════════════════════════════════════════════════
 // LEARN TOPICS
 // ═══════════════════════════════════════════════════════════════════════
-const LEARN_TOPICS=[
+export const LEARN_TOPICS=[
   {id:"planetary-hours",  label:"Planetary Hours",        desc:"The 24-hour cycle of planetary rulership",         traditions:["all"],         level:"beginner"},
   {id:"lunar-timing",     label:"Lunar Timing",           desc:"Phases, mansions, void of course, void avoidance", traditions:["all"],         level:"beginner"},
   {id:"electional",       label:"Electional Astrology",   desc:"Choosing optimal moments for magical operation",    traditions:["all"],         level:"intermediate"},
@@ -5254,7 +5255,7 @@ function GrimoireScreen({profile}){
 // ═══════════════════════════════════════════════════════════════════════
 // LEARN SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-const FOUNDATIONS=[
+export const FOUNDATIONS=[
   {id:"f1",title:"Animism & the Living World",subtitle:"How the world is made of relationships, not objects",lessons:5,topics:["animism-foundation","spirits-allies","liminal-entities"],icon:"🌿",color:"#5CA87C"},
   {id:"f2",title:"Timing & the Sky",subtitle:"Planetary hours, lunar cycles, and elections",lessons:7,topics:["planetary-hours","lunar-timing","electional"],icon:"☽",color:"#D4AF6A"},
   {id:"f3",title:"The Dead & the Ancestors",subtitle:"Working with the ancestor current and the holy dead",lessons:4,topics:["ancestor-work","saints-holy-dead"],icon:"⚰",color:"#8A78C8"},
@@ -5267,6 +5268,7 @@ const FOUNDATIONS=[
 ];
 function LearnScreen({profile}){
   const [learnMode,setLearnMode]=useState("topics"); // "foundations" | "topics"
+  const [primerOpen,setPrimerOpen]=useState(null);
   const [topic,setTopic]=useState(null);
   const [msgs,setMsgs]=useState([]);
   const [input,setInput]=useState("");
@@ -5336,6 +5338,22 @@ function LearnScreen({profile}){
           </div>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"14px 16px 8px"}}>
+          {/* Static sourced primer — the lesson's foundation, no API key required */}
+          {(()=>{
+            const primer=TOPIC_PRIMERS[topic.id];
+            if(!primer)return null;
+            return(
+              <div style={{marginBottom:14,padding:"12px 14px",borderRadius:12,background:"rgba(8,5,22,0.75)",border:"1px solid rgba(212,175,106,0.2)"}}>
+                <div style={{fontFamily:F,fontSize:8,color:"rgba(212,175,106,0.6)",letterSpacing:2.5,textTransform:"uppercase",marginBottom:7}}>⬡ Primer</div>
+                <div style={{fontFamily:F,fontSize:11,color:"#C4A870",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{primer.body}</div>
+                <div style={{marginTop:9,paddingTop:8,borderTop:"1px solid rgba(200,175,100,0.08)"}}>
+                  {primer.sources.map((s,i)=><div key={i} style={{fontFamily:F,fontSize:8.5,color:"rgba(200,175,100,0.4)",lineHeight:1.6}}>· {s}</div>)}
+                  <div style={{fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.55)",fontStyle:"italic",marginTop:5,lineHeight:1.6}}>In this app: {primer.inApp}</div>
+                </div>
+              </div>
+            );
+          })()}
+          {!profile?.apiKey&&!TOPIC_PRIMERS[topic.id]&&<div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",lineHeight:1.7,marginBottom:12}}>This topic has no static primer yet — the Socratic tutor needs an API key (Profile → API Key).</div>}
           {loading&&msgs.length<=1&&<div style={{display:"flex",gap:5,padding:"32px 0",justifyContent:"center"}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}</div>}
           {msgs.filter(m=>m.role!=="user"||msgs.indexOf(m)>0).map((m,i)=>(
             <div key={i} style={{marginBottom:14}}>
@@ -5368,7 +5386,7 @@ function LearnScreen({profile}){
       {/* Foundations Path */}
       {learnMode==="foundations"&&(
         <div>
-          <div style={{padding:"0 18px 10px",fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",lineHeight:1.7}}>Five foundational modules — work through them in sequence. Each builds on the last. The AI teaches through Socratic dialogue.</div>
+          <div style={{padding:"0 18px 10px",fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",lineHeight:1.7}}>Nine foundational modules — work through them in sequence. Each opens with a sourced primer (no API key needed). Each builds on the last. The AI teaches through Socratic dialogue.</div>
           {FOUNDATIONS.map((mod,i)=>{
             const prog=foundProgress[mod.id]||{started:false,lessonsComplete:0};
             const pct=(prog.lessonsComplete||0)/mod.lessons;
@@ -5393,10 +5411,26 @@ function LearnScreen({profile}){
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)"}}>{prog.lessonsComplete||0} / {mod.lessons} lessons</div>
-                    <button onClick={()=>startFoundationModule(mod)} style={{padding:"6px 14px",borderRadius:9,background:`${mod.color}14`,border:`1px solid ${mod.color}40`,fontFamily:F,fontSize:9,color:mod.color,cursor:"pointer"}}>
-                      {started?(pct>=1?"Review":"Continue"):"Begin →"}
-                    </button>
+                    <div style={{display:"flex",gap:6}}>
+                      {FOUNDATION_PRIMERS[mod.id]&&(
+                        <button onClick={()=>setPrimerOpen(primerOpen===mod.id?null:mod.id)} style={{padding:"6px 11px",borderRadius:9,background:primerOpen===mod.id?`${mod.color}14`:"rgba(0,0,0,0.3)",border:`1px solid ${primerOpen===mod.id?mod.color+"40":"rgba(200,175,100,0.12)"}`,fontFamily:F,fontSize:9,color:primerOpen===mod.id?mod.color:"rgba(200,175,100,0.45)",cursor:"pointer"}}>
+                          {primerOpen===mod.id?"Close":"Primer"}
+                        </button>
+                      )}
+                      <button onClick={()=>startFoundationModule(mod)} style={{padding:"6px 14px",borderRadius:9,background:`${mod.color}14`,border:`1px solid ${mod.color}40`,fontFamily:F,fontSize:9,color:mod.color,cursor:"pointer"}}>
+                        {started?(pct>=1?"Review":"Continue"):"Begin →"}
+                      </button>
+                    </div>
                   </div>
+                  {primerOpen===mod.id&&FOUNDATION_PRIMERS[mod.id]&&(
+                    <div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${mod.color}20`}}>
+                      <div style={{fontFamily:F,fontSize:11,color:"#C4A870",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{FOUNDATION_PRIMERS[mod.id].body}</div>
+                      <div style={{marginTop:8}}>
+                        {FOUNDATION_PRIMERS[mod.id].sources.map((s,i)=><div key={i} style={{fontFamily:F,fontSize:8.5,color:"rgba(200,175,100,0.4)",lineHeight:1.6}}>· {s}</div>)}
+                        <div style={{fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.55)",fontStyle:"italic",marginTop:5,lineHeight:1.6}}>In this app: {FOUNDATION_PRIMERS[mod.id].inApp}</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             );
