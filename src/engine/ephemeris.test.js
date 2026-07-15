@@ -94,6 +94,27 @@ describe("swiss ephemeris adapter", () => {
   });
 });
 
+describe("fixed star catalog integrity", () => {
+  it("every catalog star resolves in sefstars and matches its stored J2000 lon and sign", async () => {
+    const { FIXED_STARS } = await import("../App.jsx");
+    const SIGNS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"];
+    FIXED_STARS.forEach(s => {
+      const r = swFixstar(s.name, JD_J2000);
+      expect(r, `${s.name} must resolve in sefstars`).toBeTruthy();
+      expect(Math.abs(r.lon - s.lon), `${s.name} lon drift`).toBeLessThan(0.05);
+      const expectedSign = `${SIGNS[Math.floor(r.lon / 30)]} ${Math.floor(r.lon % 30)}°`;
+      expect(s.sign, `${s.name} sign label`).toBe(expectedSign);
+    });
+  });
+  it("all 15 Behenian stars are present in the catalog with materia", async () => {
+    const { FIXED_STARS } = await import("../App.jsx");
+    const { BEHENIAN } = await import("../data/behenian.js");
+    const names = new Set(FIXED_STARS.map(s => s.name));
+    Object.keys(BEHENIAN).forEach(b => expect(names.has(b), `${b} in catalog`).toBe(true));
+    expect(Object.keys(BEHENIAN)).toHaveLength(15);
+  });
+});
+
 describe("lunar mansions", () => {
   it("has 28 mansions spanning exactly 360°", () => {
     expect(MANSIONS).toHaveLength(28);

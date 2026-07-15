@@ -2,11 +2,14 @@ import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "rea
 import { askClaude } from "./ai/client.js";
 import { loadJSON, saveJSON } from "./lib/storage.js";
 import { exportAll, importAll, markExported, lastExportedAt, backupFilename, downloadText, shareOnNative, copyToClipboard } from "./lib/backup.js";
-import { captureConditions } from "./engine/snapshot.js";
-import { createCasting, loadCastings, addOutcome, closeCasting, migrateToCastings } from "./lib/castings.js";
+import { captureConditions, transitsToNatal } from "./engine/snapshot.js";
+import { createCasting, loadCastings, addOutcome, closeCasting, migrateToCastings, computeStats } from "./lib/castings.js";
 import { getMansion } from "./data/mansions.js";
 import { SEALS, getSeal } from "./data/seals.js";
 import { alchemicalSeason, moonSignOperation, moonWorkGuidance, GREAT_WORK_STAGES } from "./data/alchemy.js";
+import { DECAN_IMAGES, DECAN_DOCTRINE } from "./data/decanImages.js";
+import { getBehenian, BEHENIAN_DOCTRINE } from "./data/behenian.js";
+import { aspectMeaning } from "./data/aspectMeanings.js";
 import { loadAthanor } from "./lib/athanor.js";
 import { OPERATION_TEMPLATES as ATHANOR_TEMPLATES } from "./data/operations.js";
 import MansionsScreen from "./screens/MansionsScreen.jsx";
@@ -350,7 +353,7 @@ const VOWELS={sun:{l:"Ι",p:"EE"},moon:{l:"Α",p:"AH"},mercury:{l:"Ε",p:"EH"},v
 // Names and magic descriptions are original, grounded in Picatrix Book II
 // Ch.11, Agrippa Three Books II.37, and Abu Ma'shar's decan faces.
 // ═══════════════════════════════════════════════════════════════════════
-const DECANS=[
+export const DECANS=[
   {n:1, sign:"Aries",sym:"♈",ruler:"mars",   name:"The Iron Gate",              tarot:"2 of Wands",  magic:"Forced passage and initiation; claiming the right to enter by force of will; works of decisive beginning and contest."},
   {n:2, sign:"Aries",sym:"♈",ruler:"sun",    name:"The Golden Helm",            tarot:"3 of Wands",  magic:"Command of one's domain; solar authority and sovereignty; works of public standing and rightful kingship."},
   {n:3, sign:"Aries",sym:"♈",ruler:"venus",  name:"The Adornment",              tarot:"4 of Wands",  magic:"Desire made visible; charm over hostility; works of beauty, attraction, and winning favor through presence."},
@@ -392,44 +395,50 @@ const DECANS=[
 // ═══════════════════════════════════════════════════════════════════════
 // FIXED STARS — 20 stars
 // ═══════════════════════════════════════════════════════════════════════
-const FIXED_STARS = [
-  {name:"Regulus",   lon:149.8,col:"#FFD080",mag:1.4, nature:"Jupiter/Mars",  sign:"Leo 29°",    desc:"Heart of the Lion. The Royal Star — bestows enormous honor, military success, and executive power. Has been called the king-maker of the zodiac.",magic:"Royal authority, public recognition, leadership, solar vitality.",warning:"Destroys those who use power for revenge. The honor must be absolute."},
-  {name:"Spica",     lon:203.9,col:"#A0D0F0",mag:0.97,nature:"Venus/Mercury", sign:"Libra 23°",  desc:"The brightest star of Virgo — extraordinary good fortune, artistic genius, scientific brilliance, sudden elevation.",magic:"Creative and artistic excellence, scientific mastery, benevolent fortune.",warning:"One of the most benefic stars in the sky. No major cautions."},
-  {name:"Aldebaran", lon:69.7, col:"#F09050",mag:0.85,nature:"Mars",          sign:"Gemini 9°",  desc:"Eye of the Bull — Royal Star of the East. Courage, military success, eloquence, tenacity. Honors those who demonstrate both intelligence and bravery.",magic:"Courage in contest, competitive victory, strength of will.",warning:"Rewards integrity. Destroys the treacherous."},
-  {name:"Antares",   lon:249.7,col:"#D04020",mag:0.96,nature:"Mars/Jupiter",  sign:"Sagittarius 9°",desc:"Heart of the Scorpion — Royal Star of the West. Extreme intensity, radical transformation, reckless courage. The most volatile of the Royal Stars.",magic:"Radical transformation, extreme courage, binding malefic forces.",warning:"The most volatile Royal Star. Absolutely unforgiving of hesitation or insincerity."},
-  {name:"Algol",     lon:126.1,col:"#8080C0",mag:2.1, nature:"Saturn/Jupiter",sign:"Taurus 26°", desc:"Head of Medusa — the Blinking Demon. The most feared fixed star in the tradition. Associated with severance, radical endings, confrontation with horror.",magic:"Binding operations, protective severing, radical endings, cursing.",warning:"Handle with the greatest care. Rewards absolute clarity of intent. Punishes the careless absolutely."},
-  {name:"Sirius",    lon:104.1,col:"#E0F0FF",mag:-1.46,nature:"Jupiter/Mars", sign:"Cancer 14°", desc:"The Dog Star — brightest star in the sky. Wealth, fame, discovery of hidden things, the blazing light that reveals. Associated with Egyptian Isis and Osiris.",magic:"Fame, discovery, wealth through brilliance, loyalty and protection.",warning:"Excess brings downfall. The fire of Sirius can consume as well as illuminate."},
-  {name:"Canopus",   lon:96.4, col:"#C0E8FF",mag:-0.72,nature:"Saturn",       sign:"Cancer 14°", desc:"The Helmsman of the Argo. Navigation through the deep waters, occult knowledge, long journeys. One of the most southerly visible stars.",magic:"Occult navigation, long-distance journeys, secret knowledge.",warning:"Saturnine in nature — requires patience and acceptance of limitation."},
-  {name:"Vega",      lon:285.2,col:"#D0D0FF",mag:0.03, nature:"Venus/Mercury",sign:"Capricorn 15°",desc:"The Lyre of Orpheus. Music, enchantment through beauty, charismatic attraction, the power of art to move stone.",magic:"Musical magic, enchantment, artistic charisma, Venusian glamour.",warning:"Danger of wasted beauty through self-indulgence."},
-  {name:"Pollux",    lon:123.3,col:"#FFD0A0",mag:1.14, nature:"Mars",         sign:"Cancer 23°", desc:"The Immortal Twin. Competitive excellence, honors in physical contest and debate, the strength that comes from brotherly bond.",magic:"Athletic victory, sibling magic, competitive excellence.",warning:"The martial twin — all workings have a combative edge."},
-  {name:"Procyon",   lon:115.8,col:"#FFE0B0",mag:0.38, nature:"Mercury/Mars", sign:"Cancer 25°", desc:"Before the Dog. Swift success, quick fortune, sudden favorable change. Associated with precipitation of events and rapid manifestation.",magic:"Swift action, rapid manifestation, accelerating outcomes.",warning:"Sudden elevation often followed by equally sudden reversal."},
-  {name:"Fomalhaut", lon:333.9,col:"#C0C8FF",mag:1.16, nature:"Venus/Mercury",sign:"Pisces 3°",  desc:"The Lonely One — Royal Star of the South. Idealism, mystical vision, dreams made real. The star of the artist and the visionary.",magic:"Mystical vision, artistic inspiration, spiritual idealism.",warning:"Neptunian in quality — the vision can become an obsession or a delusion."},
-  {name:"Deneb Algedi",lon:303.7,col:"#A0B8C0",mag:2.85,nature:"Saturn/Jupiter",sign:"Aquarius 23°",desc:"Tail of the Goat. Law, justice, hidden authority. Protection through disciplined application of rules. Favors lawyers, judges, and those who work within systems.",magic:"Legal protection, working within established systems, hidden authority.",warning:"Saturn/Jupiter blend — requires both discipline and faith."},
-  {name:"Capella",   lon:81.7, col:"#FFE0A0",mag:0.08, nature:"Mercury/Mars", sign:"Gemini 21°", desc:"The She-Goat. Honours, wealth, curiosity, versatility. The inquisitive mind that seeks knowledge across all domains. Favors researchers and polymaths.",magic:"Intellectual breadth, research, honours through learning.",warning:"Restlessness — difficulty focusing the vast curiosity on one thing."},
-  {name:"Alcyone",   lon:60.3, col:"#C0D0FF",mag:2.87, nature:"Moon/Jupiter", sign:"Taurus 0°",  desc:"The Central Pleiad — the weeping one. Grief transmuted into vision, mourning becoming prophetic ability, the oracular gift born from loss.",magic:"Prophetic vision, working with ancestral grief, oracular work.",warning:"Associated with weeping and sorrow — accept this as the price of the gift."},
-  {name:"Scheat",    lon:349.1,col:"#A090B0",mag:2.4,  nature:"Saturn/Mercury",sign:"Pisces 29°", desc:"The Leg — end of Pegasus. Dangerous positions, imprisonment, drowning, and the extraordinary gift of seeing beyond ordinary limits.",magic:"Final works before a threshold, extreme situations requiring extreme measures.",warning:"One of the most malefic stars. Not recommended for most operations."},
-  {name:"Arcturus",  lon:203.8,col:"#FFCCA0",mag:-0.05,nature:"Jupiter/Mars", sign:"Libra 23°",  desc:"The Bear Watcher. Success through individual effort, pioneering spirit, wealth and honour through exploration and new paths.",magic:"Pioneering ventures, success through bold action, new territories.",warning:"Requires genuine courage and willingness to forge new paths."},
-  {name:"Zubenelgenubi",lon:225.0,col:"#90B090",mag:2.75,nature:"Saturn/Mars",sign:"Scorpio 15°", desc:"The Southern Scale. Associated with loss, curses, and poisonous matters — but also with the rectification of imbalance and karmic debts.",magic:"Works of justice and rectification, uncrossing, removing malefic influences.",warning:"Strongly malefic. Use only in works of genuine correction and justice."},
-  {name:"Zubeneschamali",lon:229.3,col:"#90C890",mag:2.61,nature:"Jupiter/Mercury",sign:"Scorpio 19°",desc:"The Northern Scale. The only star in the sky with a greenish tint — associated with honours, riches, and good fortune. Fortunate for all matters.",magic:"All benefic works, increase of wealth and status, honours.",warning:"One of the more fortunate stars. No major cautions."},
-  {name:"Vindemiatrix",lon:195.0,col:"#D0B0D0",mag:2.85,nature:"Saturn/Mercury",sign:"Libra 9°", desc:"The Grape Gatherer. Associated with widowhood, loss of a partner, grief — but also with harvesting the fruits of past work.",magic:"Completing old cycles, releasing partnerships, harvesting past efforts.",warning:"Traditionally associated with loss. Best for endings, not beginnings."},
-  {name:"Achernar",  lon:15.3, col:"#C0D8FF",mag:0.46, nature:"Jupiter",      sign:"Aries 15°",  desc:"End of the River. Extreme good fortune, particularly in religious or philosophical matters. One of the most benefic stars.",magic:"Spiritual elevation, philosophical works, extreme good fortune.",warning:"Works best for those with genuine spiritual orientation."},
+export const FIXED_STARS = [
+  {name:"Regulus",   lon:149.83,col:"#FFD080",mag:1.4, nature:"Jupiter/Mars",  sign:"Leo 29°",    desc:"Heart of the Lion. The Royal Star — bestows enormous honor, military success, and executive power. Has been called the king-maker of the zodiac.",magic:"Royal authority, public recognition, leadership, solar vitality.",warning:"Destroys those who use power for revenge. The honor must be absolute."},
+  {name:"Spica",     lon:203.84,col:"#A0D0F0",mag:0.97,nature:"Venus/Mercury", sign:"Libra 23°",  desc:"The brightest star of Virgo — extraordinary good fortune, artistic genius, scientific brilliance, sudden elevation.",magic:"Creative and artistic excellence, scientific mastery, benevolent fortune.",warning:"One of the most benefic stars in the sky. No major cautions."},
+  {name:"Aldebaran", lon:69.79, col:"#F09050",mag:0.85,nature:"Mars",          sign:"Gemini 9°",  desc:"Eye of the Bull — Royal Star of the East. Courage, military success, eloquence, tenacity. Honors those who demonstrate both intelligence and bravery.",magic:"Courage in contest, competitive victory, strength of will.",warning:"Rewards integrity. Destroys the treacherous."},
+  {name:"Antares",   lon:249.75,col:"#D04020",mag:0.96,nature:"Mars/Jupiter",  sign:"Sagittarius 9°",desc:"Heart of the Scorpion — Royal Star of the West. Extreme intensity, radical transformation, reckless courage. The most volatile of the Royal Stars.",magic:"Radical transformation, extreme courage, binding malefic forces.",warning:"The most volatile Royal Star. Absolutely unforgiving of hesitation or insincerity."},
+  {name:"Algol",     lon:56.17,col:"#8080C0",mag:2.1, nature:"Saturn/Jupiter",sign:"Taurus 26°", desc:"Head of Medusa — the Blinking Demon. The most feared fixed star in the tradition. Associated with severance, radical endings, confrontation with horror.",magic:"Binding operations, protective severing, radical endings, cursing.",warning:"Handle with the greatest care. Rewards absolute clarity of intent. Punishes the careless absolutely."},
+  {name:"Sirius",    lon:104.09,col:"#E0F0FF",mag:-1.46,nature:"Jupiter/Mars", sign:"Cancer 14°", desc:"The Dog Star — brightest star in the sky. Wealth, fame, discovery of hidden things, the blazing light that reveals. Associated with Egyptian Isis and Osiris.",magic:"Fame, discovery, wealth through brilliance, loyalty and protection.",warning:"Excess brings downfall. The fire of Sirius can consume as well as illuminate."},
+  {name:"Canopus",   lon:104.98, col:"#C0E8FF",mag:-0.72,nature:"Saturn",       sign:"Cancer 14°", desc:"The Helmsman of the Argo. Navigation through the deep waters, occult knowledge, long journeys. One of the most southerly visible stars.",magic:"Occult navigation, long-distance journeys, secret knowledge.",warning:"Saturnine in nature — requires patience and acceptance of limitation."},
+  {name:"Vega",      lon:285.3,col:"#D0D0FF",mag:0.03, nature:"Venus/Mercury",sign:"Capricorn 15°",desc:"The Lyre of Orpheus. Music, enchantment through beauty, charismatic attraction, the power of art to move stone.",magic:"Musical magic, enchantment, artistic charisma, Venusian glamour.",warning:"Danger of wasted beauty through self-indulgence."},
+  {name:"Pollux",    lon:113.22,col:"#FFD0A0",mag:1.14, nature:"Mars",         sign:"Cancer 23°", desc:"The Immortal Twin. Competitive excellence, honors in physical contest and debate, the strength that comes from brotherly bond.",magic:"Athletic victory, sibling magic, competitive excellence.",warning:"The martial twin — all workings have a combative edge."},
+  {name:"Procyon",   lon:115.79,col:"#FFE0B0",mag:0.38, nature:"Mercury/Mars", sign:"Cancer 25°", desc:"Before the Dog. Swift success, quick fortune, sudden favorable change. Associated with precipitation of events and rapid manifestation.",magic:"Swift action, rapid manifestation, accelerating outcomes.",warning:"Sudden elevation often followed by equally sudden reversal."},
+  {name:"Fomalhaut", lon:333.85,col:"#C0C8FF",mag:1.16, nature:"Venus/Mercury",sign:"Pisces 3°",  desc:"The Lonely One — Royal Star of the South. Idealism, mystical vision, dreams made real. The star of the artist and the visionary.",magic:"Mystical vision, artistic inspiration, spiritual idealism.",warning:"Neptunian in quality — the vision can become an obsession or a delusion."},
+  {name:"Deneb Algedi",lon:323.53,col:"#A0B8C0",mag:2.85,nature:"Saturn/Jupiter",sign:"Aquarius 23°",desc:"Tail of the Goat. Law, justice, hidden authority. Protection through disciplined application of rules. Favors lawyers, judges, and those who work within systems.",magic:"Legal protection, working within established systems, hidden authority.",warning:"Saturn/Jupiter blend — requires both discipline and faith."},
+  {name:"Capella",   lon:81.86, col:"#FFE0A0",mag:0.08, nature:"Mercury/Mars", sign:"Gemini 21°", desc:"The She-Goat. Honours, wealth, curiosity, versatility. The inquisitive mind that seeks knowledge across all domains. Favors researchers and polymaths.",magic:"Intellectual breadth, research, honours through learning.",warning:"Restlessness — difficulty focusing the vast curiosity on one thing."},
+  {name:"Alcyone",   lon:59.99, col:"#C0D0FF",mag:2.87, nature:"Moon/Jupiter", sign:"Taurus 29°",  desc:"The Central Pleiad — the weeping one. Grief transmuted into vision, mourning becoming prophetic ability, the oracular gift born from loss.",magic:"Prophetic vision, working with ancestral grief, oracular work.",warning:"Associated with weeping and sorrow — accept this as the price of the gift."},
+  {name:"Scheat",    lon:359.37,col:"#A090B0",mag:2.4,  nature:"Saturn/Mercury",sign:"Pisces 29°", desc:"The Leg — end of Pegasus. Dangerous positions, imprisonment, drowning, and the extraordinary gift of seeing beyond ordinary limits.",magic:"Final works before a threshold, extreme situations requiring extreme measures.",warning:"One of the most malefic stars. Not recommended for most operations."},
+  {name:"Arcturus",  lon:204.23,col:"#FFCCA0",mag:-0.05,nature:"Jupiter/Mars", sign:"Libra 24°",  desc:"The Bear Watcher. Success through individual effort, pioneering spirit, wealth and honour through exploration and new paths.",magic:"Pioneering ventures, success through bold action, new territories.",warning:"Requires genuine courage and willingness to forge new paths."},
+  {name:"Zubenelgenubi",lon:225.08,col:"#90B090",mag:2.75,nature:"Saturn/Mars",sign:"Scorpio 15°", desc:"The Southern Scale. Associated with loss, curses, and poisonous matters — but also with the rectification of imbalance and karmic debts.",magic:"Works of justice and rectification, uncrossing, removing malefic influences.",warning:"Strongly malefic. Use only in works of genuine correction and justice."},
+  {name:"Zubeneschamali",lon:229.36,col:"#90C890",mag:2.61,nature:"Jupiter/Mercury",sign:"Scorpio 19°",desc:"The Northern Scale. The only star in the sky with a greenish tint — associated with honours, riches, and good fortune. Fortunate for all matters.",magic:"All benefic works, increase of wealth and status, honours.",warning:"One of the more fortunate stars. No major cautions."},
+  {name:"Vindemiatrix",lon:189.94,col:"#D0B0D0",mag:2.85,nature:"Saturn/Mercury",sign:"Libra 9°", desc:"The Grape Gatherer. Associated with widowhood, loss of a partner, grief — but also with harvesting the fruits of past work.",magic:"Completing old cycles, releasing partnerships, harvesting past efforts.",warning:"Traditionally associated with loss. Best for endings, not beginnings."},
+  {name:"Achernar",  lon:345.3, col:"#C0D8FF",mag:0.46, nature:"Jupiter",      sign:"Pisces 15°",  desc:"End of the River. Extreme good fortune, particularly in religious or philosophical matters. One of the most benefic stars.",magic:"Spiritual elevation, philosophical works, extreme good fortune.",warning:"Works best for those with genuine spiritual orientation."},
   // Extended catalog
-  {name:"Rigel",     lon:78.5, col:"#B0D0FF",mag:0.13, nature:"Jupiter/Saturn",sign:"Gemini 18°", desc:"The left foot of Orion — the Hunter's step forward. Honour, renown, happiness, and particularly good fortune in matters of learning and mechanical skill.",magic:"Honour through skill, intellectual achievement, journeys undertaken with boldness.",warning:"The Saturnine quality asks for disciplined application; brilliance alone is insufficient."},
-  {name:"Betelgeuse",lon:88.8, col:"#FF9040",mag:0.42, nature:"Mars/Mercury", sign:"Gemini 28°", desc:"The shoulder of the Hunter — martial excellence, military honours, boldness in battle and debate. One of the most powerful stars for competitive endeavors.",magic:"Victory in open contest, martial excellence, bold action.",warning:"Mars/Mercury combined creates impulsivity — great power with poor timing brings destruction."},
-  {name:"Castor",    lon:113.0,col:"#E0F0FF",mag:1.58, nature:"Mercury",      sign:"Cancer 23°", desc:"The mortal twin of Gemini — eloquence, cleverness, dual nature, sudden fame and just as sudden reversal. The mind that sees all sides.",magic:"Communication mastery, writing, quick thought, eloquence in difficult matters.",warning:"Twin nature creates instability — the brilliance of Castor comes with its sudden dimming."},
-  {name:"Eltanin",   lon:271.4,col:"#A070C0",mag:2.24, nature:"Saturn/Mars",  sign:"Sagittarius 27°",desc:"Eye of the Dragon — the head of Draco. Deep wisdom, occult power, the dragon's knowing. Commands respect but also brings jealousy from rivals.",magic:"Occult mastery, commanding respect, protective dragon power, binding of enemies.",warning:"Heavy malefic quality — Saturn/Mars. Use with full protective measures."},
-  {name:"Hamal",     lon:37.8, col:"#F0C080",mag:2.0,  nature:"Mars/Saturn",  sign:"Taurus 7°",  desc:"The head of Aries — cruelty can be a shadow, but also the fierce protector. Violent when afflicted, powerful when channeled correctly.",magic:"Decisive action, cutting through obstacles, aggressive protection.",warning:"Mars/Saturn combination is inherently difficult — requires clear intent and ethical grounding."},
-  {name:"Menkar",    lon:53.1, col:"#A090A0",mag:2.54, nature:"Saturn",       sign:"Taurus 23°", desc:"The mouth of Cetus the Sea Monster. One of the more malefic stars — disease, scandal, dishonour, encounters with monstrous or destructive forces.",magic:"Binding monstrous or destructive forces, protective work against overwhelming enemies.",warning:"Strongly malefic. Approach only for defensive operations with full protections in place."},
-  {name:"Mirach",    lon:1.2,  col:"#E0C0E0",mag:2.07, nature:"Venus",        sign:"Aries 1°",   desc:"The girdle of Andromeda — pure Venusian beauty, friendship, love of harmony, benevolence, and artistic sensitivity.",magic:"Friendship and love spells, attracting beauty, harmony in relationships.",warning:"One of the most benefic stars for Venusian work. Avoid cold or harsh intentions."},
-  {name:"Alphecca",  lon:231.0,col:"#C0E0C0",mag:2.23, nature:"Venus/Mercury",sign:"Scorpio 11°",desc:"The Crown of the Northern Crown — honour and dignity gained through one's own merit. Artistic sensitivity combined with intellectual precision.",magic:"Merit-based honour, artistic refinement, rewards for genuine skill.",warning:"Honours fade if not sustained by continued excellence."},
-  {name:"Rasalhague",lon:261.9,col:"#90C0A0",mag:2.08, nature:"Saturn/Venus", sign:"Sagittarius 21°",desc:"Head of the Serpent Bearer. Medicine, healing, esoteric knowledge, dangerous dealings with serpentine wisdom. The healer who has faced the poison.",magic:"Healing work, medical operations, antidotes, esoteric wisdom.",warning:"Saturn tempers Venus — gains are possible but require careful, measured approach."},
-  {name:"Unukalhai", lon:220.3,col:"#906060",mag:2.65, nature:"Saturn/Mars",  sign:"Scorpio 10°",desc:"Heart of the Serpent — disease, poison, destructive forces made available to those who can command them. The venom that heals or kills.",magic:"Binding harmful forces, protective works, extreme cases of defensive magic.",warning:"One of the more malefic stars. Saturn/Mars combined is exceptionally destructive without care."},
-  {name:"Lesath",    lon:253.6,col:"#D04040",mag:2.69, nature:"Mars/Mercury", sign:"Sagittarius 23°",desc:"The sting of the Scorpion — danger, violence, toxic cleverness, the barb that strikes unexpectedly. Associated with poisons and dangerous wisdom.",magic:"Sharp and sudden action, swift binding, works against specific opponents.",warning:"Mars/Mercury is volatile and fast-moving. Works triggered here can escalate unpredictably."},
-  {name:"Sadalsuud", lon:323.9,col:"#8090C0",mag:2.91, nature:"Saturn/Mercury",sign:"Aquarius 23°",desc:"The luckiest of the lucky — Jupiter of the waters. The star of good fortune that comes through communities, organizations, and collective endeavor.",magic:"Group working, communal blessing, luck through networks and connections.",warning:"Saturn modifies Mercury here — the fortune requires organization and system, not luck alone."},
-  {name:"Deneb Adige",lon:355.1,col:"#C0D0F0",mag:1.25, nature:"Venus/Mercury",sign:"Pisces 5°", desc:"The tail of the Swan — the beauty of artistic completion, graceful endings, the swan song that transcends ordinary limits.",magic:"Artistic completion, graceful conclusions, beauty in transition and farewell.",warning:"Associated with endings — most powerful for concluding cycles, not initiating them."},
-  {name:"Markab",    lon:349.7,col:"#8080A0",mag:2.49, nature:"Saturn/Mars",  sign:"Pisces 29°", desc:"The saddle of Pegasus — honor gained and then destroyed, falls from great heights, the danger of being near success without the stability to hold it.",magic:"Works at the very end of a cycle or threshold, desperate measures before a turning point.",warning:"Strongly associated with falls from honour. Most dangerous for those in positions of power."},
-  {name:"Mirfak",    lon:41.6, col:"#F0D0A0",mag:1.79, nature:"Jupiter/Saturn",sign:"Taurus 11°",desc:"The hero Perseus — honours, boldness, the courage that comes from principle. Good for those who champion just causes and slay monstrous obstacles.",magic:"Heroic deeds, championing just causes, victory through courage and principle.",warning:"Requires genuine heroism — not bravado. Empty posturing under this star backfires."},
+  {name:"Rigel",     lon:76.83, col:"#B0D0FF",mag:0.13, nature:"Jupiter/Saturn",sign:"Gemini 16°", desc:"The left foot of Orion — the Hunter's step forward. Honour, renown, happiness, and particularly good fortune in matters of learning and mechanical skill.",magic:"Honour through skill, intellectual achievement, journeys undertaken with boldness.",warning:"The Saturnine quality asks for disciplined application; brilliance alone is insufficient."},
+  {name:"Betelgeuse",lon:88.76, col:"#FF9040",mag:0.42, nature:"Mars/Mercury", sign:"Gemini 28°", desc:"The shoulder of the Hunter — martial excellence, military honours, boldness in battle and debate. One of the most powerful stars for competitive endeavors.",magic:"Victory in open contest, martial excellence, bold action.",warning:"Mars/Mercury combined creates impulsivity — great power with poor timing brings destruction."},
+  {name:"Castor",    lon:110.24,col:"#E0F0FF",mag:1.58, nature:"Mercury",      sign:"Cancer 20°", desc:"The mortal twin of Gemini — eloquence, cleverness, dual nature, sudden fame and just as sudden reversal. The mind that sees all sides.",magic:"Communication mastery, writing, quick thought, eloquence in difficult matters.",warning:"Twin nature creates instability — the brilliance of Castor comes with its sudden dimming."},
+  {name:"Eltanin",   lon:267.94,col:"#A070C0",mag:2.24, nature:"Saturn/Mars",  sign:"Sagittarius 27°",desc:"Eye of the Dragon — the head of Draco. Deep wisdom, occult power, the dragon's knowing. Commands respect but also brings jealousy from rivals.",magic:"Occult mastery, commanding respect, protective dragon power, binding of enemies.",warning:"Heavy malefic quality — Saturn/Mars. Use with full protective measures."},
+  {name:"Hamal",     lon:37.66, col:"#F0C080",mag:2.0,  nature:"Mars/Saturn",  sign:"Taurus 7°",  desc:"The head of Aries — cruelty can be a shadow, but also the fierce protector. Violent when afflicted, powerful when channeled correctly.",magic:"Decisive action, cutting through obstacles, aggressive protection.",warning:"Mars/Saturn combination is inherently difficult — requires clear intent and ethical grounding."},
+  {name:"Menkar",    lon:45.09, col:"#A090A0",mag:2.54, nature:"Saturn",       sign:"Taurus 15°", desc:"The mouth of Cetus the Sea Monster. One of the more malefic stars — disease, scandal, dishonour, encounters with monstrous or destructive forces.",magic:"Binding monstrous or destructive forces, protective work against overwhelming enemies.",warning:"Strongly malefic. Approach only for defensive operations with full protections in place."},
+  {name:"Mirach",    lon:30.4,  col:"#E0C0E0",mag:2.07, nature:"Venus",        sign:"Taurus 0°",   desc:"The girdle of Andromeda — pure Venusian beauty, friendship, love of harmony, benevolence, and artistic sensitivity.",magic:"Friendship and love spells, attracting beauty, harmony in relationships.",warning:"One of the most benefic stars for Venusian work. Avoid cold or harsh intentions."},
+  {name:"Alphecca",  lon:222.29,col:"#C0E0C0",mag:2.23, nature:"Venus/Mercury",sign:"Scorpio 12°",desc:"The Crown of the Northern Crown — honour and dignity gained through one's own merit. Artistic sensitivity combined with intellectual precision.",magic:"Merit-based honour, artistic refinement, rewards for genuine skill.",warning:"Honours fade if not sustained by continued excellence."},
+  {name:"Rasalhague",lon:262.44,col:"#90C0A0",mag:2.08, nature:"Saturn/Venus", sign:"Sagittarius 22°",desc:"Head of the Serpent Bearer. Medicine, healing, esoteric knowledge, dangerous dealings with serpentine wisdom. The healer who has faced the poison.",magic:"Healing work, medical operations, antidotes, esoteric wisdom.",warning:"Saturn tempers Venus — gains are possible but require careful, measured approach."},
+  {name:"Unukalhai", lon:232.07,col:"#906060",mag:2.65, nature:"Saturn/Mars",  sign:"Scorpio 22°",desc:"Heart of the Serpent — disease, poison, destructive forces made available to those who can command them. The venom that heals or kills.",magic:"Binding harmful forces, protective works, extreme cases of defensive magic.",warning:"One of the more malefic stars. Saturn/Mars combined is exceptionally destructive without care."},
+  {name:"Lesath",    lon:264.0,col:"#D04040",mag:2.69, nature:"Mars/Mercury", sign:"Sagittarius 24°",desc:"The sting of the Scorpion — danger, violence, toxic cleverness, the barb that strikes unexpectedly. Associated with poisons and dangerous wisdom.",magic:"Sharp and sudden action, swift binding, works against specific opponents.",warning:"Mars/Mercury is volatile and fast-moving. Works triggered here can escalate unpredictably."},
+  {name:"Sadalsuud", lon:323.39,col:"#8090C0",mag:2.91, nature:"Saturn/Mercury",sign:"Aquarius 23°",desc:"The luckiest of the lucky — Jupiter of the waters. The star of good fortune that comes through communities, organizations, and collective endeavor.",magic:"Group working, communal blessing, luck through networks and connections.",warning:"Saturn modifies Mercury here — the fortune requires organization and system, not luck alone."},
+  {name:"Deneb Adige",lon:335.32,col:"#C0D0F0",mag:1.25, nature:"Venus/Mercury",sign:"Pisces 5°", desc:"The tail of the Swan — the beauty of artistic completion, graceful endings, the swan song that transcends ordinary limits.",magic:"Artistic completion, graceful conclusions, beauty in transition and farewell.",warning:"Associated with endings — most powerful for concluding cycles, not initiating them."},
+  {name:"Markab",    lon:353.48,col:"#8080A0",mag:2.49, nature:"Saturn/Mars",  sign:"Pisces 23°", desc:"The saddle of Pegasus — honor gained and then destroyed, falls from great heights, the danger of being near success without the stability to hold it.",magic:"Works at the very end of a cycle or threshold, desperate measures before a turning point.",warning:"Strongly associated with falls from honour. Most dangerous for those in positions of power."},
+  {name:"Mirfak",    lon:62.08, col:"#F0D0A0",mag:1.79, nature:"Jupiter/Saturn",sign:"Gemini 2°",desc:"The hero Perseus — honours, boldness, the courage that comes from principle. Good for those who champion just causes and slay monstrous obstacles.",magic:"Heroic deeds, championing just causes, victory through courage and principle.",warning:"Requires genuine heroism — not bravado. Empty posturing under this star backfires."},
+  {name:"Alkaid",    lon:176.93, col:"#B0C0D8",mag:1.86, nature:"Venus/Moon",   sign:"Virgo 26°",  desc:"Tail of the Great Bear — Benetnash, the chief of the mourners. A Behenian star of the loadstone and the north-turning chicory; protection in travel and against enchantment.",magic:"Protection against incantations, security in travel, works of just vengeance (Picatrix III.7).",warning:"The Picatrix's one fixed-star working uses this star for vengeance — handle its martial edge with justice or not at all."},
+  {name:"Algorab",   lon:193.45, col:"#8090A0",mag:2.94, nature:"Saturn/Mars",  sign:"Libra 13°",  desc:"Wing of the Crow — a Behenian star, double-edged: the raven's boldness and evil dreams, but power over spirits and protection against malice.",magic:"Driving away or gathering spirits, protection against the malice of men and winds, crow-work.",warning:"Saturn/Mars — it makes bold and choleric. The onyx and the burdock temper what the star inflames."},
 ];
+// Positions engine-derived: every lon above is the star's J2000 ecliptic
+// longitude computed from the Swiss Ephemeris catalog (sefstars), and each
+// sign label is derived from that lon — the two can no longer disagree.
+// The 15 Behenian stars carry their Agrippa/Hermes materia in data/behenian.js.
 
 // ═══════════════════════════════════════════════════════════════════════
 // FRACTAL ENGINE
@@ -910,29 +919,6 @@ function calcAllLots(asc,sLon,mLon,maLon,vLon,jLon,saLon,day){
   };
 }
 
-// ── 5f: Parans ───────────────────────────────────────────────────────
-function calcParans(jd,lat,lon){
-  try{
-    const asc=calcASC(jd,lat,lon);const mc=calcMC(jd,lon);
-    const ic=norm(mc+180),dsc=norm(asc+180);
-    const angles=[{name:"Rising",l:asc},{name:"Setting",l:dsc},{name:"Culminating",l:mc},{name:"IC",l:ic}];
-    const planets=["sun","moon","mercury","venus","mars","jupiter","saturn"];
-    const angular=[];
-    for(const p of planets){
-      const plon=planetLon(p,jd);
-      for(const ang of angles){
-        const diff=Math.abs(((plon-ang.l+180+360)%360)-180);
-        if(diff<15)angular.push({planet:p,angle:ang.name,diff:diff.toFixed(1)});
-      }
-    }
-    const parans=[];
-    for(let i=0;i<angular.length;i++)for(let j=i+1;j<angular.length;j++)
-      if(angular[i].planet!==angular[j].planet)
-        parans.push({p1:angular[i].planet,a1:angular[i].angle,p2:angular[j].planet,a2:angular[j].angle});
-    return{angular,parans};
-  }catch(e){return{angular:[],parans:[]};}
-}
-
 // ── People Library (5d Synastry) ─────────────────────────────────────
 function loadPeople(){try{const r=localStorage.getItem("astrum_people");return r?JSON.parse(r):[];}catch{return[];}}
 function savePeople(p){try{localStorage.setItem("astrum_people",JSON.stringify(p));}catch{}}
@@ -1188,6 +1174,7 @@ const TINT_PRESETS = {
 // ═══════════════════════════════════════════════════════════════════════
 const NAV_SECTIONS = [
   {id:"sky",     icon:"⊙", label:"Sky",       desc:"Live celestial state"},
+  {id:"aspects", icon:"△", label:"Aspects",    desc:"Live aspect grid & meanings"},
   {id:"decans",  icon:"✦", label:"Decans",     desc:"36 Faces of Heaven"},
   {id:"fractal", icon:"◎", label:"Fractal",    desc:"Nested time"},
   {id:"planets", icon:"♄", label:"Planets",    desc:"Seven sphere profiles"},
@@ -1242,6 +1229,11 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
     {id:"progressions",label:"Progressions",desc:"Secondary progressions for today",icon:"→",screen:"natal"},
     {id:"elect",label:"Electional Search",desc:"Find auspicious windows",icon:"◈",screen:"elect"},
     {id:"sigil",label:"New Sigil",desc:"Create a sigil in the workshop",icon:"⟁",screen:"sigils"},
+    {id:"mansion",label:"Current Lunar Mansion",desc:"The Moon's station and next entries",icon:"☾",screen:"mansions"},
+    {id:"horary",label:"Cast a Horary Question",desc:"Chart of the question with significators",icon:"?",screen:"horary"},
+    {id:"talisman",label:"New Talisman",desc:"Election → design → consecration pipeline",icon:"◈",screen:"talisman"},
+    {id:"athanor",label:"The Athanor",desc:"Alchemical operations, season, and library",icon:"🜍",screen:"athanor"},
+    {id:"review",label:"Review Outcomes",desc:"Judge castings and see practice statistics",icon:"◬",screen:"review"},
   ].filter(c=>!q||c.label.toLowerCase().includes(q)||c.desc.toLowerCase().includes(q));
   const histItems=hist.filter(h=>!q||h.label?.toLowerCase().includes(q));
 
@@ -1834,6 +1826,18 @@ function DecansScreen({eph,fractal,natalPos,mode,setMode}){
           </div>
         </div>
         <div style={{fontFamily:F,fontSize:11,color:"#9A8060",fontStyle:"italic",marginTop:10,lineHeight:1.8}}>{d.magic}</div>
+        {/* The verified face images — Picatrix II.11 & Agrippa II.37 */}
+        {DECAN_IMAGES[sel]&&(
+          <div style={{marginTop:10,padding:"10px 12px",borderRadius:10,background:"rgba(0,0,0,0.3)",border:`1px solid ${col}20`}}>
+            <div style={{fontFamily:F,fontSize:8,color:`${col}90`,letterSpacing:2,textTransform:"uppercase",marginBottom:5}}>The Image of the Face</div>
+            <div style={{fontFamily:F,fontSize:10.5,color:"#C4A870",fontStyle:"italic",lineHeight:1.8}}>{DECAN_IMAGES[sel].p}</div>
+            <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.35)",marginTop:3}}>— Picatrix II.11 (Latin tradition)</div>
+            <div style={{fontFamily:F,fontSize:10,color:"#9A8060",fontStyle:"italic",lineHeight:1.7,marginTop:7}}>{DECAN_IMAGES[sel].a}</div>
+            <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.35)",marginTop:3}}>— Agrippa II.37</div>
+            {DECAN_IMAGES[sel].v&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.6)",fontStyle:"italic",marginTop:5,lineHeight:1.5}}>Variant: {DECAN_IMAGES[sel].v}</div>}
+            <div style={{fontFamily:F,fontSize:9,color:`${col}90`,marginTop:6}}>{DECAN_IMAGES[sel].t}</div>
+          </div>
+        )}
         {isFractalActive&&(
           <div style={{marginTop:9,padding:"8px 10px",borderRadius:9,background:"rgba(0,0,0,0.3)",borderColor:`${col}15`,border:"1px solid"}}>
             <div style={L(`${col}50`,7)}>Active Fractal Levels</div>
@@ -1965,44 +1969,6 @@ function getStarConj(lon,jd){
 }
 function getMoonSpeed(jd){const dm=Math.abs(dailyMotion("moon",jd));return{speed:dm.toFixed(2),fast:dm>13.2,slow:dm<12,label:dm>13.2?"Fast":"Slow"};}
 
-function getCurrentMansion(mlon){
-  const MDATA=[
-    {n:1,nm:"Al-Sharatain",lon:0,ruler:"saturn",op:"Begin new works, long journeys."},
-    {n:2,nm:"Al-Butain",lon:12.9,ruler:"venus",op:"Love, hidden things, reconciliation."},
-    {n:3,nm:"Al-Thurayya",lon:25.7,ruler:"moon",op:"Love, friendship, sea travel."},
-    {n:4,nm:"Al-Dabaran",lon:38.6,ruler:"saturn",op:"Destruction, binding, protection."},
-    {n:5,nm:"Al-Haqa",lon:51.4,ruler:"mercury",op:"Eloquence, secrets, safe travel."},
-    {n:6,nm:"Al-Hana",lon:64.3,ruler:"moon",op:"Love, fertility, capture."},
-    {n:7,nm:"Al-Dhira",lon:77.1,ruler:"jupiter",op:"Gain, friendship, trade."},
-    {n:8,nm:"Al-Nathrah",lon:90.0,ruler:"saturn",op:"Victory, court, separating."},
-    {n:9,nm:"Al-Tarf",lon:102.9,ruler:"mars",op:"Destruction, hindrance, banishing."},
-    {n:10,nm:"Al-Jabha",lon:115.7,ruler:"jupiter",op:"Love, compassion, freedom."},
-    {n:11,nm:"Al-Zubra",lon:128.6,ruler:"mars",op:"Binding, captivity, war."},
-    {n:12,nm:"Al-Sarfah",lon:141.4,ruler:"sun",op:"Changing fortune, road opening."},
-    {n:13,nm:"Al-Awwa",lon:154.3,ruler:"venus",op:"Love, union, travel. Most favorable."},
-    {n:14,nm:"Al-Simak",lon:167.1,ruler:"mercury",op:"Favor, officials, with Spica: fortune."},
-    {n:15,nm:"Al-Ghafr",lon:180.0,ruler:"saturn",op:"Buried things, ancestors, treasure."},
-    {n:16,nm:"Al-Jubana",lon:192.9,ruler:"moon",op:"Destruction only."},
-    {n:17,nm:"Al-Iklil",lon:205.7,ruler:"mars",op:"Victory, honor, all good things."},
-    {n:18,nm:"Al-Qalb",lon:218.6,ruler:"sun",op:"Reconciliation, friendship."},
-    {n:19,nm:"Al-Shawla",lon:231.4,ruler:"saturn",op:"Taming, compelling obedience."},
-    {n:20,nm:"Al-Naam",lon:244.3,ruler:"jupiter",op:"Pursuit, destruction of enemies."},
-    {n:21,nm:"Al-Baldah",lon:257.1,ruler:"venus",op:"Destroying enemies, causing flight."},
-    {n:22,nm:"Saad al-Dhabih",lon:270.0,ruler:"moon",op:"Healing, escape from captivity."},
-    {n:23,nm:"Saad Bula",lon:282.9,ruler:"saturn",op:"Healing all disease, restoration."},
-    {n:24,nm:"Saad al-Suud",lon:295.7,ruler:"venus",op:"Marriage, union of lovers."},
-    {n:25,nm:"Saad al-Akhbiya",lon:308.6,ruler:"mars",op:"Loosing prisoners, messengers."},
-    {n:26,nm:"Al-Fargh al-Awwal",lon:321.4,ruler:"moon",op:"Building, foundations, childbirth."},
-    {n:27,nm:"Al-Fargh al-Thani",lon:334.3,ruler:"saturn",op:"Increasing herds, healing wounds."},
-    {n:28,nm:"Al-Batn al-Hut",lon:347.1,ruler:"mercury",op:"Acquiring wealth, completion."},
-  ];
-  const l=norm(mlon);let idx=0;
-  for(let i=MDATA.length-1;i>=0;i--){if(l>=MDATA[i].lon){idx=i;break;}}
-  const next=MDATA[(idx+1)%28];
-  const degsLeft=(next.lon>MDATA[idx].lon?next.lon:next.lon+360)-l;
-  return{mansion:MDATA[idx],idx,degsLeft,MDATA};
-}
-
 function assessElection(date,pk,natalPos){
   const jd=dateToJD(date);
   const positions={};
@@ -2101,6 +2067,18 @@ function AspectsScreen({eph}){
       {sel!==null&&asps[sel]&&<div style={{margin:"0 14px 10px",borderRadius:13,background:"rgba(8,5,22,0.8)",border:"1px solid "+asps[sel].aspect.col+"30",padding:"12px 14px"}}>
         <div style={{fontFamily:F,fontSize:15,color:asps[sel].aspect.col}}>{P[asps[sel].p1].sym} {asps[sel].aspect.n} {P[asps[sel].p2].sym}</div>
         <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.5)",marginTop:2}}>{asps[sel].orb}° orb · {asps[sel].applying?"Applying":"Separating"} · {asps[sel].aspect.nat}</div>
+        {(()=>{
+          const m=aspectMeaning(asps[sel].p1,asps[sel].p2,asps[sel].aspect.n);
+          if(!m)return null;
+          return(<>
+            <div style={{fontFamily:F,fontSize:11,color:"#C4A870",fontStyle:"italic",lineHeight:1.8,marginTop:8}}>{m.essence}</div>
+            <div style={{fontFamily:F,fontSize:10.5,color:"#9A8060",fontStyle:"italic",lineHeight:1.7,marginTop:5}}>{m.mode}</div>
+            <div style={{fontFamily:F,fontSize:9.5,color:asps[sel].applying?"#7AB07A":"rgba(200,175,100,0.45)",fontStyle:"italic",marginTop:6,lineHeight:1.6}}>
+              {asps[sel].applying?"Applying — the dialogue is building toward perfection; workings ride the wave.":"Separating — the exchange has already perfected; its matter is settled and dispersing."}
+            </div>
+            <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.3)",marginTop:5}}>Traditional significations after the classical synthesis — interpretive convention, not quotation.</div>
+          </>);
+        })()}
         <button onClick={()=>setSel(null)} style={{marginTop:8,background:"none",border:"none",color:"rgba(200,175,100,0.4)",cursor:"pointer",fontFamily:F,fontSize:9}}>CLOSE</button>
       </div>}
       <div style={{margin:"0 14px",padding:"12px 14px",borderRadius:13,background:"rgba(8,5,22,0.65)",border:"1px solid rgba(200,175,100,0.09)"}}>
@@ -2288,6 +2266,24 @@ function StarsScreen({eph,natalPos}){
           <div style={{fontFamily:F,fontSize:11,color:"#9A8060",fontStyle:"italic",lineHeight:1.8,marginBottom:8}}>{s.desc}</div>
           <div style={L("rgba(180,190,220,0.5)",7)}>Magic</div>
           <div style={{fontFamily:F,fontSize:11,color:"#C4A870",fontStyle:"italic",lineHeight:1.7,marginTop:4}}>{s.magic}</div>
+          {/* Behenian talismanic materia — Agrippa I.32/II.47, Hermes on the 15 Stars */}
+          {(()=>{
+            const b=getBehenian(s.name);
+            if(!b)return null;
+            return(
+              <div style={{marginTop:9,padding:"10px 12px",borderRadius:10,background:"rgba(200,180,255,0.05)",border:"1px solid rgba(200,180,255,0.18)"}}>
+                <div style={{fontFamily:F,fontSize:8,color:"rgba(200,180,255,0.65)",letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>✦ Behenian Star — {b.latin}</div>
+                <div style={{fontFamily:F,fontSize:10,color:"#C4A870",lineHeight:1.8}}>
+                  <span style={{color:"rgba(200,180,255,0.6)"}}>STONE</span> {b.stone} · <span style={{color:"rgba(200,180,255,0.6)"}}>HERB</span> {b.herb}
+                </div>
+                <div style={{fontFamily:F,fontSize:9.5,color:"rgba(200,175,100,0.5)",marginTop:3}}>Nature: {b.nature}{b.ptolemy?` · Ptolemy ${b.ptolemy}`:""}</div>
+                <div style={{fontFamily:F,fontSize:10.5,color:"#9A8060",fontStyle:"italic",lineHeight:1.7,marginTop:6}}>Image: {b.image}</div>
+                <div style={{fontFamily:F,fontSize:10.5,color:"#C4A870",fontStyle:"italic",lineHeight:1.7,marginTop:4}}>{b.virtue}</div>
+                {b.variant&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.6)",fontStyle:"italic",marginTop:4,lineHeight:1.5}}>{b.variant}</div>}
+                <div style={{fontFamily:F,fontSize:8.5,color:"rgba(200,175,100,0.4)",fontStyle:"italic",marginTop:6,lineHeight:1.6}}>{BEHENIAN_DOCTRINE.thebit}</div>
+              </div>
+            );
+          })()}
           {s.warning!=="One of the most benefic stars in the sky. No major cautions."&&(
             <div style={{marginTop:8,padding:"7px 9px",borderRadius:8,background:"rgba(180,80,80,0.1)",border:"1px solid rgba(180,80,80,0.25)"}}>
               <div style={{fontFamily:F,fontSize:9,color:"rgba(220,140,140,0.8)",fontStyle:"italic"}}>⚠ {s.warning}</div>
@@ -2313,12 +2309,6 @@ function StarsScreen({eph,natalPos}){
           })()}
         </div>
       )}
-      {/* Parans section — requires location */}
-      {(()=>{
-        const loc=eph?.pos&&eph?.jd?{jd:eph.jd}:null;
-        // Extract lat/lon from useEphemeris if available (we don't have it here, skip if not)
-        return null; // parans displayed via NatalScreen
-      })()}
       <div className="card" style={{margin:"0 14px"}}>
         <div style={L()}>The {FIXED_STARS.length} Stars</div>
         <div style={{marginTop:8}}>
@@ -3539,6 +3529,7 @@ function FractalScreen({fractal,natalPos,mode,setMode,now}){
         <div style={L()}>Fractal Timing</div>
         <div style={T(20)}>Nested Decan Windows</div>
         <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",fontStyle:"italic",marginTop:3,letterSpacing:0.5}}>36⁴ = 1,679,616 divisions of the tropical year</div>
+        <div style={{fontFamily:F,fontSize:8,color:"rgba(160,140,220,0.45)",fontStyle:"italic",marginTop:4,lineHeight:1.5}}>A modern synthesis original to this app — decanic self-similarity crossed with the four-worlds ladder. Not a classical technique; the classical layers (decans, firdaria, profections) live on their own screens.</div>
       </div>
 
       {/* Mode Toggle */}
@@ -4207,6 +4198,45 @@ function buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile){
     case "work": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: Give a complete working recommendation for today. What planet or spirit entity should this practitioner work with? What is the specific materia required (by planetary correspondence)? What is the correct timing (hour, day, Moon condition)? What offering is appropriate? And critically: what is the narrative frame for this working — what story is the practitioner entering, and what role do they play in it? Include: the ancestor current that should be established first, the specific spirit relationship being invoked, and how the practitioner will recognize the call-and-response of a successful working.`;
     case "journal": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: The practitioner is reviewing their magical journal. What timing wisdom applies right now? What celestial and macrocycle conditions are worth recording as a snapshot for future reference? Specifically: what synchronicities should they be watching for as responses to past workings? How does the current moment fit into the larger story of their practice — what chapter are they in? What patterns in the journal would you, as an animist advisor, want to highlight?`;
     case "cycles": return `${base} ${macroCtx}\n${CYCLE_LORE.plutoCurrent}\n${CYCLE_LORE.neptuneCurrent}\n${CYCLE_LORE.uranusCurrent}\n${CYCLE_LORE.jsMutationCurrent}\n${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: Synthesize the macro-cycle picture into actionable magical guidance. We are at this specific confluence of Pluto in Aquarius, Neptune entering Aries, Uranus entering Gemini, and 5 years into the first Air Mutation since 1226 CE. What does this multi-layered configuration demand of the serious magical practitioner? Which traditions and practices are most amplified by this civilizational weather? What is "ours to do" in Gordon White's framing — what should we be building, which spirits should we be cultivating, and what are we in the putrefactory phase of completing?`;
+    case "aspects": {
+      const aspStr=(eph.aspects||[]).slice(0,6).map(a=>`${P[a.p1].name} ${a.aspect.n} ${P[a.p2].name} (orb ${a.orb}°${a.applying?", applying":""})`).join("; ")||"No close aspects";
+      return `${base} Current aspects: ${aspStr}. Antiscia contacts: ${(eph.antiscia||[]).length}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: Read the current aspect web as a live conversation among the planetary spirits. Which dialogue dominates the sky right now? Which applying aspect should the practitioner ride, and which should they let pass? Speak to how these aspects color any magical work undertaken today.`;
+    }
+    case "transits": {
+      const hits=natalPos?transitsToNatal(eph.pos,natalPos):[];
+      const hitStr=hits.length?hits.map(h=>`${P[h.transiting]?.name||h.transiting} ${h.aspect} natal ${P[h.natal]?.name||h.natal} (orb ${h.orb}°)`).join("; "):"No exact transits within orb";
+      return `${base} Exact transits to the natal chart right now: ${hitStr}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: These transits are the sky's current address to this specific practitioner. What is being activated, tested, or offered? Which transit deserves a magical response — a working, an offering, a deliberate pause — and which asks only for observation?`;
+    }
+    case "ephemeris": {
+      const retro=Object.entries(eph.pos).filter(([,p])=>p.isRetro).map(([pk])=>P[pk].name).join(", ")||"none";
+      return `${base} Retrograde now: ${retro}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: The practitioner is studying the ephemeris — the raw calendar of the sky. What upcoming celestial mechanics (ingresses, stations, lunations, eclipses) most deserve preparation? What should be scheduled toward, and what should be scheduled around?`;
+    }
+    case "calendar": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: The practitioner is planning their month of workings. Read the quality of the coming weeks: where do the good windows cluster, what does the Moon's rhythm suggest for pacing, and how would you sequence a month of practice — elections, maintenance, rest — like a liturgical calendar?`;
+    case "mansions": {
+      const m=getMansion(eph.pos.moon.lon);
+      return `${base} The Moon stands in mansion ${m.index} — ${m.arabic} (${m.latin}, "${m.translation}"), ${Math.round(m.progress*100)}% through. Its nature is ${m.nature}. Elect under it: ${m.elect} Avoid: ${m.avoid} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition and a reader of the Picatrix: Speak to this mansion as a station of the Moon's journey — the oldest electional framework in the tradition. What does ${m.arabic} favor in the coming hours? How does it combine with the Moon's phase and aspects right now? What working, if any, should be timed before the next mansion begins?`;
+    }
+    case "horary": return `${base} Moon: ${eph.moonPhase}${eph.voc?.isVoC?" — VOID OF COURSE (judgment unreliable)":""}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the tradition of Lilly's Christian Astrology: The practitioner is considering a horary question. Counsel them on the asking itself — is this moment radical enough to bear judgment (consider the void Moon above)? How should the question be framed so the chart can answer it? What makes a question sincere enough for horary?`;
+    case "talisman": {
+      const strong=Object.entries(eph.pos).filter(([,p])=>(p.dignity==="domicile"||p.dignity==="exaltation")&&!p.isRetro&&!p.combust).map(([pk])=>P[pk].name).join(", ")||"none at full strength";
+      return `${base} Planets currently dignified, direct, and clear of the beams: ${strong}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition, versed in Picatrix and Agrippa: The practitioner is at the talisman workshop. Which sphere is most ready to be fixed into matter right now, and for what intent? What materia and consecration would you counsel? If nothing is ready, say so plainly — a talisman made under a weak sky is a weak talisman.`;
+    }
+    case "sigils": {
+      let sigStr="";
+      try{const sigs=loadJSON("astrum_sigils",[]);const open=sigs.filter(s=>["created","charged","deployed"].includes(s.status));sigStr=`${sigs.length} sigils in the workshop, ${open.length} active (${open.slice(0,3).map(s=>`"${(s.intent||s.word||"").slice(0,30)}" — ${s.status}`).join("; ")}).`;}catch(e){}
+      return `${base} ${sigStr} Moon: ${eph.moonPhase}${eph.voc?.isVoC?" — void":""}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: Read the sigil work. Is this an hour for charging (the fire), deploying (the release), or forgetting (the burial)? Which active sigils are ripe for their next stage given the Moon's condition? Speak to the chaos-magical rhythm: fire and forget, but time the firing.`;
+    }
+    case "grimoire": {
+      let gStr="";
+      try{const g=loadJSON("astrum_grimoire",[]);gStr=`The grimoire holds ${g.length} entries.`;}catch(e){}
+      return `${base} ${gStr} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: The practitioner is in their book of shadows. What patterns in a personal grimoire deserve periodic re-reading? What should be re-attempted, what retired, what consecrated as core practice? Counsel them on curating the record of their own tradition.`;
+    }
+    case "review": {
+      let rStr="";
+      try{const stats=computeStats(loadCastings());rStr=`${stats.total} castings recorded, ${stats.judged} judged, overall hit-rate ${stats.overall.pct!=null?stats.overall.pct+"%":"—"}. Strongest planets by record: ${stats.byPlanet.slice(0,3).map(r=>`${P[r.key]?.name||r.key} ${r.pct}% (n=${r.n})`).join(", ")||"insufficient data"}.`;}catch(e){}
+      return `${base} ${rStr} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition, and as an honest analyst: The practitioner is reviewing their results. What do these numbers actually support believing? Where might the record be fooling them (small samples, selection effects, unjudged castings)? And what is the single most informative experiment they could run next to sharpen their practice?`;
+    }
+    case "learn": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: The practitioner is studying. Given the current sky and their tradition, what subject does this moment itself teach best? Point them to what the heavens are currently demonstrating — a dignity, an aspect, a mansion, a season of the Work — and frame one lesson from it.`;
     case "athanor": {
       const season=alchemicalSeason(eph.pos.sun.lon);
       const moonOp=moonSignOperation(eph.pos.moon.lon);
@@ -6057,7 +6087,7 @@ export default function App(){
           {tab==="ephemeris"&&<EphemerisScreen now={now}/>}
           {tab==="cycles"  &&<CyclesScreen  now={now} profile={profile} eph={eph}/>}
           {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph} profile={profile}/>}
-          {tab==="mansions"&&<MansionsScreen eph={eph} now={now}/>}
+          {tab==="mansions"&&<MansionsScreen eph={eph} now={now} profile={profile} natalPos={natalPos}/>}
           {tab==="horary"  &&<HoraryScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
           {tab==="athanor" &&<AthanorScreen  profile={profile} natalPos={natalPos} eph={eph} now={now}/>}

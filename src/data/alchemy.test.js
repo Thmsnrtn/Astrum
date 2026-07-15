@@ -77,6 +77,20 @@ describe("operation templates", () => {
   }, 120000);
 });
 
+describe("decan images (Picatrix II.11 / Agrippa II.37)", () => {
+  it("36 images, each aligned with the DECANS table's tarot card and carrying both traditions", async () => {
+    const { DECAN_IMAGES } = await import("./decanImages.js");
+    const { DECANS } = await import("../App.jsx");
+    expect(DECAN_IMAGES).toHaveLength(36);
+    DECAN_IMAGES.forEach((d, i) => {
+      const card = DECANS[i].tarot.replace("Pents", "Pentacles");
+      expect(d.t.startsWith(card), `decan ${i + 1}: "${d.t}" vs "${card}"`).toBe(true);
+      expect(d.p.length).toBeGreaterThan(40);
+      expect(d.a.length).toBeGreaterThan(40);
+    });
+  });
+});
+
 describe("extended dueRules", () => {
   it("sunSigns fast-forwards to the season (dew under Aries from July)", () => {
     const d = resolveDueRule({ sunSigns: [0, 1], preDawn: true }, NOW, LONDON, "sun");

@@ -6,8 +6,9 @@
 // real lunar longitude, so times are engine-accurate).
 
 import { useState, useMemo } from "react";
-import { F, L, T, dateToJD, planetLon } from "../App.jsx";
+import { F, L, T, dateToJD, planetLon, conditionsFromProfile } from "../App.jsx";
 import { MANSIONS, MANSION_WIDTH, getMansion } from "../data/mansions.js";
+import { createCasting } from "../lib/castings.js";
 
 const GOLD = "#D4AF6A";
 const NATURE_COL = { favorable: "#5CA85C", unfavorable: "#B05050", mixed: "#D4AF6A" };
@@ -28,11 +29,26 @@ function nextMoonCrossing(target, jd) {
 
 function jdToDate(jd) { return new Date((jd - 2440587.5) * 86400000); }
 
-export default function MansionsScreen({ eph, now }) {
+export default function MansionsScreen({ eph, now, profile, natalPos }) {
   const [sel, setSel] = useState(null);
+  const [committed, setCommitted] = useState(false);
   const moonLonNow = eph?.pos?.moon?.lon ?? 0;
   const current = getMansion(moonLonNow);
   const shown = sel != null ? { ...MANSIONS[sel], index: sel + 1 } : current;
+
+  // Operator's Loop: a working timed to the mansion is a casting like any other
+  const recordUnderMansion = () => {
+    try {
+      createCasting({
+        kind: "working",
+        title: `Working under ${current.arabic} (mansion ${current.index})`,
+        intent: current.elect,
+        conditions: conditionsFromProfile(new Date(now), profile, natalPos),
+        links: {},
+      });
+      setCommitted(true); setTimeout(() => setCommitted(false), 3000);
+    } catch {}
+  };
 
   // Next 5 mansion entries
   const upcoming = useMemo(() => {
@@ -107,6 +123,11 @@ export default function MansionsScreen({ eph, now }) {
             <span style={{ fontFamily: F, fontSize: 8, color: "#B05050", letterSpacing: 2 }}>AVOID: </span>
             <span style={{ fontFamily: F, fontSize: 10, color: "#C4A870", fontStyle: "italic" }}>{shown.avoid}</span>
           </div>
+          {(shown.index ?? shown.n) === current.index && (
+            <button onClick={recordUnderMansion} style={{ width: "100%", marginTop: 8, padding: "10px 0", borderRadius: 10, background: committed ? "rgba(92,168,92,0.15)" : "rgba(200,221,237,0.08)", border: `1px solid ${committed ? "rgba(92,168,92,0.4)" : "rgba(200,221,237,0.25)"}`, fontFamily: F, fontSize: 9, color: committed ? "#7AB07A" : "#C8DDED", letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
+              {committed ? "✓ Recorded — judge it in Review" : "⚑ Record a Working Under This Mansion"}
+            </button>
+          )}
         </div>
 
         {/* Upcoming entries */}
