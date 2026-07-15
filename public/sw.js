@@ -1,7 +1,10 @@
-const CACHE = 'astrum-v1';
+const CACHE = 'astrum-v2';
 const ASSETS = [
   '/Astrum/',
   '/Astrum/index.html',
+  // Swiss Ephemeris engine — cached up front so precision survives offline
+  '/Astrum/wasm/swisseph.wasm',
+  '/Astrum/wasm/swisseph.data',
 ];
 
 self.addEventListener('install', e => {

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { fileURLToPath } from 'url'
 
 // Tauri expects a fixed port in dev mode and correct build output
 const TAURI = process.env.TAURI_ENV_PLATFORM !== undefined
@@ -9,6 +10,15 @@ const GH_PAGES = process.env.GITHUB_PAGES === 'true'
 export default defineConfig({
   plugins: [react()],
   base: GH_PAGES ? '/Astrum/' : (TAURI ? '/' : '/'),
+  resolve: {
+    alias: {
+      // The Emscripten glue isn't in swisseph-wasm's exports map; we need it
+      // directly so src/engine/sweph.js can supply its own locateFile (the
+      // package's default resolves against location.href, which breaks under
+      // a base path like /Astrum/).
+      'swisseph-wasm-glue': fileURLToPath(new URL('./node_modules/swisseph-wasm/wasm/swisseph.js', import.meta.url)),
+    },
+  },
   // Prevent vite from obscuring Rust errors
   clearScreen: false,
   server: {

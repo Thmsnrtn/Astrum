@@ -6,6 +6,7 @@ import { captureConditions } from "./engine/snapshot.js";
 import { createCasting, loadCastings, addOutcome, closeCasting, migrateToCastings } from "./lib/castings.js";
 import { getMansion } from "./data/mansions.js";
 import ReviewScreen from "./screens/ReviewScreen.jsx";
+import { swPlanetLon, swDailyMotion, swTrueNode, swChiron, swLilith, swHouses, swFixstar, onSwephReady, engineInfo } from "./engine/sweph.js";
 
 // ═══════════════════════════════════════════════════════════════════════
 // PLATFORM DETECTION
@@ -40,12 +41,14 @@ function dateToJD(d) {
   return Math.floor(365.25*(Y+4716))+Math.floor(30.6001*(M+1))+D+B-1524.5;
 }
 function sunLon(jd){
+  const sw=swPlanetLon("sun",jd);if(sw!=null)return sw;
   const T=(jd-2451545)/36525,L0=norm(280.46646+36000.76983*T);
   const M=norm(357.52911+35999.05029*T),Mr=M*D2R;
   const C=(1.914602-0.004817*T)*Math.sin(Mr)+(0.019993-0.000101*T)*Math.sin(2*Mr)+0.000289*Math.sin(3*Mr);
   return norm(L0+C-0.00569-0.00478*Math.sin(norm(125.04-1934.136*T)*D2R));
 }
 function moonLon(jd){
+  const sw=swPlanetLon("moon",jd);if(sw!=null)return sw;
   // Meeus "Astronomical Algorithms" Ch 47 — 30-term truncation (accuracy ±0.04°)
   const T=(jd-2451545)/36525;
   const Lp=norm(218.3164477+481267.88123421*T-0.0015786*T*T+T*T*T/538841-T*T*T*T/65194000);
@@ -88,6 +91,7 @@ function equationOfCenter(e,M){
   return R2D*((2*e-e3/4+5*e5/96)*Math.sin(Mr)+(5*e2/4-11*e4/24)*Math.sin(2*Mr)+(13*e3/12-43*e5/64)*Math.sin(3*Mr)+(103*e4/96)*Math.sin(4*Mr)+(1097*e5/960)*Math.sin(5*Mr));
 }
 function planetLon(name,jd){
+  const sw=swPlanetLon(name,jd);if(sw!=null)return sw;
   if(name==="sun")return sunLon(jd);if(name==="moon")return moonLon(jd);
   const T=(jd-2451545)/36525,el=EL[name];if(!el)return 0;
   const e=el.e0+el.de*T;
@@ -103,7 +107,7 @@ function planetLon(name,jd){
   const eR=1.000001018*(1-ee*ee)/(1+ee*Math.cos(eM));
   return norm(R2D*Math.atan2(r*Math.sin(hL*D2R)-eR*Math.sin(eL*D2R),r*Math.cos(hL*D2R)-eR*Math.cos(eL*D2R)));
 }
-function dailyMotion(name,jd){let d=planetLon(name,jd+0.5)-planetLon(name,jd-0.5);if(d>180)d-=360;if(d<-180)d+=360;return d;}
+function dailyMotion(name,jd){const sw=swDailyMotion(name,jd);if(sw!=null)return sw;let d=planetLon(name,jd+0.5)-planetLon(name,jd-0.5);if(d>180)d-=360;if(d<-180)d+=360;return d;}
 const SIGNS=[{name:"Aries",sym:"♈",el:"fire",mod:"cardinal"},{name:"Taurus",sym:"♉",el:"earth",mod:"fixed"},{name:"Gemini",sym:"♊",el:"air",mod:"mutable"},{name:"Cancer",sym:"♋",el:"water",mod:"cardinal"},{name:"Leo",sym:"♌",el:"fire",mod:"fixed"},{name:"Virgo",sym:"♍",el:"earth",mod:"mutable"},{name:"Libra",sym:"♎",el:"air",mod:"cardinal"},{name:"Scorpio",sym:"♏",el:"water",mod:"fixed"},{name:"Sagittarius",sym:"♐",el:"fire",mod:"mutable"},{name:"Capricorn",sym:"♑",el:"earth",mod:"cardinal"},{name:"Aquarius",sym:"♒",el:"air",mod:"fixed"},{name:"Pisces",sym:"♓",el:"water",mod:"mutable"}];
 function lonToZodiac(lon){const l=norm(lon),si=Math.floor(l/30),deg=l%30;return{...SIGNS[si],signIndex:si,degree:Math.floor(deg),minutes:Math.floor((deg%1)*60)};}
 
@@ -234,6 +238,8 @@ function getPlanetaryHour(date){
 }
 // Precess a J2000.0 star longitude to current epoch (~50.29"/year = 1.3969°/century)
 function precessStar(lon0,jd){return norm(lon0+1.396971*(jd-2451545)/36525);}
+// True star position: Swiss Ephemeris catalog lookup when loaded, linear precession otherwise
+function starLonAt(star,jd){const sw=star?.name?swFixstar(star.name,jd):null;return sw?sw.lon:precessStar(star.lon,jd);}
 // Mean lunar node (True Node uses additional ~±1.5° perturbation; mean is sufficient for electional)
 function meanNode(jd){const T=(jd-2451545)/36525;return norm(125.04452-1934.136261*T+0.0020708*T*T+T*T*T/450000);}
 
@@ -475,6 +481,7 @@ const OUTER_EPOCHS={
 };
 const J2000_MS=946728000000;
 function outerPlanetLon(planet,date){
+  const sw=swPlanetLon(planet,dateToJD(date));if(sw!=null)return sw;
   const days=(date.getTime()-J2000_MS)/86400000;
   const ep=OUTER_EPOCHS[planet];
   return norm(ep.lon0+ep.rate*days);
@@ -540,7 +547,7 @@ function useEphemeris(date,location){
   const decanIdx=Math.min(35,Math.floor(pos.sun.lon/10));
   const northNode=meanNode(jd),southNode=norm(northNode+180);
   const nearStars=FIXED_STARS.filter(s=>{
-    const sLon=precessStar(s.lon,jd);
+    const sLon=starLonAt(s,jd);
     const tp=Object.values(pos);
     return tp.some(p=>{let d=Math.abs(norm(sLon-p.lon));if(d>180)d=360-d;return d<3;});
   });
@@ -607,8 +614,9 @@ function conditionsFromProfile(date,profile,natalPos,election=null,approximate=f
 // ═══════════════════════════════════════════════════════════════════════
 
 // ── 5c: Additional Bodies ─────────────────────────────────────────────
-function meanLilith(jd){return norm(83.353+40.6726*(jd-2451545)/36525*365.25);}
+function meanLilith(jd){const sw=swLilith(jd);if(sw!=null)return sw;return norm(83.353+40.6726*(jd-2451545)/36525*365.25);}
 function chironLon(jd){
+  const sw=swChiron(jd);if(sw!=null)return sw;
   const T=(jd-2451545)/36525;
   const n=360/50.7;
   const M=norm(76.5+n*T*100);
@@ -618,6 +626,7 @@ function chironLon(jd){
   return norm(v+339.0+209.7);
 }
 function trueNode(jd){
+  const sw=swTrueNode(jd);if(sw!=null)return sw;
   const Mprime=norm(134.96298+477198.867398*(jd-2451545)/36525);
   const F=norm(93.27191+483202.017538*(jd-2451545)/36525);
   const mn=meanNode(jd);
@@ -1904,7 +1913,7 @@ function checkProhibition(jd,targetPk){
   return prohibitor;
 }
 function getStarConj(lon,jd){
-  return FIXED_STARS.filter(s=>{const sLon=jd?precessStar(s.lon,jd):s.lon;let d=Math.abs(norm(sLon-lon));if(d>180)d=360-d;return d<2.5;});
+  return FIXED_STARS.filter(s=>{const sLon=jd?starLonAt(s,jd):s.lon;let d=Math.abs(norm(sLon-lon));if(d>180)d=360-d;return d<2.5;});
 }
 function getMoonSpeed(jd){const dm=Math.abs(dailyMotion("moon",jd));return{speed:dm.toFixed(2),fast:dm>13.2,slow:dm<12,label:dm>13.2?"Fast":"Slow"};}
 
@@ -2178,7 +2187,7 @@ function StarsScreen({eph,natalPos}){
   const [sel,setSel]=useState(null);
   const s=sel!==null?FIXED_STARS[sel]:null;
   const starActivity = FIXED_STARS.map((star,i)=>{
-    const sLon=precessStar(star.lon,eph.jd);
+    const sLon=starLonAt(star,eph.jd);
     const nearTransit=Object.entries(eph.pos).filter(([pk,p])=>{let d=Math.abs(norm(sLon-p.lon));if(d>180)d=360-d;return d<3;}).map(([pk])=>pk);
     const nearNatal=natalPos?Object.entries(natalPos).filter(([pk,np])=>P[pk]&&np?.lon!=null&&(()=>{let d=Math.abs(norm(sLon-np.lon));if(d>180)d=360-d;return d<3;})()).map(([pk])=>pk):[];
     return{...star,sLon,idx:i,nearTransit,nearNatal,isActive:nearTransit.length>0||nearNatal.length>0};
@@ -2199,7 +2208,7 @@ function StarsScreen({eph,natalPos}){
           ))}
           {FIXED_STARS.map((star,i)=>{
             const act=starActivity.find(s2=>s2.name===star.name);
-            const x=10+((act?.sLon??precessStar(star.lon,eph.jd))/360)*260, y=80;
+            const x=10+((act?.sLon??starLonAt(star,eph.jd))/360)*260, y=80;
             const size=Math.max(2.5,4.5-star.mag*0.5);
             const isActive=act?.isActive;
             return (
@@ -5524,6 +5533,13 @@ function ProfileScreen({profile,setProfile}){
           <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)",marginTop:5}}>Obtain at console.anthropic.com — you pay only for what you use.</div>
         </div>
       </div>
+      <div className="card" style={{margin:"0 14px 10px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div>
+          <div style={L()}>Ephemeris Engine</div>
+          <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Swiss Ephemeris (WASM) gives arc-second positions and true fixed-star places; Meeus is the built-in fallback.</div>
+        </div>
+        <div style={{fontFamily:F,fontSize:10,color:engineInfo()==="swiss"?"#7AB07A":"#C08050",letterSpacing:1,whiteSpace:"nowrap",marginLeft:10,textTransform:"uppercase"}}>{engineInfo()==="swiss"?"✓ Swiss":engineInfo()}</div>
+      </div>
       <BackupCard/>
       <KnowledgeBase/>
       {/* Planetary Tint — Batch 3 */}
@@ -5583,6 +5599,10 @@ export default function App(){
     try{const r=await window.storage.get("astrum_natal");if(r?.value){const d=JSON.parse(r.value);setNatalData(d);}}catch(e){}
     setProfile({name:"",natal:{date:"",time:"",city:"",lat:null,lon:null},traditions:["western-ceremonial"],level:"intermediate",apiKey:"",tint:"solar",theme:"dark"});
   })();},[]);
+  // Recompute positions once the Swiss Ephemeris WASM finishes loading
+  const [engine,setEngine]=useState(engineInfo());
+  useEffect(()=>{onSwephReady(()=>setEngine(engineInfo()));},[]);
+
   // Compute natal positions from profile (or legacy natal data)
   useEffect(()=>{
     const nd=profile?.natal?.date?profile.natal:natalData;
@@ -5591,7 +5611,7 @@ export default function App(){
       const loc=nd.lat&&nd.lon?{lat:nd.lat,lon:nd.lon}:null;
       if(!isNaN(bd.getTime()))setNatalPos(calcNatal(bd,loc));else setNatalPos(null);
     }else setNatalPos(null);
-  },[natalData,profile]);
+  },[natalData,profile,engine]);
 
   // ── Operator's Loop migration: build castings from legacy journal/sigils
   useEffect(()=>{

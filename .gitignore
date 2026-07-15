@@ -10,3 +10,4 @@ ios/
 android/
 # macOS
 .DS_Store
+public/wasm/

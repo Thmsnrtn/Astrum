@@ -1,6 +1,12 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
+import { initSweph } from './engine/sweph.js'
+
+// Swiss Ephemeris loads in the background (~13 MB WASM+data, SW-cached after
+// first visit). Render is never blocked: the app boots on the Meeus engine
+// and upgrades to arc-second precision the moment the module is ready.
+initSweph()
 
 // Polyfill window.storage for environments that don't provide it
 if (!window.storage) {
