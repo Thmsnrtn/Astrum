@@ -11,6 +11,7 @@ import { DECAN_IMAGES, DECAN_DOCTRINE } from "./data/decanImages.js";
 import { getBehenian, BEHENIAN_DOCTRINE } from "./data/behenian.js";
 import { aspectMeaning } from "./data/aspectMeanings.js";
 import { FOUNDATION_PRIMERS, TOPIC_PRIMERS } from "./data/primers.js";
+import { parseFeed, addFeedEvents, loadFeed, deleteFeedSource, feedInRange, feedForDate, FEED_KIND_META } from "./lib/intake.js";
 import { loadAthanor } from "./lib/athanor.js";
 import { OPERATION_TEMPLATES as ATHANOR_TEMPLATES } from "./data/operations.js";
 import MansionsScreen from "./screens/MansionsScreen.jsx";
@@ -4212,7 +4213,11 @@ function buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile){
       const retro=Object.entries(eph.pos).filter(([,p])=>p.isRetro).map(([pk])=>P[pk].name).join(", ")||"none";
       return `${base} Retrograde now: ${retro}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: The practitioner is studying the ephemeris — the raw calendar of the sky. What upcoming celestial mechanics (ingresses, stations, lunations, eclipses) most deserve preparation? What should be scheduled toward, and what should be scheduled around?`;
     }
-    case "calendar": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: The practitioner is planning their month of workings. Read the quality of the coming weeks: where do the good windows cluster, what does the Moon's rhythm suggest for pacing, and how would you sequence a month of practice — elections, maintenance, rest — like a liturgical calendar?`;
+    case "calendar": case "almanac": {
+      let feedStr="";
+      try{const today=now.toISOString().split("T")[0];const soon=new Date(now.getTime()+21*86400000).toISOString().split("T")[0];const f=feedInRange(today,soon);if(f.length)feedStr=` Timing letters flag: ${f.slice(0,6).map(e=>`${e.source} (${e.date}): ${e.title.slice(0,60)}`).join("; ")}.`;}catch(e){}
+      return `${base}${feedStr} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition: The practitioner is planning their month of workings. Read the quality of the coming weeks: where do the good windows cluster, what does the Moon's rhythm suggest for pacing, and how would you sequence a month of practice — elections, maintenance, rest — like a liturgical calendar? Where your own reading of the sky agrees with the timing letters above, say so; where it differs, say that too — the practitioner keeps the letters as one voice among several, their own record being another.`;
+    }
     case "mansions": {
       const m=getMansion(eph.pos.moon.lon);
       return `${base} The Moon stands in mansion ${m.index} — ${m.arabic} (${m.latin}, "${m.translation}"), ${Math.round(m.progress*100)}% through. Its nature is ${m.nature}. Elect under it: ${m.elect} Avoid: ${m.avoid} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition and a reader of the Picatrix: Speak to this mansion as a station of the Moon's journey — the oldest electional framework in the tradition. What does ${m.arabic} favor in the coming hours? How does it combine with the Moon's phase and aspects right now? What working, if any, should be timed before the next mansion begins?`;
@@ -5468,6 +5473,83 @@ function LearnScreen({profile}){
 // ═══════════════════════════════════════════════════════════════════════
 // KNOWLEDGE BASE COMPONENT (embedded in ProfileScreen)
 // ═══════════════════════════════════════════════════════════════════════
+function IntakeCard(){
+  const [text,setText]=useState("");
+  const [source,setSource]=useState("");
+  const [year,setYear]=useState(new Date().getFullYear());
+  const [parsed,setParsed]=useState(null); // candidate events, pre-save
+  const [asNode,setAsNode]=useState(true);
+  const [msg,setMsg]=useState("");
+  const [sources,setSources]=useState(()=>{const f=loadFeed();const m={};f.forEach(e=>{m[e.source]=(m[e.source]||0)+1;});return m;});
+  const refreshSources=()=>{const f=loadFeed();const m={};f.forEach(e=>{m[e.source]=(m[e.source]||0)+1;});setSources(m);};
+  const doParse=()=>{
+    if(!text.trim())return;
+    const ev=parseFeed(text,source.trim()||"Imported",year);
+    setParsed(ev);
+    setMsg(ev.length?`${ev.length} timing event${ev.length>1?"s":""} detected — review and save.`:"No dated timing found. You can still file the text as a knowledge node.");
+  };
+  const removeCandidate=(id)=>setParsed(p=>p.filter(e=>e.id!==id));
+  const save=()=>{
+    let added=0;
+    if(parsed&&parsed.length)added=addFeedEvents(parsed);
+    if(asNode&&text.trim()){
+      const node={id:Date.now(),title:`${source.trim()||"Import"} — ${new Date().toLocaleDateString()}`,content:text.trim(),source:source.trim(),always:false,dateAdded:new Date().toISOString()};
+      saveKnowledge([...loadKnowledge(),node]);
+    }
+    setMsg(`✓ Saved${added?` ${added} events to the calendar feed`:""}${asNode&&text.trim()?`${added?" and":""} the text as a knowledge node`:""}.`);
+    setText("");setParsed(null);refreshSources();
+  };
+  const clearSource=(s)=>{deleteFeedSource(s);refreshSources();setMsg(`Removed all "${s}" events from the feed.`);};
+  const IS={width:"100%",padding:"7px 10px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:6,color:GOLD,fontFamily:F,fontSize:11,boxSizing:"border-box"};
+  return(
+    <div className="card" style={{margin:"0 14px 10px"}}>
+      <div style={L()}>Intake — Timing Letters & Material</div>
+      <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.35)",marginTop:4,lineHeight:1.6}}>
+        Paste a timing letter or a post you subscribe to. Dated lines become source-tagged events on your Almanac; the full text can be filed as an attributed knowledge node the Oracle can draw on. Runs entirely on-device.
+      </div>
+      <div style={{display:"flex",gap:6,marginTop:10}}>
+        <input value={source} onChange={e=>setSource(e.target.value)} placeholder="Source (e.g. Circle Thrice, Rune Soup)" style={{...IS,flex:2}}/>
+        <input type="number" value={year} onChange={e=>setYear(+e.target.value)} title="Year for undated lines" style={{...IS,flex:1,minWidth:0}}/>
+      </div>
+      <textarea value={text} onChange={e=>setText(e.target.value)} rows={6} placeholder="Paste the newsletter or post text here…" style={{...IS,marginTop:6,resize:"vertical"}}/>
+      <div style={{display:"flex",gap:6,marginTop:6}}>
+        <button onClick={doParse} disabled={!text.trim()} style={{flex:1,padding:"8px 0",borderRadius:8,background:text.trim()?"rgba(200,175,100,0.1)":"rgba(0,0,0,0.3)",border:`1px solid ${text.trim()?"rgba(200,175,100,0.28)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:9,color:text.trim()?GOLD:"#5A4020",letterSpacing:1.5,cursor:"pointer"}}>DETECT TIMING</button>
+        {(parsed!==null)&&<button onClick={save} style={{flex:1,padding:"8px 0",borderRadius:8,background:"rgba(92,168,92,0.12)",border:"1px solid rgba(92,168,92,0.35)",fontFamily:F,fontSize:9,color:"#7AB07A",letterSpacing:1.5,cursor:"pointer"}}>SAVE</button>}
+      </div>
+      <button onClick={()=>setAsNode(a=>!a)} style={{marginTop:7,display:"flex",alignItems:"center",gap:7,background:"none",border:"none",cursor:"pointer",padding:0}}>
+        <span style={{width:16,height:16,borderRadius:4,border:`1px solid ${asNode?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.2)"}`,background:asNode?"rgba(200,175,100,0.15)":"transparent",color:GOLD,fontSize:9,lineHeight:"16px",textAlign:"center",flexShrink:0}}>{asNode?"✓":""}</span>
+        <span style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)"}}>Also file the full text as a knowledge node</span>
+      </button>
+      {parsed!==null&&parsed.length>0&&(
+        <div style={{marginTop:9,borderTop:"1px solid rgba(200,175,100,0.08)",paddingTop:8}}>
+          {parsed.map(e=>{const k=FEED_KIND_META[e.kind];return(
+            <div key={e.id} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"4px 0"}}>
+              <span style={{color:k.col,fontSize:11,width:14,flexShrink:0}}>{k.glyph}</span>
+              <div style={{flex:1}}>
+                <div style={{fontFamily:F,fontSize:9.5,color:"#C4A870",lineHeight:1.5}}>{e.title}</div>
+                <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)"}}>{e.date}{e.time?` · ${e.time}`:""} · {k.label}</div>
+              </div>
+              <button onClick={()=>removeCandidate(e.id)} style={{background:"none",border:"none",color:"rgba(200,100,100,0.5)",cursor:"pointer",fontSize:11,flexShrink:0}}>✕</button>
+            </div>
+          );})}
+        </div>
+      )}
+      {msg&&<div style={{fontFamily:F,fontSize:9,color:msg.startsWith("✓")?"#7A9A7A":"rgba(200,175,100,0.5)",marginTop:8,lineHeight:1.5}}>{msg}</div>}
+      {Object.keys(sources).length>0&&(
+        <div style={{marginTop:9,borderTop:"1px solid rgba(200,175,100,0.08)",paddingTop:8}}>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)",letterSpacing:2,textTransform:"uppercase",marginBottom:5}}>Feed Sources</div>
+          {Object.entries(sources).map(([s,n])=>(
+            <div key={s} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"2px 0"}}>
+              <span style={{fontFamily:F,fontSize:9.5,color:"#C4A870"}}>{s} · {n} event{n>1?"s":""}</span>
+              <button onClick={()=>clearSource(s)} style={{background:"none",border:"none",color:"rgba(200,100,100,0.4)",cursor:"pointer",fontFamily:F,fontSize:8,letterSpacing:1}}>CLEAR</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function KnowledgeBase(){
   const [nodes,setNodes]=useState(()=>loadKnowledge());
   const [adding,setAdding]=useState(false);
@@ -5762,6 +5844,7 @@ function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyPrefs}){
         <div style={{fontFamily:F,fontSize:10,color:engineInfo()==="swiss"?"#7AB07A":"#C08050",letterSpacing:1,whiteSpace:"nowrap",marginLeft:10,textTransform:"uppercase"}}>{engineInfo()==="swiss"?"✓ Swiss":engineInfo()}</div>
       </div>
       <NotifyCard notifyPrefs={notifyPrefs} setNotifyPrefs={setNotifyPrefs}/>
+      <IntakeCard/>
       <BackupCard/>
       <KnowledgeBase/>
       {/* Planetary Tint — Batch 3 */}

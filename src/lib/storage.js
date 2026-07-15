@@ -18,6 +18,7 @@ export const STORAGE_KEYS = [
   "astrum_castings",    // casting records (Operator's Loop)
   "astrum_athanor",     // alchemical operations (Athanor)
   "astrum_notify_prefs",// ambient notification preferences
+  "astrum_feed",        // ingested timing events (Intake → Almanac)
   "astrum_schema",      // data schema version (gates migrations)
   "astrum_last_export", // ISO timestamp of last backup export
 ];

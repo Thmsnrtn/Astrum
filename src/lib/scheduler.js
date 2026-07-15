@@ -12,6 +12,7 @@
 import { getPlanetaryHour, getPlanetaryHourUnequal, checkVoC, dateToJD, P } from "../App.jsx";
 import { getMansion } from "../data/mansions.js";
 import { alchemicalSeason, moonSignOperation, moonWorkGuidance } from "../data/alchemy.js";
+import { feedInRange } from "./intake.js";
 import { loadJSON, saveJSON } from "./storage.js";
 
 export const DEFAULT_NOTIFY_PREFS = {
@@ -135,6 +136,13 @@ export function composeBriefing({ now, eph, hour, castings = [], athanor = [] })
   openElections.slice(0, 2).forEach(c => lines.push(`◈ Committed: ${c.title} — ${new Date(c.links.electionWindow.start).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}.`));
   const dueSteps = athanor.filter(op => op.status === "active").flatMap(op => (op.steps || []).filter(s => !s.completedAt && s.scheduledFor && new Date(s.scheduledFor).toDateString() === now.toDateString()).map(s => ({ op, s })));
   dueSteps.slice(0, 2).forEach(({ op, s }) => lines.push(`🜍 ${op.name}: ${s.title} due today.`));
+  // Ingested timing letters — anything they flag for today or the next few days
+  try {
+    const todayStr = now.toISOString().split("T")[0];
+    const soon = new Date(now.getTime() + 4 * 86400000).toISOString().split("T")[0];
+    const feed = feedInRange(todayStr, soon);
+    feed.slice(0, 3).forEach(e => lines.push(`✦ ${e.source} flags ${e.date === todayStr ? "today" : e.date}: ${e.title.slice(0, 80)}`));
+  } catch {}
   const awaiting = castings.filter(c => c.status === "open" && c.kind !== "election").length;
   if (awaiting) lines.push(`${awaiting} casting${awaiting > 1 ? "s" : ""} awaiting outcome in Review.`);
   return lines.join("\n");
