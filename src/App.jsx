@@ -20,6 +20,8 @@ import HoraryScreen from "./screens/HoraryScreen.jsx";
 import AthanorScreen from "./screens/AthanorScreen.jsx";
 import AlmanacScreen from "./screens/AlmanacScreen.jsx";
 import GeomancyScreen from "./screens/GeomancyScreen.jsx";
+import LotsScreen from "./screens/LotsScreen.jsx";
+import { computeLots } from "./engine/lots.js";
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
 import { reschedule, ensurePermission } from "./lib/notify.js";
 import { autoBackupNative } from "./lib/backup.js";
@@ -203,10 +205,10 @@ function getPlanetPhase(planet,planetLon,sunLon){
   return"morning-star"; // West of Sun: rises before Sun
 }
 
-// ── Arabic Lots (expanded) ────────────────────────────────────────────
-function calcLotEros(asc,venusL,fortuneL){return norm(asc+venusL-fortuneL);}
-function calcLotNecessity(asc,marsL,fortuneL){return norm(asc+fortuneL-marsL);}
-function calcLotCourage(asc,marsL,venusL){return norm(asc+marsL-venusL);}
+// ── Arabic Lots ───────────────────────────────────────────────────────
+// The seven Hermetic Lots are computed by the verified, sect-aware engine in
+// engine/lots.js (see computeLots). calcPOF/calcPOS below remain for the
+// natal-chart path and Fortune/Spirit callers.
 
 export function checkVoC(jd){
   const moonL=moonLon(jd);
@@ -578,19 +580,17 @@ function useEphemeris(date,location){
   const aspects=getAspectsAll(pos);
   const antiscia=getAntisciaAspects(pos);
   // Location-based additions (Phase 1c)
-  let asc=null,mc=null,pof=null,pos2=null,isDayChart=null,lotEros=null,lotNecessity=null,lotCourage=null;
+  let asc=null,mc=null,pof=null,pos2=null,isDayChart=null,lots=null,lotEros=null,lotNecessity=null,lotCourage=null;
   if(location?.lat&&location?.lon){
     asc=calcASC(jd,location.lat,location.lon);
     mc=calcMC(jd,location.lon);
     const ss=sunriseSetUTC(date,location.lat,location.lon);
     isDayChart=ss?date>=ss.rise&&date<ss.set:pos.sun.lon>=0&&pos.sun.lon<=180;
-    pof=calcPOF(asc,pos.moon.lon,pos.sun.lon,isDayChart);
-    pos2=calcPOS(asc,pos.moon.lon,pos.sun.lon,isDayChart);
-    lotEros=calcLotEros(asc,pos.venus.lon,pof);
-    lotNecessity=calcLotNecessity(asc,pos.mars.lon,pof);
-    lotCourage=calcLotCourage(asc,pos.mars.lon,pos.venus.lon);
+    // All seven Hermetic Lots from the verified sect-aware engine (Paulus).
+    lots=computeLots({asc,isDayChart,sun:pos.sun.lon,moon:pos.moon.lon,mercury:pos.mercury.lon,venus:pos.venus.lon,mars:pos.mars.lon,jupiter:pos.jupiter.lon,saturn:pos.saturn.lon});
+    pof=lots.fortune;pos2=lots.spirit;lotEros=lots.eros;lotNecessity=lots.necessity;lotCourage=lots.courage;
   }
-  return{pos,jd,moonPhase:phases[Math.floor(mpDeg/45)],moonPhaseDeg:mpDeg,voc,decanIdx,nearStars,aspects,antiscia,northNode,southNode,asc,mc,pof,pos2,isDayChart,lotEros,lotNecessity,lotCourage};
+  return{pos,jd,moonPhase:phases[Math.floor(mpDeg/45)],moonPhaseDeg:mpDeg,voc,decanIdx,nearStars,aspects,antiscia,northNode,southNode,asc,mc,pof,pos2,isDayChart,lots,lotEros,lotNecessity,lotCourage};
 }
 
 function calcNatal(bd,location){
@@ -1188,6 +1188,7 @@ const NAV_SECTIONS = [
   {id:"transits", icon:"⟳", label:"Transits",  desc:"Transit hit list"},
   {id:"ephemeris",icon:"≡", label:"Ephemeris", desc:"Ingresses, stations, eclipses"},
   {id:"mansions", icon:"☾", label:"Mansions",  desc:"28 lunar stations"},
+  {id:"lots",     icon:"⊗", label:"Lots",       desc:"The seven Hermetic Lots"},
   {id:"elect",    icon:"◈", label:"Elections",  desc:"Optimal windows"},
   {id:"calendar", icon:"◫", label:"Calendar",  desc:"Election planning grid"},
   {id:"almanac",  icon:"❋", label:"Almanac",   desc:"Liturgical month — sky, elections & timing letters"},
@@ -1237,6 +1238,7 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
     {id:"elect",label:"Electional Search",desc:"Find auspicious windows",icon:"◈",screen:"elect"},
     {id:"sigil",label:"New Sigil",desc:"Create a sigil in the workshop",icon:"⟁",screen:"sigils"},
     {id:"mansion",label:"Current Lunar Mansion",desc:"The Moon's station and next entries",icon:"☾",screen:"mansions"},
+    {id:"lots",label:"The Hermetic Lots",desc:"Fortune, Spirit, and the five sect-aware lots",icon:"⊗",screen:"lots"},
     {id:"horary",label:"Cast a Horary Question",desc:"Chart of the question with significators",icon:"?",screen:"horary"},
     {id:"geomancy",label:"Cast Geomancy",desc:"The shield of the sixteen figures",icon:"⚏",screen:"geomancy"},
     {id:"talisman",label:"New Talisman",desc:"Election → design → consecration pipeline",icon:"◈",screen:"talisman"},
@@ -4158,6 +4160,7 @@ export const LEARN_TOPICS=[
   {id:"dream-work",      label:"Dream Work",              desc:"Incubation, liminal sleep practice, and dream interpretation", traditions:["animism","hellenism","traditional-witchcraft","all"],level:"intermediate"},
   {id:"fortune-divination",label:"Fortune & Divination",  desc:"Reading patterns in time and space — geomancy, lots, omens", traditions:["all"],        level:"beginner"},
   {id:"geomancy",        label:"Geomancy",                desc:"The sixteen figures, the shield chart, and reading by the houses", traditions:["all"],level:"intermediate"},
+  {id:"hermetic-lots",   label:"The Hermetic Lots",       desc:"Fortune, Spirit, and the five sect-aware lots of Hellenistic astrology", traditions:["all"],level:"intermediate"},
   {id:"saints-holy-dead",label:"Saints & the Holy Dead",  desc:"Working with the canonized current and the beloved dead", traditions:["folk","animism"],level:"intermediate"},
   {id:"liminal-entities",label:"Liminal Entities",        desc:"Threshold beings, guardians, and hedge-crossing", traditions:["animism","traditional-witchcraft","folk"],level:"advanced"},
   {id:"blended-cycle",   label:"Blended Cycle Model",     desc:"Placing your magic in historical and generational time", traditions:["all"],        level:"intermediate"},
@@ -4232,6 +4235,7 @@ function buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile){
     }
     case "horary": return `${base} Moon: ${eph.moonPhase}${eph.voc?.isVoC?" — VOID OF COURSE (judgment unreliable)":""}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the tradition of Lilly's Christian Astrology: The practitioner is considering a horary question. Counsel them on the asking itself — is this moment radical enough to bear judgment (consider the void Moon above)? How should the question be framed so the chart can answer it? What makes a question sincere enough for horary?`;
     case "geomancy": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a master geomancer in the tradition of Agrippa and Greer: The practitioner is casting the sixteen figures. Counsel them on the asking — geomancy answers a clear, sincere, single question best. How should they frame this matter, and which house does it truly belong to? Speak briefly to the character of geomancy as an elemental oracle: the figures are built of odd and even, the whole answer folded into a single Judge — earthier and more decisive than the horary chart.`;
+    case "lots": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a Hellenistic astrologer in the tradition of Paulus Alexandrinus and Vettius Valens: The practitioner is contemplating the seven Hermetic Lots — Fortune (the body and what fortune gives), Spirit (the soul and what one does by will), and the five that swing from them: Eros, Necessity, Courage, Victory, Nemesis. Remember that the lots are sect-aware — the formulas reverse between a day and a night chart. Counsel them on how to read Fortune and Spirit together as the two hinges of the chart, and how the lesser lots and their rulers colour the life. Be precise and traditional.`;
     case "talisman": {
       const strong=Object.entries(eph.pos).filter(([,p])=>(p.dignity==="domicile"||p.dignity==="exaltation")&&!p.isRetro&&!p.combust).map(([pk])=>P[pk].name).join(", ")||"none at full strength";
       return `${base} Planets currently dignified, direct, and clear of the beams: ${strong}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition, versed in Picatrix and Agrippa: The practitioner is at the talisman workshop. Which sphere is most ready to be fixed into matter right now, and for what intent? What materia and consecration would you counsel? If nothing is ready, say so plainly — a talisman made under a weak sky is a weak talisman.`;
@@ -6314,6 +6318,7 @@ export default function App(){
           {tab==="cycles"  &&<CyclesScreen  now={now} profile={profile} eph={eph}/>}
           {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph} profile={profile}/>}
           {tab==="mansions"&&<MansionsScreen eph={eph} now={now} profile={profile} natalPos={natalPos}/>}
+          {tab==="lots"    &&<LotsScreen     eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
           {tab==="horary"  &&<HoraryScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="geomancy"&&<GeomancyScreen profile={profile} natalPos={natalPos}/>}
           {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
