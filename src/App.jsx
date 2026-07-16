@@ -22,6 +22,7 @@ import AlmanacScreen from "./screens/AlmanacScreen.jsx";
 import GeomancyScreen from "./screens/GeomancyScreen.jsx";
 import LotsScreen from "./screens/LotsScreen.jsx";
 import { computeLots } from "./engine/lots.js";
+import { electiveMemory, memoryVerdict } from "./lib/electiveMemory.js";
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
 import { reschedule, ensurePermission } from "./lib/notify.js";
 import { autoBackupNative } from "./lib/backup.js";
@@ -1980,6 +1981,24 @@ function getStarConj(lon,jd){
 }
 function getMoonSpeed(jd){const dm=Math.abs(dailyMotion("moon",jd));return{speed:dm.toFixed(2),fast:dm>13.2,slow:dm<12,label:dm>13.2?"Fast":"Slow"};}
 
+// The 8 named moon phases, matching eph.moonPhase in calcPositions and the
+// keys computeStats groups on — so electionFactors lines up with the record.
+const MOON_PHASE_NAMES=["New","Waxing Crescent","First Quarter","Waxing Gibbous","Full","Waning Gibbous","Last Quarter","Waning Crescent"];
+function electionBandKey(score){return score==null?null:score>=90?"90+ Talismanic":score>=75?"75–89 Excellent":score>=60?"60–74 Good":score>=45?"45–59 Acceptable":"< 45 Marginal";}
+// Resolve a candidate election's condition-factors into the exact key strings
+// castings.computeStats() groups on, so electiveMemory can match your history.
+function electionFactors(date,pk,score){
+  const jd=dateToJD(date);
+  const hour=getPlanetaryHour(date);
+  const ml=moonLon(jd),sl=sunLon(jd);
+  const phase=MOON_PHASE_NAMES[Math.floor(norm(ml-sl)/45)];
+  const mans=getMansion(ml);
+  return{planet:pk,hourPlanet:hour.planet,dayRuler:hour.dayRuler,moonPhase:phase,
+    mansionKey:mans?`${mans.index}. ${mans.arabic}`:null,
+    vocKey:checkVoC(jd).isVoC?"Void of Course":"Not Void",
+    bandKey:electionBandKey(score)};
+}
+
 function assessElection(date,pk,natalPos){
   const jd=dateToJD(date);
   const positions={};
@@ -2373,6 +2392,10 @@ function ElectScreen({now,natalPos,eph,profile}){
   const [committed,setCommitted]=useState(null);
   useEffect(()=>{setPlanet(meta.planet);setElections([]);setSelIdx(null);},[ik]);
   const live=assessElection(now,planet,natalPos);
+  // Elective memory: how conditions like these have fared in your own record.
+  const memStats=useMemo(()=>computeStats(loadCastings()),[committed]);
+  const mem=useMemo(()=>electiveMemory(memStats,electionFactors(now,planet,live.score)),[memStats,planet,live.score,now]);
+  const adjusted=mem.available?Math.max(0,Math.min(100,live.score+mem.adjustment)):null;
   // Operator's Loop: committing an election creates a casting record
   const commitElection=(date,assess)=>{
     try{
@@ -2457,6 +2480,17 @@ function ElectScreen({now,natalPos,eph,profile}){
               <div style={{textAlign:"center"}}><div style={{fontFamily:F,fontSize:48,color:sCol(sc),lineHeight:1}}>{sc}</div></div>
             </div>
             <div style={{height:3,background:"rgba(200,175,100,0.09)",borderRadius:2,marginBottom:9}}><div style={{height:"100%",width:sc+"%",background:sCol(sc),borderRadius:2}}/></div>
+            {/* Elective memory — the second voice: your own record */}
+            <div style={{marginBottom:9,padding:"9px 11px",borderRadius:10,background:mem.available?(mem.adjustment>0?"rgba(92,168,92,0.08)":mem.adjustment<0?"rgba(180,80,60,0.08)":"rgba(8,5,22,0.5)"):"rgba(8,5,22,0.5)",border:`1px solid ${mem.available?(mem.adjustment>0?"rgba(92,168,92,0.3)":mem.adjustment<0?"rgba(180,80,60,0.3)":"rgba(200,175,100,0.12)"):"rgba(200,175,100,0.1)"}`}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:mem.available&&mem.testimony.length?7:0}}>
+                <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.5)",letterSpacing:2,textTransform:"uppercase"}}>Your Record</span>
+                {mem.available&&<span style={{fontFamily:F,fontSize:12,color:mem.adjustment>0?"#7AB07A":mem.adjustment<0?"#D28060":"#8A7050",marginLeft:"auto"}}>{mem.adjustment>0?"+":""}{mem.adjustment} → {adjusted}</span>}
+              </div>
+              <div style={{fontFamily:F,fontSize:9.5,color:"#9A8060",fontStyle:"italic",lineHeight:1.6}}>{memoryVerdict(mem)}</div>
+              {mem.available&&mem.testimony.length>0&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:7}}>
+                {mem.testimony.slice(0,4).map((t,i)=><span key={i} style={{fontFamily:F,fontSize:8,color:t.delta>0?"#7AB07A":t.delta<0?"#D28060":"#8A7050",background:"rgba(0,0,0,0.25)",border:`1px solid ${t.delta>0?"rgba(92,168,92,0.25)":t.delta<0?"rgba(180,80,60,0.25)":"rgba(200,175,100,0.15)"}`,borderRadius:6,padding:"2px 7px"}}>{t.factor} “{t.key}” {t.pct}% · n{t.n}</span>)}
+              </div>}
+            </div>
             {live.critFail.length>0&&<div style={{marginBottom:8,padding:"8px 10px",borderRadius:9,background:"rgba(100,20,20,0.4)",border:"1px solid rgba(180,60,60,0.3)"}}>{live.critFail.map(c=><div key={c.id} style={{fontFamily:F,fontSize:10,color:"#C08080",fontStyle:"italic",lineHeight:1.6}}>✗ {c.label}: {c.note}</div>)}</div>}
             <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
               {live.trans&&<span style={{fontFamily:F,fontSize:8,color:"#7CB8E0",background:"rgba(124,184,224,0.1)",border:"1px solid rgba(124,184,224,0.25)",borderRadius:6,padding:"2px 7px"}}>Translation: {P[live.trans.from]?.sym} to {P[live.trans.to]?.sym}</span>}
