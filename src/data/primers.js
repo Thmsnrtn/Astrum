@@ -153,6 +153,13 @@ The hierarchy of what can be fixed: planetary characters and kameas, the decan i
     sources: ["Picatrix (throughout; II.11 for decan images)", "Agrippa II.22, II.35–52", "Hermes on the 15 Fixed Stars"],
     inApp: "The Talisman workshop runs the whole pipeline — election, figure, consecration, record — and Review asks for the outcome.",
   },
+  "geomancy": {
+    body: `Geomancy is divination by earth — the oldest of the elemental oracles, carried out of the Arabic ilm al-raml ("science of the sand") into medieval Europe, where Agrippa gave it its standard Latin form. Sixteen figures, each four rows of a single or double dot, are all it uses. You cast four Mothers (originally by making rows of marks in sand or on paper without counting, then taking each row's parity — odd is single, even is double). From the Mothers the whole chart derives by two operations: the four Daughters by transposition (reading the Mothers' rows as columns), and the Nieces, two Witnesses, and Judge by addition — combining figures row by row, like parities making a double, unlike making a single.
+
+The Judge is the answer folded into one figure, and a beautiful property guarantees the work: the Judge is always one of the eight "even" figures, so an odd Judge means you erred. The Right Witness is the querent's side and the road travelled, the Left the outcome and the road ahead. For a fuller reading the twelve figures fall into the astrological houses — Mothers to I–IV, Daughters to V–VIII, Nieces to IX–XII — and you judge whether the querent's significator (the 1st house) and the quesited's (the house of the matter, as in horary) "perfect" by occupation, conjunction, mutation, or translation. Geomancy is earthier and more decisive than a horary chart: it answers plainly.`,
+    sources: ["Agrippa, Fourth Book of Occult Philosophy — Of Geomancy (1655 trans.)", "J.M. Greer, The Art and Practice of Geomancy (2009)", "Regardie, A Practical Guide to Geomantic Divination (Golden Dawn)"],
+    inApp: "The Geomancy screen casts and derives the whole shield, shows the Judge's verdict and the house chart, and saves each reading as a casting judged in Review.",
+  },
   "sigils": {
     body: `Two lineages share the name. The classical sigil is derived, not designed: a spirit's name traced by gematria across a planetary kamea (the seals of Agrippa II.22's intelligences and spirits), or a character received in the grimoire tradition. The modern sigil (Austin Osman Spare, systematized by chaos magic) is manufactured from intent: write the desire, strike the repeating letters, compress the remainder into a glyph, charge it in gnosis, and forget it.
 

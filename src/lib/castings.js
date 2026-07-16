@@ -9,7 +9,7 @@
 
 import { loadJSON, saveJSON, getSchemaVersion, setSchemaVersion } from "./storage.js";
 
-export const CASTING_KINDS = ["working", "sigil", "talisman", "election", "horary", "athanor"];
+export const CASTING_KINDS = ["working", "sigil", "talisman", "election", "horary", "athanor", "geomancy"];
 export const VERDICTS = ["hit", "partial", "miss", "unknown"];
 
 export function loadCastings() { return loadJSON("astrum_castings", []); }

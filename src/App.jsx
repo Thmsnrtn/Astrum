@@ -19,6 +19,7 @@ import MansionsScreen from "./screens/MansionsScreen.jsx";
 import HoraryScreen from "./screens/HoraryScreen.jsx";
 import AthanorScreen from "./screens/AthanorScreen.jsx";
 import AlmanacScreen from "./screens/AlmanacScreen.jsx";
+import GeomancyScreen from "./screens/GeomancyScreen.jsx";
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
 import { reschedule, ensurePermission } from "./lib/notify.js";
 import { autoBackupNative } from "./lib/backup.js";
@@ -1191,6 +1192,7 @@ const NAV_SECTIONS = [
   {id:"calendar", icon:"◫", label:"Calendar",  desc:"Election planning grid"},
   {id:"almanac",  icon:"❋", label:"Almanac",   desc:"Liturgical month — sky, elections & timing letters"},
   {id:"horary",   icon:"?", label:"Horary",    desc:"Chart of the question"},
+  {id:"geomancy", icon:"⚏", label:"Geomancy",  desc:"The shield of the sixteen figures"},
   {id:"work",    icon:"⚗", label:"Work",       desc:"Build a ritual"},
   {id:"talisman",icon:"◈", label:"Talisman",   desc:"Election → design → consecration"},
   {id:"athanor", icon:"🜍", label:"Athanor",    desc:"Alchemical operations lab"},
@@ -1236,6 +1238,7 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
     {id:"sigil",label:"New Sigil",desc:"Create a sigil in the workshop",icon:"⟁",screen:"sigils"},
     {id:"mansion",label:"Current Lunar Mansion",desc:"The Moon's station and next entries",icon:"☾",screen:"mansions"},
     {id:"horary",label:"Cast a Horary Question",desc:"Chart of the question with significators",icon:"?",screen:"horary"},
+    {id:"geomancy",label:"Cast Geomancy",desc:"The shield of the sixteen figures",icon:"⚏",screen:"geomancy"},
     {id:"talisman",label:"New Talisman",desc:"Election → design → consecration pipeline",icon:"◈",screen:"talisman"},
     {id:"athanor",label:"The Athanor",desc:"Alchemical operations, season, and library",icon:"🜍",screen:"athanor"},
     {id:"review",label:"Review Outcomes",desc:"Judge castings and see practice statistics",icon:"◬",screen:"review"},
@@ -4154,6 +4157,7 @@ export const LEARN_TOPICS=[
   {id:"sacrifice-reciprocity",label:"Sacrifice & Reciprocity", desc:"The economy of the spirit world — giving to receive", traditions:["animism","folk","hellenism","all"],level:"intermediate"},
   {id:"dream-work",      label:"Dream Work",              desc:"Incubation, liminal sleep practice, and dream interpretation", traditions:["animism","hellenism","traditional-witchcraft","all"],level:"intermediate"},
   {id:"fortune-divination",label:"Fortune & Divination",  desc:"Reading patterns in time and space — geomancy, lots, omens", traditions:["all"],        level:"beginner"},
+  {id:"geomancy",        label:"Geomancy",                desc:"The sixteen figures, the shield chart, and reading by the houses", traditions:["all"],level:"intermediate"},
   {id:"saints-holy-dead",label:"Saints & the Holy Dead",  desc:"Working with the canonized current and the beloved dead", traditions:["folk","animism"],level:"intermediate"},
   {id:"liminal-entities",label:"Liminal Entities",        desc:"Threshold beings, guardians, and hedge-crossing", traditions:["animism","traditional-witchcraft","folk"],level:"advanced"},
   {id:"blended-cycle",   label:"Blended Cycle Model",     desc:"Placing your magic in historical and generational time", traditions:["all"],        level:"intermediate"},
@@ -4227,6 +4231,7 @@ function buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile){
       return `${base} The Moon stands in mansion ${m.index} — ${m.arabic} (${m.latin}, "${m.translation}"), ${Math.round(m.progress*100)}% through. Its nature is ${m.nature}. Elect under it: ${m.elect} Avoid: ${m.avoid} ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition and a reader of the Picatrix: Speak to this mansion as a station of the Moon's journey — the oldest electional framework in the tradition. What does ${m.arabic} favor in the coming hours? How does it combine with the Moon's phase and aspects right now? What working, if any, should be timed before the next mansion begins?`;
     }
     case "horary": return `${base} Moon: ${eph.moonPhase}${eph.voc?.isVoC?" — VOID OF COURSE (judgment unreliable)":""}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the tradition of Lilly's Christian Astrology: The practitioner is considering a horary question. Counsel them on the asking itself — is this moment radical enough to bear judgment (consider the void Moon above)? How should the question be framed so the chart can answer it? What makes a question sincere enough for horary?`;
+    case "geomancy": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a master geomancer in the tradition of Agrippa and Greer: The practitioner is casting the sixteen figures. Counsel them on the asking — geomancy answers a clear, sincere, single question best. How should they frame this matter, and which house does it truly belong to? Speak briefly to the character of geomancy as an elemental oracle: the figures are built of odd and even, the whole answer folded into a single Judge — earthier and more decisive than the horary chart.`;
     case "talisman": {
       const strong=Object.entries(eph.pos).filter(([,p])=>(p.dignity==="domicile"||p.dignity==="exaltation")&&!p.isRetro&&!p.combust).map(([pk])=>P[pk].name).join(", ")||"none at full strength";
       return `${base} Planets currently dignified, direct, and clear of the beams: ${strong}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the ${tradition} tradition, versed in Picatrix and Agrippa: The practitioner is at the talisman workshop. Which sphere is most ready to be fixed into matter right now, and for what intent? What materia and consecration would you counsel? If nothing is ready, say so plainly — a talisman made under a weak sky is a weak talisman.`;
@@ -6310,6 +6315,7 @@ export default function App(){
           {tab==="elect"   &&<ElectScreen   now={now} natalPos={natalPos} eph={eph} profile={profile}/>}
           {tab==="mansions"&&<MansionsScreen eph={eph} now={now} profile={profile} natalPos={natalPos}/>}
           {tab==="horary"  &&<HoraryScreen  profile={profile} natalPos={natalPos}/>}
+          {tab==="geomancy"&&<GeomancyScreen profile={profile} natalPos={natalPos}/>}
           {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
           {tab==="athanor" &&<AthanorScreen  profile={profile} natalPos={natalPos} eph={eph} now={now}/>}
           {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}

@@ -16,7 +16,7 @@ const VERDICT_META = {
   partial: { label: "PARTIAL", col: "#D4AF6A" },
   miss:    { label: "MISS",    col: "#D24B31" },
 };
-const KIND_ICONS = { working: "⚗", sigil: "⟁", talisman: "◈", election: "◫", horary: "?", athanor: "🜍" };
+const KIND_ICONS = { working: "⚗", sigil: "⟁", talisman: "◈", election: "◫", horary: "?", athanor: "🜍", geomancy: "⚏" };
 
 function CondChips({ c }) {
   const cond = c.conditions;
