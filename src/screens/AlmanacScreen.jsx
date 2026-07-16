@@ -22,6 +22,7 @@ export default function AlmanacScreen({ now, profile }) {
   const [offset, setOffset] = useState(0);
   const [selDay, setSelDay] = useState(null);
   const [exportMsg, setExportMsg] = useState("");
+  const [exportOpen, setExportOpen] = useState(false);
   const location = profile?.natal?.lat && profile?.natal?.lon ? { lat: profile.natal.lat, lon: profile.natal.lon } : null;
 
   const base = new Date(now.getFullYear(), now.getMonth() + offset, 1);
@@ -43,12 +44,40 @@ export default function AlmanacScreen({ now, profile }) {
   const todayStr = now.toISOString().split("T")[0];
   const sel = selDay ? model.days.find(d => d.day === selDay) : null;
 
-  const exportAlmanac = async () => {
-    const html = buildAlmanacHTML(model, overlays, `${MONTHS[month]} ${year}`, location);
-    const name = `astrum-almanac-${year}-${String(month + 1).padStart(2, "0")}.html`;
-    if (await shareOnNative(name, html)) { setExportMsg("✓ Almanac sent to the share sheet — open and print to PDF"); return; }
-    if (downloadText(name, html)) { setExportMsg(`✓ Downloaded ${name} — open it and print to PDF`); return; }
-    setExportMsg("✗ Export unavailable here");
+  // Build all feed/election overlays once (keyed by full date), shared across
+  // every month in a range export.
+  const allOverlays = () => {
+    const feed = {}, elect = {};
+    loadFeed().forEach(e => { (feed[e.date] = feed[e.date] || []).push(e); });
+    loadCastings().filter(c => c.kind === "election" && c.status === "open" && c.links?.electionWindow?.start).forEach(c => {
+      const d = c.links.electionWindow.start.split("T")[0];
+      (elect[d] = elect[d] || []).push(c);
+    });
+    return { feed, elect };
+  };
+
+  const exportRange = async (nMonths) => {
+    setExportOpen(false);
+    setExportMsg("Composing…");
+    // build sequentially on the next tick so the "Composing…" paint lands first
+    setTimeout(async () => {
+      const ov = allOverlays();
+      const sections = [];
+      for (let i = 0; i < nMonths; i++) {
+        const b = new Date(year, month + i, 1);
+        const m = buildMonthModel({ year: b.getFullYear(), month: b.getMonth(), location });
+        sections.push(monthSectionHTML(m, ov, `${MONTHS[b.getMonth()]} ${b.getFullYear()}`));
+      }
+      const first = new Date(year, month, 1), last = new Date(year, month + nMonths - 1, 1);
+      const title = nMonths === 1 ? `${MONTHS[month]} ${year}`
+        : `${MONTHS[first.getMonth()]} ${first.getFullYear()} – ${MONTHS[last.getMonth()]} ${last.getFullYear()}`;
+      const html = almanacDoc(sections, title, location);
+      const tag = nMonths === 1 ? `${year}-${String(month + 1).padStart(2, "0")}` : nMonths === 3 ? `${year}-season` : `${year}-annual`;
+      const name = `astrum-almanac-${tag}.html`;
+      if (await shareOnNative(name, html)) { setExportMsg("✓ Sent to the share sheet — open and print to PDF"); return; }
+      if (downloadText(name, html)) { setExportMsg(`✓ Downloaded ${name} — open it and print to PDF`); return; }
+      setExportMsg("✗ Export unavailable here");
+    }, 30);
   };
 
   return (
@@ -58,7 +87,16 @@ export default function AlmanacScreen({ now, profile }) {
           <div style={{ fontFamily: F, fontSize: 9, color: "#8A7040", letterSpacing: 3.5, textTransform: "uppercase" }}>The Liturgical Calendar</div>
           <div style={T(20)}>Almanac</div>
         </div>
-        <button onClick={exportAlmanac} style={{ padding: "7px 12px", borderRadius: 9, background: "rgba(212,175,106,0.1)", border: "1px solid rgba(212,175,106,0.28)", fontFamily: F, fontSize: 8.5, color: GOLD, letterSpacing: 1.5, cursor: "pointer" }}>⎙ EXPORT</button>
+        <div style={{ position: "relative" }}>
+          <button onClick={() => setExportOpen(o => !o)} style={{ padding: "7px 12px", borderRadius: 9, background: "rgba(212,175,106,0.1)", border: "1px solid rgba(212,175,106,0.28)", fontFamily: F, fontSize: 8.5, color: GOLD, letterSpacing: 1.5, cursor: "pointer" }}>⎙ EXPORT ▾</button>
+          {exportOpen && (
+            <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 4, zIndex: 20, background: "rgba(8,5,22,0.98)", border: "1px solid rgba(212,175,106,0.3)", borderRadius: 10, overflow: "hidden", boxShadow: "0 8px 30px rgba(0,0,0,0.6)" }}>
+              {[["This Month", 1], ["This Season (3 mo)", 3], ["The Year (12 mo)", 12]].map(([lbl, n]) => (
+                <button key={n} onClick={() => exportRange(n)} style={{ display: "block", width: "100%", whiteSpace: "nowrap", padding: "9px 14px", background: "none", border: "none", borderBottom: "1px solid rgba(200,175,100,0.08)", fontFamily: F, fontSize: 9.5, color: "#C4A870", textAlign: "left", cursor: "pointer" }}>{lbl}</button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Month nav */}
@@ -195,8 +233,10 @@ function DayDetail({ dm, year, month, location, feed, elect }) {
 }
 
 // ── Printable HTML almanac (open → print to PDF, or share on iOS) ────────
-function buildAlmanacHTML(model, overlays, label, location) {
-  const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const escHTML = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+// One month's <section> — used alone or stacked into a season/year volume.
+function monthSectionHTML(model, overlays, label) {
   const rows = model.days.map(dm => {
     const feed = overlays.feed[dm.dateStr] || [];
     const elect = overlays.elect[dm.dateStr] || [];
@@ -208,28 +248,36 @@ function buildAlmanacHTML(model, overlays, label, location) {
     ];
     return `<tr>
       <td class="d">${dm.day}<br><span class="dow">${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][dm.dow]}</span></td>
-      <td>${esc(dm.dayRuler)}</td>
-      <td>${dm.moon.phaseGlyph} ${esc(dm.moon.phaseName)}<br>${esc(dm.moon.sign)}${dm.voc ? " · VoC" : ""}</td>
-      <td>M${dm.mansion.n} ${esc(dm.mansion.name)}</td>
-      <td>${esc((dm.sunDecan.name) || "")}</td>
-      <td class="n">${notes.map(esc).join("<br>") || "—"}</td>
+      <td>${escHTML(dm.dayRuler)}</td>
+      <td>${dm.moon.phaseGlyph} ${escHTML(dm.moon.phaseName)}<br>${escHTML(dm.moon.sign)}${dm.voc ? " · VoC" : ""}</td>
+      <td>M${dm.mansion.n} ${escHTML(dm.mansion.name)}</td>
+      <td>${escHTML((dm.sunDecan.name) || "")}</td>
+      <td class="n">${notes.map(escHTML).join("<br>") || "—"}</td>
     </tr>`;
   }).join("");
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Astrum Almanac — ${esc(label)}</title>
+  return `<section><h2>${escHTML(label)}</h2>
+  <table><thead><tr><th>Day</th><th>Ruler</th><th>Moon</th><th>Mansion</th><th>Sun Decan</th><th>Events, Elections & Letters</th></tr></thead>
+  <tbody>${rows}</tbody></table></section>`;
+}
+
+// Wrap one or many month sections into a printable volume.
+function almanacDoc(sections, title, location) {
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Astrum Almanac — ${escHTML(title)}</title>
 <style>
   body{font-family:Georgia,'Times New Roman',serif;color:#2a2018;margin:32px;}
-  h1{font-size:20px;letter-spacing:2px;font-weight:normal;border-bottom:1px solid #b8a060;padding-bottom:8px;}
-  .sub{font-size:11px;color:#7a6a40;margin:4px 0 18px;}
-  table{border-collapse:collapse;width:100%;font-size:11px;}
+  h1{font-size:22px;letter-spacing:2px;font-weight:normal;border-bottom:1px solid #b8a060;padding-bottom:8px;}
+  h2{font-size:16px;letter-spacing:1px;font-weight:normal;color:#5a4020;margin:26px 0 6px;page-break-after:avoid;}
+  .sub{font-size:11px;color:#7a6a40;margin:4px 0 8px;}
+  table{border-collapse:collapse;width:100%;font-size:11px;page-break-inside:auto;}
   th{text-align:left;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#8a7040;border-bottom:1px solid #ccb;padding:4px 6px;}
   td{border-bottom:1px solid #eee;padding:5px 6px;vertical-align:top;}
   td.d{font-weight:bold;width:34px;} .dow{font-weight:normal;font-size:8px;color:#999;}
   td.n{color:#4a3a20;font-size:10px;line-height:1.5;}
-  @media print{body{margin:12px;} a{display:none;}}
+  section{page-break-inside:auto;}
+  @media print{body{margin:12px;} section+section h2{page-break-before:always;}}
 </style></head><body>
-  <h1>Astrum Almanac — ${esc(label)}</h1>
+  <h1>Astrum Almanac — ${escHTML(title)}</h1>
   <div class="sub">Generated from the Swiss Ephemeris${location ? " for your location" : " (equal hours — no location set)"}. Timing-letter entries are attributed to their source; elections are your own committed windows.</div>
-  <table><thead><tr><th>Day</th><th>Ruler</th><th>Moon</th><th>Mansion</th><th>Sun Decan</th><th>Events, Elections & Letters</th></tr></thead>
-  <tbody>${rows}</tbody></table>
+  ${sections.join("\n")}
 </body></html>`;
 }
