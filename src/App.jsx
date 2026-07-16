@@ -6242,12 +6242,15 @@ export default function App(){
     return()=>{cancelled=true;clearInterval(iv);Promise.resolve(capSub).then(s=>s?.remove?.()).catch(()=>{});};
   },[notifyPrefs,profile?.natal?.lat,profile?.natal?.lon]); // eslint-disable-line
 
-  // ── Auto-backup the practice record when iOS backgrounds the app
+  // ── Auto-backup + flush the durable snapshot when iOS backgrounds the app
   useEffect(()=>{
     if(!window.Capacitor?.isNativePlatform?.())return;
     let capSub=null;
     import("@capacitor/app").then(({App:CapApp})=>{
-      capSub=CapApp.addListener("pause",()=>{autoBackupNative();});
+      capSub=CapApp.addListener("pause",async()=>{
+        try{const {flushSnapshot}=await import("./lib/nativeStore.js");await flushSnapshot();}catch(e){}
+        autoBackupNative();
+      });
     }).catch(()=>{});
     return()=>{Promise.resolve(capSub).then(s=>s?.remove?.()).catch(()=>{});};
   },[]);

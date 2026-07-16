@@ -25,22 +25,32 @@ export const STORAGE_KEYS = [
 ];
 
 import { idbSet, idbGet, idbDelete, idbKeys, requestPersistent, hydrateDecision } from "./durable.js";
+import { requestSnapshot, nativeReadSnapshot, nativeAvailable } from "./nativeStore.js";
 
 export function rawGet(key) {
   try { return localStorage.getItem(key); } catch { return null; }
 }
 
+// Collect the whole record for the native filesystem snapshot.
+function collectAll() {
+  const out = {};
+  for (const k of STORAGE_KEYS) { const v = rawGet(k); if (v != null) out[k] = v; }
+  return out;
+}
+
 export function rawSet(key, val) {
   let ok = false;
   try { localStorage.setItem(key, val); ok = true; } catch {}
-  // Mirror to the durable (non-evictable) store, best-effort and async.
-  if (key.startsWith("astrum_")) idbSet(key, val);
+  if (key.startsWith("astrum_")) {
+    idbSet(key, val);                 // durable bucket (survives eviction)
+    requestSnapshot(collectAll);      // app-owned file (survives WebView clearing) — native-only, debounced
+  }
   return ok;
 }
 
 export function removeKey(key) {
   try { localStorage.removeItem(key); } catch {}
-  if (key.startsWith("astrum_")) idbDelete(key);
+  if (key.startsWith("astrum_")) { idbDelete(key); requestSnapshot(collectAll); }
 }
 
 // Boot step: claim the durable bucket, then reconcile localStorage with
@@ -48,10 +58,10 @@ export function removeKey(key) {
 // IndexedDB with anything only localStorage has. Run before the app reads
 // storage. Best-effort: any failure leaves the app on plain localStorage.
 export async function initDurable() {
-  const summary = { restored: 0, seeded: 0, persistent: false };
+  const summary = { restored: 0, seeded: 0, fileRestored: 0, persistent: false };
   try { summary.persistent = await requestPersistent(); } catch {}
   try {
-    // union of registered keys and whatever IndexedDB already holds
+    // Tier 1 — IndexedDB reconciliation (survives eviction)
     const idbAll = await idbKeys();
     const keys = new Set([...STORAGE_KEYS, ...idbAll.filter(k => typeof k === "string" && k.startsWith("astrum_"))]);
     for (const key of keys) {
@@ -60,6 +70,22 @@ export async function initDurable() {
       const decision = hydrateDecision(ls, idb);
       if (decision === "restore") { try { localStorage.setItem(key, idb); summary.restored++; } catch {} }
       else if (decision === "seed") { await idbSet(key, ls); summary.seeded++; }
+    }
+    // Tier 2 — native filesystem snapshot (survives WebView data clearing).
+    // Only reached on Capacitor; restores anything still missing after tier 1.
+    if (nativeAvailable()) {
+      const snap = await nativeReadSnapshot();
+      if (snap) {
+        for (const [key, val] of Object.entries(snap)) {
+          if (!key.startsWith("astrum_") || typeof val !== "string") continue;
+          if (rawGet(key) == null) {
+            try { localStorage.setItem(key, val); summary.fileRestored++; } catch {}
+            idbSet(key, val); // re-seed the middle tier too
+          }
+        }
+      }
+      // ensure a fresh snapshot exists for next boot
+      requestSnapshot(collectAll);
     }
   } catch {}
   return summary;
