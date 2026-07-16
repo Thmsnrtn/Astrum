@@ -1,7 +1,7 @@
 // The intake parser is pure and offline — verify it extracts dated timing
 // from the kinds of lines a timing letter actually contains.
 import { describe, it, expect } from "vitest";
-import { parseFeed } from "./intake.js";
+import { parseFeed, parseAIResponse, mergeEvents, aiExtractionMessages } from "./intake.js";
 
 describe("parseFeed", () => {
   const SAMPLE = `
@@ -66,5 +66,61 @@ Jupiter enters Cancer 6/9/2026 — a yearlong blessing on home and family.
 
   it("returns nothing for text with no dates", () => {
     expect(parseFeed("The Moon is the transmitter of every planet's virtue.", "x", 2026)).toHaveLength(0);
+  });
+});
+
+describe("parseAIResponse", () => {
+  it("parses a clean JSON array of events", () => {
+    const reply = JSON.stringify([
+      { date: "2026-03-20", time: "3:34 PM", title: "Sun enters Aries", kind: "ingress" },
+      { date: "2026-03-14", time: null, title: "Full Moon in Libra", kind: "lunation" },
+    ]);
+    const ev = parseAIResponse(reply, "Circle Thrice", 2026);
+    expect(ev).toHaveLength(2);
+    expect(ev[0].date).toBe("2026-03-14"); // sorted
+    expect(ev.find(e => e.date === "2026-03-20").kind).toBe("ingress");
+    expect(ev.every(e => e.source === "Circle Thrice")).toBe(true);
+  });
+  it("tolerates code fences and surrounding prose", () => {
+    const reply = "Sure! Here are the events:\n```json\n[{\"date\":\"2026-04-02\",\"title\":\"Venus window\",\"kind\":\"election\"}]\n```\nHope that helps.";
+    const ev = parseAIResponse(reply, "src", 2026);
+    expect(ev).toHaveLength(1);
+    expect(ev[0].kind).toBe("election");
+  });
+  it("coerces an invalid kind to note and recovers a loose date", () => {
+    const reply = JSON.stringify([{ date: "May 3", title: "Something", kind: "wobble" }]);
+    const ev = parseAIResponse(reply, "src", 2027);
+    expect(ev[0].kind).toBe("note");
+    expect(ev[0].date).toBe("2027-05-03");
+  });
+  it("drops items with no usable date", () => {
+    const reply = JSON.stringify([{ date: "", title: "no date here", kind: "note" }]);
+    expect(parseAIResponse(reply, "src", 2026)).toHaveLength(0);
+  });
+  it("returns [] for non-JSON or non-array replies", () => {
+    expect(parseAIResponse("I could not find any events.", "src", 2026)).toHaveLength(0);
+    expect(parseAIResponse('{"date":"2026-01-01"}', "src", 2026)).toHaveLength(0);
+  });
+});
+
+describe("mergeEvents", () => {
+  it("prefers the primary list and backfills unique secondary events", () => {
+    const ai = [{ date: "2026-03-20", title: "Sun enters Aries", kind: "ingress", source: "ai" }];
+    const heur = [
+      { date: "2026-03-20", title: "Sun enters Aries", kind: "ingress", source: "heur" }, // dup → dropped
+      { date: "2026-03-14", title: "Full Moon in Libra", kind: "lunation", source: "heur" }, // unique → kept
+    ];
+    const m = mergeEvents(ai, heur);
+    expect(m).toHaveLength(2);
+    expect(m.find(e => e.date === "2026-03-20").source).toBe("ai");
+  });
+});
+
+describe("aiExtractionMessages", () => {
+  it("builds a system+user prompt seeded with the reference year", () => {
+    const { system, messages } = aiExtractionMessages("some newsletter", 2029);
+    expect(system).toContain("2029");
+    expect(system).toContain("JSON array");
+    expect(messages[0].content).toBe("some newsletter");
   });
 });

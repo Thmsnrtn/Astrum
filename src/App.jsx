@@ -12,7 +12,7 @@ import { DECAN_IMAGES, DECAN_DOCTRINE } from "./data/decanImages.js";
 import { getBehenian, BEHENIAN_DOCTRINE } from "./data/behenian.js";
 import { aspectMeaning } from "./data/aspectMeanings.js";
 import { FOUNDATION_PRIMERS, TOPIC_PRIMERS } from "./data/primers.js";
-import { parseFeed, addFeedEvents, loadFeed, deleteFeedSource, feedInRange, feedForDate, FEED_KIND_META } from "./lib/intake.js";
+import { parseFeed, addFeedEvents, loadFeed, deleteFeedSource, feedInRange, feedForDate, FEED_KIND_META, aiExtractionMessages, parseAIResponse, mergeEvents } from "./lib/intake.js";
 import { loadAthanor } from "./lib/athanor.js";
 import { OPERATION_TEMPLATES as ATHANOR_TEMPLATES } from "./data/operations.js";
 import MansionsScreen from "./screens/MansionsScreen.jsx";
@@ -5560,11 +5560,31 @@ function IntakeCard(){
   const [msg,setMsg]=useState("");
   const [sources,setSources]=useState(()=>{const f=loadFeed();const m={};f.forEach(e=>{m[e.source]=(m[e.source]||0)+1;});return m;});
   const refreshSources=()=>{const f=loadFeed();const m={};f.forEach(e=>{m[e.source]=(m[e.source]||0)+1;});setSources(m);};
+  const [aiBusy,setAiBusy]=useState(false);
   const doParse=()=>{
     if(!text.trim())return;
     const ev=parseFeed(text,source.trim()||"Imported",year);
     setParsed(ev);
     setMsg(ev.length?`${ev.length} timing event${ev.length>1?"s":""} detected — review and save.`:"No dated timing found. You can still file the text as a knowledge node.");
+  };
+  const doAIParse=async()=>{
+    if(!text.trim())return;
+    setAiBusy(true);setMsg("Reading with the AI engine…");
+    const src=source.trim()||"Imported";
+    const heuristic=parseFeed(text,src,year);
+    try{
+      const {askAI}=await import("./ai/client.js");
+      const {system,messages}=aiExtractionMessages(text,year);
+      const reply=await askAI({system,messages,maxTokens:1500});
+      const aiEvents=parseAIResponse(reply,src,year);
+      const merged=mergeEvents(aiEvents,heuristic); // AI-preferred, heuristic backfills
+      setParsed(merged);
+      setMsg(merged.length?`${merged.length} event${merged.length>1?"s":""} detected (AI + pattern) — review and save.`:"The AI found no dated timing. You can still file the text as a knowledge node.");
+    }catch(e){
+      setParsed(heuristic);
+      setMsg(`AI engine unavailable (${(e.message||"").slice(0,60)}). Fell back to pattern detection${heuristic.length?` — ${heuristic.length} found`:""}.`);
+    }
+    setAiBusy(false);
   };
   const removeCandidate=(id)=>setParsed(p=>p.filter(e=>e.id!==id));
   const save=()=>{
@@ -5592,8 +5612,10 @@ function IntakeCard(){
       <textarea value={text} onChange={e=>setText(e.target.value)} rows={6} placeholder="Paste the newsletter or post text here…" style={{...IS,marginTop:6,resize:"vertical"}}/>
       <div style={{display:"flex",gap:6,marginTop:6}}>
         <button onClick={doParse} disabled={!text.trim()} style={{flex:1,padding:"8px 0",borderRadius:8,background:text.trim()?"rgba(200,175,100,0.1)":"rgba(0,0,0,0.3)",border:`1px solid ${text.trim()?"rgba(200,175,100,0.28)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:9,color:text.trim()?GOLD:"#5A4020",letterSpacing:1.5,cursor:"pointer"}}>DETECT TIMING</button>
+        {aiConfigured()&&<button onClick={doAIParse} disabled={!text.trim()||aiBusy} style={{flex:1,padding:"8px 0",borderRadius:8,background:text.trim()?"rgba(100,80,160,0.14)":"rgba(0,0,0,0.3)",border:`1px solid ${text.trim()?"rgba(100,80,160,0.35)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:9,color:text.trim()?"rgba(160,140,220,0.85)":"#5A4020",letterSpacing:1.5,cursor:"pointer"}}>{aiBusy?"READING…":"✧ AI DETECT"}</button>}
         {(parsed!==null)&&<button onClick={save} style={{flex:1,padding:"8px 0",borderRadius:8,background:"rgba(92,168,92,0.12)",border:"1px solid rgba(92,168,92,0.35)",fontFamily:F,fontSize:9,color:"#7AB07A",letterSpacing:1.5,cursor:"pointer"}}>SAVE</button>}
       </div>
+      <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:5,lineHeight:1.5}}>Pattern detection runs on-device always. AI detect handles messier formats — and runs offline too when your engine is local or on-device.</div>
       <button onClick={()=>setAsNode(a=>!a)} style={{marginTop:7,display:"flex",alignItems:"center",gap:7,background:"none",border:"none",cursor:"pointer",padding:0}}>
         <span style={{width:16,height:16,borderRadius:4,border:`1px solid ${asNode?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.2)"}`,background:asNode?"rgba(200,175,100,0.15)":"transparent",color:GOLD,fontSize:9,lineHeight:"16px",textAlign:"center",flexShrink:0}}>{asNode?"✓":""}</span>
         <span style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)"}}>Also file the full text as a knowledge node</span>

@@ -122,6 +122,65 @@ export function parseFeed(text, source, refYear) {
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
+// ── AI-assisted extraction (optional; heuristic remains the offline core) ─
+// The prompt and the response parser live here (pure/testable); the actual
+// model call happens in the UI via the configured AI engine, so a local or
+// on-device engine extracts timing offline too.
+const VALID_KINDS = ["ingress", "station", "lunation", "eclipse", "election", "voc", "note"];
+
+export function aiExtractionMessages(text, refYear) {
+  const year = refYear || new Date().getFullYear();
+  const system = `You extract astrological and magical timing events from a newsletter or post. Output ONLY a JSON array — no prose, no code fences. Each element: {"date":"YYYY-MM-DD","time":"3:34 PM" or null,"title":"one short line","kind":"ingress|station|lunation|eclipse|election|voc|note"}. Use the year ${year} for any date that omits one. Include only genuinely dated events; skip undated commentary. "kind": ingress = a body entering a sign; station = retrograde/direct; lunation = new/full/quarter Moon; eclipse; election = an auspicious window or talisman timing; voc = void-of-course Moon; note = anything else dated.`;
+  return { system, messages: [{ role: "user", content: text.slice(0, 8000) }] };
+}
+
+// Parse a model's JSON reply into feed events. Tolerant of code fences and
+// stray prose around the array; validates each field.
+export function parseAIResponse(reply, source, refYear) {
+  const year = refYear || new Date().getFullYear();
+  let arr;
+  try {
+    const start = reply.indexOf("["), end = reply.lastIndexOf("]");
+    if (start < 0 || end < start) return [];
+    arr = JSON.parse(reply.slice(start, end + 1));
+  } catch { return []; }
+  if (!Array.isArray(arr)) return [];
+  const out = [];
+  for (const it of arr) {
+    if (!it || typeof it !== "object") continue;
+    let date = typeof it.date === "string" ? it.date.trim() : "";
+    // accept YYYY-MM-DD; otherwise try to read a date out of the string
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const d = findDate(String(it.date || it.title || ""), year);
+      if (!d) continue;
+      date = toISO(d.month, d.day, d.year || year);
+    }
+    const [y, m, dd] = date.split("-").map(Number);
+    if (!(y >= 1900 && y <= 2200 && m >= 1 && m <= 12 && dd >= 1 && dd <= 31)) continue;
+    const title = String(it.title || "").trim().slice(0, 140) || "(untitled)";
+    const kind = VALID_KINDS.includes(it.kind) ? it.kind : "note";
+    out.push({
+      id: newId(), source: source || "Imported", date, time: it.time && String(it.time).trim() ? String(it.time).trim() : null,
+      title, kind, note: "", raw: title, addedAt: new Date().toISOString(),
+    });
+  }
+  return dedupe(out);
+}
+
+function dedupe(events) {
+  const seen = new Set();
+  return events.filter(e => { const k = e.date + "|" + e.title; if (seen.has(k)) return false; seen.add(k); return true; })
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Merge two event lists (e.g. AI + heuristic), preferring the first on a
+// date+title collision so nothing either method found is lost.
+export function mergeEvents(primary, secondary) {
+  const key = e => e.date + "|" + e.title.toLowerCase().slice(0, 40);
+  const seen = new Set(primary.map(key));
+  return dedupe([...primary, ...secondary.filter(e => !seen.has(key(e)))]);
+}
+
 export const FEED_KIND_META = {
   ingress:  { glyph: "≡", col: "#7CB8E0", label: "Ingress" },
   station:  { glyph: "℞", col: "#C878A8", label: "Station" },
