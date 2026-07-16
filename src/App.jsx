@@ -22,6 +22,7 @@ import AlmanacScreen from "./screens/AlmanacScreen.jsx";
 import GeomancyScreen from "./screens/GeomancyScreen.jsx";
 import LotsScreen from "./screens/LotsScreen.jsx";
 import LunarCycleScreen from "./screens/LunarCycleScreen.jsx";
+import RitualRuntimeScreen from "./screens/RitualRuntimeScreen.jsx";
 import { computeLots } from "./engine/lots.js";
 import { electiveMemory, memoryVerdict } from "./lib/electiveMemory.js";
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
@@ -1198,6 +1199,7 @@ const NAV_SECTIONS = [
   {id:"horary",   icon:"?", label:"Horary",    desc:"Chart of the question"},
   {id:"geomancy", icon:"⚏", label:"Geomancy",  desc:"The shield of the sixteen figures"},
   {id:"work",    icon:"⚗", label:"Work",       desc:"Build a ritual"},
+  {id:"rite",    icon:"✧", label:"Rite",       desc:"Step through a working under the hour"},
   {id:"talisman",icon:"◈", label:"Talisman",   desc:"Election → design → consecration"},
   {id:"athanor", icon:"🜍", label:"Athanor",    desc:"Alchemical operations lab"},
   {id:"journal", icon:"✎", label:"Journal",    desc:"Practice record"},
@@ -1243,6 +1245,7 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
     {id:"mansion",label:"Current Lunar Mansion",desc:"The Moon's station and next entries",icon:"☾",screen:"mansions"},
     {id:"lots",label:"The Hermetic Lots",desc:"Fortune, Spirit, and the five sect-aware lots",icon:"⊗",screen:"lots"},
     {id:"lunar",label:"Lunar Cycle",desc:"Phase, the coming turns, and this lunation's intention",icon:"☾",screen:"lunar"},
+    {id:"rite",label:"Begin a Rite",desc:"Step through a working under the planetary hour",icon:"✧",screen:"rite"},
     {id:"horary",label:"Cast a Horary Question",desc:"Chart of the question with significators",icon:"?",screen:"horary"},
     {id:"geomancy",label:"Cast Geomancy",desc:"The shield of the sixteen figures",icon:"⚏",screen:"geomancy"},
     {id:"talisman",label:"New Talisman",desc:"Election → design → consecration pipeline",icon:"◈",screen:"talisman"},
@@ -2591,7 +2594,7 @@ function ElectScreen({now,natalPos,eph,profile}){
 // ═══════════════════════════════════════════════════════════════════════
 // WORK SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-const TRADITION_STEPS={
+export const TRADITION_STEPS={
   "western-ceremonial":[
     {t:"Purification",d:"Begin preparation the day before: fast lightly, avoid conflict, spend time with the planet's materia. Bathe before the working. Let preparation be the first act of invocation."},
     {t:"Prepare the Space",d:"Arrange the altar with everything the sphere calls for: its seal at center, incense unlit, offerings arrayed, tools in their place. Face the classical direction. Readiness is devotion."},
@@ -6365,6 +6368,7 @@ export default function App(){
           {tab==="mansions"&&<MansionsScreen eph={eph} now={now} profile={profile} natalPos={natalPos}/>}
           {tab==="lots"    &&<LotsScreen     eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
           {tab==="lunar"   &&<LunarCycleScreen now={now} profile={profile} natalPos={natalPos}/>}
+          {tab==="rite"    &&<RitualRuntimeScreen eph={eph} hour={hour} profile={profile} natalPos={natalPos} now={now}/>}
           {tab==="horary"  &&<HoraryScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="geomancy"&&<GeomancyScreen profile={profile} natalPos={natalPos}/>}
           {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
