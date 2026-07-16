@@ -24,16 +24,45 @@ export const STORAGE_KEYS = [
   "astrum_last_export", // ISO timestamp of last backup export
 ];
 
+import { idbSet, idbGet, idbDelete, idbKeys, requestPersistent, hydrateDecision } from "./durable.js";
+
 export function rawGet(key) {
   try { return localStorage.getItem(key); } catch { return null; }
 }
 
 export function rawSet(key, val) {
-  try { localStorage.setItem(key, val); return true; } catch { return false; }
+  let ok = false;
+  try { localStorage.setItem(key, val); ok = true; } catch {}
+  // Mirror to the durable (non-evictable) store, best-effort and async.
+  if (key.startsWith("astrum_")) idbSet(key, val);
+  return ok;
 }
 
 export function removeKey(key) {
   try { localStorage.removeItem(key); } catch {}
+  if (key.startsWith("astrum_")) idbDelete(key);
+}
+
+// Boot step: claim the durable bucket, then reconcile localStorage with
+// IndexedDB — restore anything localStorage lost to an eviction, seed
+// IndexedDB with anything only localStorage has. Run before the app reads
+// storage. Best-effort: any failure leaves the app on plain localStorage.
+export async function initDurable() {
+  const summary = { restored: 0, seeded: 0, persistent: false };
+  try { summary.persistent = await requestPersistent(); } catch {}
+  try {
+    // union of registered keys and whatever IndexedDB already holds
+    const idbAll = await idbKeys();
+    const keys = new Set([...STORAGE_KEYS, ...idbAll.filter(k => typeof k === "string" && k.startsWith("astrum_"))]);
+    for (const key of keys) {
+      const ls = rawGet(key);
+      const idb = await idbGet(key);
+      const decision = hydrateDecision(ls, idb);
+      if (decision === "restore") { try { localStorage.setItem(key, idb); summary.restored++; } catch {} }
+      else if (decision === "seed") { await idbSet(key, ls); summary.seeded++; }
+    }
+  } catch {}
+  return summary;
 }
 
 export function loadJSON(key, fallback = null) {
