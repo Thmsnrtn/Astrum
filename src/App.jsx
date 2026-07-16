@@ -25,6 +25,8 @@ import LunarCycleScreen from "./screens/LunarCycleScreen.jsx";
 import RitualRuntimeScreen from "./screens/RitualRuntimeScreen.jsx";
 import { computeLots } from "./engine/lots.js";
 import { electiveMemory, memoryVerdict } from "./lib/electiveMemory.js";
+import { groundingFor } from "./lib/rag.js";
+import RecallScreen from "./screens/RecallScreen.jsx";
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
 import { reschedule, ensurePermission } from "./lib/notify.js";
 import { autoBackupNative } from "./lib/backup.js";
@@ -1206,6 +1208,7 @@ const NAV_SECTIONS = [
   {id:"sigils",  icon:"⟁", label:"Sigils",     desc:"Sigil workshop"},
   {id:"grimoire",icon:"📖", label:"Grimoire",   desc:"Personal book of shadows"},
   {id:"review",  icon:"◬", label:"Review",     desc:"Outcomes & practice statistics"},
+  {id:"recall",  icon:"⌕", label:"Recall",     desc:"Search your own record — grounds the Oracle"},
   {id:"cycles",  icon:"⟳", label:"Cycles",     desc:"Macro cycles & generational timing"},
   {id:"learn",   icon:"⬡", label:"Learn",      desc:"AI magical education"},
   {id:"ai",      icon:"✧", label:"Planner",    desc:"AI working builder"},
@@ -1251,6 +1254,7 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
     {id:"talisman",label:"New Talisman",desc:"Election → design → consecration pipeline",icon:"◈",screen:"talisman"},
     {id:"athanor",label:"The Athanor",desc:"Alchemical operations, season, and library",icon:"🜍",screen:"athanor"},
     {id:"review",label:"Review Outcomes",desc:"Judge castings and see practice statistics",icon:"◬",screen:"review"},
+    {id:"recall",label:"Recall — Search Your Record",desc:"BM25 over your journal, grimoire, castings, and ingested letters",icon:"⌕",screen:"recall"},
     {id:"almanac",label:"Open the Almanac",desc:"Liturgical month — sky, elections, and timing letters",icon:"❋",screen:"almanac"},
   ].filter(c=>!q||c.label.toLowerCase().includes(q)||c.desc.toLowerCase().includes(q));
   const histItems=hist.filter(h=>!q||h.label?.toLowerCase().includes(q));
@@ -4130,7 +4134,9 @@ function AIScreen({now,eph,fractal,natalPos,hour,profile}){
     setMessages(m=>[...m,userMsg]);
     setInput("");setLoading(true);
     const context=buildContext();
-    const systemPrompt=buildSystemPrompt(profile,context);
+    // RAG: ground the answer in the practitioner's own corpus.
+    const grounding=groundingFor(input);
+    const systemPrompt=buildSystemPrompt(profile,context)+grounding;
     const apiKey=profile?.apiKey||"";
     if(!aiConfigured()){setMessages(m=>[...m,{role:"assistant",content:aiUnconfiguredMessage()}]);setLoading(false);return;}
     try{
@@ -6379,6 +6385,7 @@ export default function App(){
           {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile} natalPos={natalPos}/>}
           {tab==="grimoire"&&<GrimoireScreen profile={profile}/>}
           {tab==="review"  &&<ReviewScreen   profile={profile}/>}
+          {tab==="recall"  &&<RecallScreen   setTab={setTab}/>}
           {tab==="learn"   &&<LearnScreen   profile={profile}/>}
           {tab==="work"    &&<WorkScreen    eph={eph} initPlanet={workPlanet} natalPos={natalPos} profile={profile} now={now}/>}
           {tab==="ai"      &&<AIScreen      now={now} eph={eph} fractal={fractal} natalPos={natalPos} hour={hour} profile={profile}/>}
