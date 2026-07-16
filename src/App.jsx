@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
-import { askClaude } from "./ai/client.js";
+import { askClaude, aiConfigured, aiUnconfiguredMessage, aiProviderInfo, resolveAIConfig, AI_PROVIDERS } from "./ai/client.js";
+import { WEBLLM_MODELS } from "./ai/webllm.js";
 import { loadJSON, saveJSON } from "./lib/storage.js";
 import { exportAll, importAll, markExported, lastExportedAt, backupFilename, downloadText, shareOnNative, copyToClipboard } from "./lib/backup.js";
 import { captureConditions, transitsToNatal } from "./engine/snapshot.js";
@@ -1639,7 +1640,7 @@ function BriefingCard({now,eph,hour,profile}){
       {open&&<div style={{padding:"0 14px 12px"}}>
         <div style={{fontFamily:F,fontSize:11,color:"#C4A870",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{text}</div>
         {gloss?<div style={{marginTop:8,padding:"9px 11px",borderRadius:10,background:"rgba(20,15,40,0.7)",border:"1px solid rgba(100,80,160,0.25)",fontFamily:F,fontSize:10.5,color:"#B0A0D0",fontStyle:"italic",lineHeight:1.8}}>{gloss}</div>
-        :profile?.apiKey&&<button onClick={getGloss} disabled={glossing} style={{marginTop:8,padding:"6px 12px",borderRadius:9,background:"rgba(100,80,160,0.12)",border:"1px solid rgba(100,80,160,0.3)",fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.8)",letterSpacing:1.5,cursor:"pointer"}}>{glossing?"READING…":"✧ ORACLE'S GLOSS"}</button>}
+        :aiConfigured()&&<button onClick={getGloss} disabled={glossing} style={{marginTop:8,padding:"6px 12px",borderRadius:9,background:"rgba(100,80,160,0.12)",border:"1px solid rgba(100,80,160,0.3)",fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.8)",letterSpacing:1.5,cursor:"pointer"}}>{glossing?"READING…":"✧ ORACLE'S GLOSS"}</button>}
       </div>}
     </div>
   );
@@ -2391,7 +2392,7 @@ function ElectScreen({now,natalPos,eph,profile}){
   ];
   const generateSeasonReport=async()=>{
     const apiKey=profile?.apiKey||"";
-    if(!apiKey){setSeasonReport("Configure your Anthropic API key in Profile to generate a season report.");return;}
+    if(!aiConfigured()){setSeasonReport(aiUnconfiguredMessage());return;}
     setSeasonLoading(true);setSeasonReport(null);
     const trad=profile?.traditions?.map(t=>TRADITIONS[t]?.label||t).join(", ")||"Western Ceremonial";
     const jupPos=eph?.pos?.jupiter?`Jupiter ${eph.pos.jupiter.zodiac.degree}° ${eph.pos.jupiter.zodiac.name}`:"";
@@ -2640,7 +2641,7 @@ function WorkScreen({eph,initPlanet,natalPos,profile,now}){
   const STEPS=TRADITION_STEPS[primaryTrad]||TRADITION_STEPS["western-ceremonial"];
   const generatePlan=async()=>{
     const apiKey=profile?.apiKey||"";
-    if(!apiKey){setGenPlan("Configure your Anthropic API key in Profile to generate ritual plans.");return;}
+    if(!aiConfigured()){setGenPlan(aiUnconfiguredMessage());return;}
     if(!genGoal.trim())return;
     setGenLoading(true);setGenPlan(null);setGenSaved(false);
     const trad=profile?.traditions?.map(t=>TRADITIONS[t]?.label||t).join(", ")||"Western Ceremonial";
@@ -3816,7 +3817,7 @@ function CyclesScreen({now,profile,eph}){
   }).sort((a,b)=>a.year-b.year||a.month-b.month).slice(0,5);
   const generateReport=async()=>{
     const apiKey=profile?.apiKey||"";
-    if(!apiKey){setAiReport("Configure your Anthropic API key in Profile to generate a cycle report.");return;}
+    if(!aiConfigured()){setAiReport(aiUnconfiguredMessage());return;}
     setAiLoading(true);setAiReport(null);
     const trad=profile?.traditions?.map(t=>TRADITIONS[t]?.label||t).join(", ")||"Western Ceremonial";
     const outerStr=Object.entries(outerPos).map(([p,d])=>`${OUTER_META[p].name}: ${d.degree}° ${d.sign} (${d.yearsInSign}yr in sign, ${d.yearsRemaining}yr remaining)`).join("; ");
@@ -3961,7 +3962,7 @@ function JournalScreen({profile,natalPos}){
   const del=async(id)=>{const ne=entries.filter(e=>e.id!==id);setEntries(ne);try{await window.storage.set("astrum_journal",JSON.stringify(ne));}catch(e){}};
   const reflect=async()=>{
     const apiKey=profile?.apiKey||"";
-    if(!apiKey){setReflection("Configure your Anthropic API key in Profile to use AI reflection.");return;}
+    if(!aiConfigured()){setReflection(aiUnconfiguredMessage());return;}
     setReflecting(true);setReflection(null);
     const trad=profile?.traditions?.map(t=>TRADITIONS[t]?.label||t).join(", ")||"Western Ceremonial";
     const entrySummary=entries.slice(0,20).map(e=>`[${e.date}] ${P[e.planet]?.name||e.planet}: ${e.intent}${e.outcome?` → ${e.outcome}`:""}`).join("\n");
@@ -4079,7 +4080,7 @@ function AIScreen({now,eph,fractal,natalPos,hour,profile}){
     const context=buildContext();
     const systemPrompt=buildSystemPrompt(profile,context);
     const apiKey=profile?.apiKey||"";
-    if(!apiKey){setMessages(m=>[...m,{role:"assistant",content:"No API key configured. Go to Profile → Anthropic API Key to enter your key from console.anthropic.com."}]);setLoading(false);return;}
+    if(!aiConfigured()){setMessages(m=>[...m,{role:"assistant",content:aiUnconfiguredMessage()}]);setLoading(false);return;}
     try{
       const txt=await askClaude({apiKey,system:systemPrompt,maxTokens:1500,messages:[...messages,userMsg].filter(m=>m.role!=="assistant"||messages.indexOf(m)>0).map(m=>({role:m.role,content:m.content}))});
       setMessages(m=>[...m,{role:"assistant",content:txt}]);
@@ -4276,7 +4277,7 @@ function OraclePanel({open,onClose,context,profile}){
     const newMsgs=[...history,{role:"user",content:userText}];
     setMsgs(newMsgs);
     setLoading(true);
-    if(!apiKey){setMsgs(m=>[...m,{role:"assistant",content:"Configure your Anthropic API key in Profile → API Key to activate the Oracle."}]);setLoading(false);return;}
+    if(!aiConfigured()){setMsgs(m=>[...m,{role:"assistant",content:aiUnconfiguredMessage()}]);setLoading(false);return;}
     const sys=buildSystemPrompt(profile,"You are the Oracle — an embedded advisor in a magical practice app. Speak directly to what the practitioner is currently observing. Be concise and specific (2-4 paragraphs for readings, shorter for follow-ups). Reference exact data given. No generalities — address the specific conditions described.");
     try{
       const txt=await askClaude({apiKey,system:sys,maxTokens:800,messages:newMsgs.map(m=>({role:m.role,content:m.content}))});
@@ -5024,10 +5025,10 @@ function SigilScreen({eph,profile,natalPos}){
         <div style={{borderTop:"1px solid rgba(200,175,100,0.08)",paddingTop:20,marginBottom:20}}>
           <div style={{fontSize:10,letterSpacing:2,color:"rgba(200,175,100,0.5)",marginBottom:10}}>✧ AI TIMING GUIDANCE</div>
           {note?<div style={{fontSize:12,lineHeight:1.7,color:"rgba(200,175,100,0.75)"}}>{note}</div>
-          :<button onClick={()=>getAITiming(sel)} disabled={aiLoading||!profile?.apiKey} style={{padding:"6px 16px",border:"1px solid rgba(200,175,100,0.2)",borderRadius:4,background:"transparent",color:aiLoading?"rgba(200,175,100,0.35)":GOLD,fontFamily:F,fontSize:10,letterSpacing:2,cursor:"pointer"}}>
+          :<button onClick={()=>getAITiming(sel)} disabled={aiLoading||!aiConfigured()} style={{padding:"6px 16px",border:"1px solid rgba(200,175,100,0.2)",borderRadius:4,background:"transparent",color:aiLoading?"rgba(200,175,100,0.35)":GOLD,fontFamily:F,fontSize:10,letterSpacing:2,cursor:"pointer"}}>
             {aiLoading?"READING SKY…":"GET TIMING"}
           </button>}
-          {!profile?.apiKey&&<div style={{fontSize:9,color:"rgba(200,175,100,0.3)",marginTop:6}}>Set API key in Profile to enable AI timing.</div>}
+          {!aiConfigured()&&<div style={{fontSize:9,color:"rgba(200,175,100,0.3)",marginTop:6}}>Set an AI engine in Profile to enable AI timing.</div>}
         </div>
         <button onClick={()=>deleteSigil(sel.id)} style={{padding:"5px 14px",border:"1px solid rgba(200,100,100,0.2)",borderRadius:4,background:"transparent",color:"rgba(200,100,100,0.5)",fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>DELETE SIGIL</button>
       </div>
@@ -5292,7 +5293,7 @@ function LearnScreen({profile}){
     const apiKey=profile?.apiKey||"";
     const newMsgs=[...history,{role:"user",content:text}];
     setMsgs(newMsgs);setLoading(true);
-    if(!apiKey){setMsgs(m=>[...m,{role:"assistant",content:"Configure your Anthropic API key in Profile to use the Learn feature."}]);setLoading(false);return;}
+    if(!aiConfigured()){setMsgs(m=>[...m,{role:"assistant",content:aiUnconfiguredMessage()}]);setLoading(false);return;}
     const modeNote=testMode?"You are in TEST MODE. Ask the student a specific question about the topic they have been learning. Wait for their answer, then evaluate it: affirm what is correct, gently correct what is wrong, and deepen the teaching. Then ask another question.":"You are in LESSON MODE. Teach using the Socratic method: introduce a key concept, ask the student a thought-provoking question, respond to their answer with deeper insight. Keep your turns to 2-3 paragraphs maximum. Guide discovery rather than simply lecturing.";
     const sys=buildSystemPrompt(profile,`You are a master teacher of magical tradition and esoteric knowledge.\n\n${modeNote}`);
     try{
@@ -5361,7 +5362,7 @@ function LearnScreen({profile}){
               </div>
             );
           })()}
-          {!profile?.apiKey&&!TOPIC_PRIMERS[topic.id]&&<div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",lineHeight:1.7,marginBottom:12}}>This topic has no static primer yet — the Socratic tutor needs an API key (Profile → API Key).</div>}
+          {!aiConfigured()&&!TOPIC_PRIMERS[topic.id]&&<div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",lineHeight:1.7,marginBottom:12}}>This topic has no static primer yet — the Socratic tutor needs an AI engine (Profile → AI Engine).</div>}
           {loading&&msgs.length<=1&&<div style={{display:"flex",gap:5,padding:"32px 0",justifyContent:"center"}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}</div>}
           {msgs.filter(m=>m.role!=="user"||msgs.indexOf(m)>0).map((m,i)=>(
             <div key={i} style={{marginBottom:14}}>
@@ -5476,6 +5477,80 @@ function LearnScreen({profile}){
 // ═══════════════════════════════════════════════════════════════════════
 // KNOWLEDGE BASE COMPONENT (embedded in ProfileScreen)
 // ═══════════════════════════════════════════════════════════════════════
+function AIEngineCard(){
+  const [cfg,setCfg]=useState(()=>{const c=resolveAIConfig();return {provider:c.provider,localUrl:c.localUrl,localModel:c.localModel,localKey:c.localKey,webllmModel:c.webllmModel};});
+  const [msg,setMsg]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [prog,setProg]=useState("");
+  const save=(patch)=>{const next={...cfg,...patch};setCfg(next);saveJSON("astrum_ai",next);};
+  const IS={width:"100%",marginTop:6,background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:8,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:11,boxSizing:"border-box"};
+  const test=async()=>{
+    setBusy(true);setMsg("");setProg("");
+    try{
+      const {askAI}=await import("./ai/client.js");
+      const out=await askAI({system:"You are a terse test.",messages:[{role:"user",content:"Reply with exactly: ready"}],maxTokens:16,onProgress:p=>setProg(p?.text||"")});
+      setMsg("✓ Engine replied: "+(out||"").trim().slice(0,60));
+    }catch(e){setMsg("✗ "+(e.message||"failed"));}
+    setBusy(false);setProg("");
+  };
+  const warmWebLLM=async()=>{
+    setBusy(true);setMsg("Downloading & compiling the model — this is a one-time step, then it runs offline…");setProg("");
+    try{
+      const {getEngine}=await import("./ai/webllm.js");
+      await getEngine(cfg.webllmModel,p=>setProg(`${p?.text||""} ${p?.progress?Math.round(p.progress*100)+"%":""}`));
+      setMsg("✓ On-device model ready — it now works with no network.");
+    }catch(e){setMsg("✗ "+(e.message||"failed"));}
+    setBusy(false);
+  };
+  const webgpu=typeof navigator!=="undefined"&&!!navigator.gpu;
+  const opt=(id,label,sub)=>(
+    <button key={id} onClick={()=>save({provider:id})} style={{width:"100%",textAlign:"left",padding:"9px 11px",borderRadius:10,marginBottom:5,background:cfg.provider===id?"rgba(212,175,106,0.1)":"rgba(0,0,0,0.25)",border:`1px solid ${cfg.provider===id?"rgba(212,175,106,0.4)":"rgba(200,175,100,0.08)"}`,cursor:"pointer"}}>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <span style={{width:14,height:14,borderRadius:7,border:`1px solid ${cfg.provider===id?GOLD:"rgba(200,175,100,0.3)"}`,background:cfg.provider===id?GOLD:"transparent",flexShrink:0}}/>
+        <span style={{fontFamily:F,fontSize:11,color:cfg.provider===id?GOLD:"rgba(200,175,100,0.6)"}}>{label}</span>
+      </div>
+      <div style={{fontFamily:F,fontSize:8.5,color:"rgba(200,175,100,0.35)",marginTop:3,marginLeft:22,lineHeight:1.5}}>{sub}</div>
+    </button>
+  );
+  return(
+    <div className="card" style={{margin:"0 14px 10px"}}>
+      <div style={L()}>AI Engine</div>
+      <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Which brain powers the Oracle, tutor, and reflections. Choose the cloud, your own server, or a model that runs entirely on this device.</div>
+      <div style={{marginTop:10}}>
+        {opt("anthropic","Anthropic — cloud","Best quality. Uses your API key below. Needs a connection.")}
+        {opt("local","Local server — OpenAI-compatible","Point at Ollama, llama.cpp, or LM Studio on your network. Private, offline if the server is local.")}
+        {opt("webllm","On-device — WebGPU","A quantized model running in the app itself. Downloads once, then works with no network — for a dedicated offline iPad.")}
+      </div>
+      {cfg.provider==="anthropic"&&(
+        <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",marginTop:4,fontStyle:"italic"}}>Set the key in the Anthropic API Key card below.</div>
+      )}
+      {cfg.provider==="local"&&(
+        <div style={{marginTop:4}}>
+          <input value={cfg.localUrl} onChange={e=>save({localUrl:e.target.value})} placeholder="http://localhost:11434/v1" style={IS}/>
+          <input value={cfg.localModel} onChange={e=>save({localModel:e.target.value})} placeholder="model name (e.g. llama3.1)" style={IS}/>
+          <input type="password" value={cfg.localKey} onChange={e=>save({localKey:e.target.value})} placeholder="API key (optional)" style={IS}/>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:5,lineHeight:1.5}}>The URL should include the version path (…/v1). A dedicated iPad can reach a server on the same network.</div>
+        </div>
+      )}
+      {cfg.provider==="webllm"&&(
+        <div style={{marginTop:4}}>
+          {!webgpu&&<div style={{fontFamily:F,fontSize:9,color:"#C08050",marginTop:2,lineHeight:1.6}}>⚠ This device reports no WebGPU. On-device AI needs it (recent iPadOS/Safari). Where it's missing, use the cloud or a local server.</div>}
+          <select value={cfg.webllmModel} onChange={e=>save({webllmModel:e.target.value})} style={IS}>
+            {WEBLLM_MODELS.map(m=><option key={m.id} value={m.id}>{m.label} · {m.size}</option>)}
+          </select>
+          <button onClick={warmWebLLM} disabled={busy||!webgpu} style={{width:"100%",marginTop:6,padding:"9px 0",borderRadius:8,background:webgpu?"rgba(100,80,160,0.15)":"rgba(0,0,0,0.3)",border:`1px solid ${webgpu?"rgba(100,80,160,0.35)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:9,color:webgpu?"rgba(160,140,220,0.85)":"#5A4020",letterSpacing:1.5,cursor:webgpu?"pointer":"default"}}>{busy?"WORKING…":"⬇ DOWNLOAD & WARM UP MODEL"}</button>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:5,lineHeight:1.5}}>First download is large (see size) and needs a connection once; afterward the model is cached and runs offline.</div>
+        </div>
+      )}
+      <div style={{display:"flex",gap:6,marginTop:8}}>
+        <button onClick={test} disabled={busy} style={{flex:1,padding:"8px 0",borderRadius:8,background:"rgba(200,175,100,0.08)",border:"1px solid rgba(200,175,100,0.2)",fontFamily:F,fontSize:9,color:GOLD,letterSpacing:1.5,cursor:"pointer"}}>{busy?"…":"TEST ENGINE"}</button>
+      </div>
+      {prog&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.6)",marginTop:6,lineHeight:1.5}}>{prog}</div>}
+      {msg&&<div style={{fontFamily:F,fontSize:9,color:msg.startsWith("✓")?"#7A9A7A":"#9B5050",marginTop:6,lineHeight:1.5}}>{msg}</div>}
+    </div>
+  );
+}
+
 function IntakeCard(){
   const [text,setText]=useState("");
   const [source,setSource]=useState("");
@@ -5831,9 +5906,10 @@ function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyPrefs}){
           })}
         </div>
       </div>
+      <AIEngineCard/>
       <div className="card" style={{margin:"0 14px 10px"}}>
         <div style={L()}>Anthropic API Key</div>
-        <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Required for the AI Planner and all Oracle features. Stored only in this app, never transmitted elsewhere.</div>
+        <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Used when the AI Engine is set to Anthropic. Stored only in this app, never transmitted elsewhere.</div>
         <div style={{marginTop:10}}>
           <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="sk-ant-…" style={IS}/>
           <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)",marginTop:5}}>Obtain at console.anthropic.com — you pay only for what you use.</div>
@@ -5871,7 +5947,7 @@ function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyPrefs}){
         <button onClick={saveProfile} style={{width:"100%",padding:"13px 0",borderRadius:12,background:"rgba(212,175,106,0.12)",border:"1px solid rgba(212,175,106,0.35)",fontFamily:F,fontSize:10,color:saved?"#7AB07A":"#D4AF6A",letterSpacing:3,textTransform:"uppercase",cursor:"pointer",transition:"color 0.4s"}}>
           {saved?"✓ PROFILE SAVED":"SAVE PROFILE"}
         </button>
-        {!profile?.apiKey&&<div style={{fontFamily:F,fontSize:9,color:"#9B5050",textAlign:"center",marginTop:8,lineHeight:1.5}}>API key not set — AI features are inactive</div>}
+        {!aiConfigured()&&<div style={{fontFamily:F,fontSize:9,color:"#9B5050",textAlign:"center",marginTop:8,lineHeight:1.5}}>No AI engine active — set one in AI Engine above</div>}
       </div>
     </div>
   );
