@@ -58,6 +58,31 @@ describe("the five derived lots reverse by night", () => {
   });
 });
 
+describe("the Valens convention (Eros/Necessity as pure mirrors)", () => {
+  const N = x => ((x % 360) + 360) % 360;
+  it("Valens Eros = Asc + Spirit − Fortune, Necessity = Asc + Fortune − Spirit (day)", () => {
+    const l = computeLots(day, { convention: "valens" });
+    expect(l.eros).toBe(N(0 + l.spirit - l.fortune));
+    expect(l.necessity).toBe(N(0 + l.fortune - l.spirit));
+  });
+  it("under Valens, Eros and Necessity are exact reverses of each other", () => {
+    const l = computeLots(day, { convention: "valens" });
+    // Eros and Necessity are equidistant from Asc in opposite directions.
+    expect(N(l.eros + l.necessity)).toBe(N(2 * day.asc));
+  });
+  it("leaves the other five lots identical to Paulus", () => {
+    const p = computeLots(day), v = computeLots(day, { convention: "valens" });
+    for (const id of ["fortune", "spirit", "courage", "victory", "nemesis"]) {
+      expect(v[id]).toBe(p[id]);
+    }
+  });
+  it("differs from Paulus on Eros/Necessity for a generic chart", () => {
+    const p = computeLots(day), v = computeLots(day, { convention: "valens" });
+    expect(v.eros).not.toBe(p.eros);
+    expect(v.necessity).not.toBe(p.necessity);
+  });
+});
+
 describe("wholeSignHouse", () => {
   it("counts whole-sign houses from the Ascendant", () => {
     expect(wholeSignHouse(15, 15)).toBe(1);       // same sign as Asc → 1st

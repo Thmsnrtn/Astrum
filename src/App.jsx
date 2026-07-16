@@ -2409,7 +2409,13 @@ function ElectScreen({now,natalPos,eph,profile}){
   const sCol=s=>s>=90?"#FFD700":s>=75?"#5CA85C":s>=60?"#D4AF6A":s>=45?"#C08050":"#8B4040";
   const gCol=g=>g.includes("DISQ")?"#8B4040":g.includes("Talismanic")?"#FFD700":g.includes("Excellent")?"#5CA85C":g.includes("Good")?"#D4AF6A":"#8A7050";
   const fmtD=d=>{const diff=Math.floor((d-now)/86400000),t=d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});if(diff===0)return"Today "+t;if(diff===1)return"Tomorrow "+t;if(diff<8)return DAY_NAMES[d.getDay()]+" "+t;return d.toLocaleDateString("en-US",{month:"short",day:"numeric"})+" "+t;};
-  const runScan=()=>{setScanning(true);setElections([]);setSelIdx(null);const snap=new Date(now);setTimeout(()=>{setElections(scanElections(snap,days,planet,natalPos));setScanning(false);},300);};
+  const [rankByRecord,setRankByRecord]=useState(false);
+  const runScan=()=>{setScanning(true);setElections([]);setSelIdx(null);const snap=new Date(now);setTimeout(()=>{
+    const raw=scanElections(snap,days,planet,natalPos);
+    // Decorate each window with elective memory so your record can rank them.
+    const decorated=raw.map(r=>{const m=electiveMemory(memStats,electionFactors(r.date,planet,r.assess.score));return{...r,mem:m,adjusted:m.available?Math.max(0,Math.min(100,r.assess.score+m.adjustment)):r.assess.score};});
+    setElections(decorated);setScanning(false);
+  },300);};
   const SEASON_DOMAINS=[
     {id:"wealth",  label:"Wealth",   icon:"✦", col:"#D4AF6A"},
     {id:"health",  label:"Health",   icon:"⊕", col:"#5CA87C"},
@@ -2524,10 +2530,11 @@ function ElectScreen({now,natalPos,eph,profile}){
             <div style={{display:"flex",gap:5,marginBottom:9}}>{[14,30,60,90].map(d=><button key={d} onClick={()=>setDays(d)} style={{flex:1,padding:"6px 0",borderRadius:8,background:days===d?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(days===d?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.12)"),fontFamily:F,fontSize:8,color:days===d?"#D4AF6A":"#6A5030",letterSpacing:2,cursor:"pointer"}}>{d}D</button>)}</div>
             <button onClick={runScan} disabled={scanning} style={{width:"100%",padding:"12px 0",borderRadius:11,background:scanning?"rgba(0,0,0,0.3)":P[planet].col+"18",border:"1px solid "+(scanning?"rgba(200,175,100,0.12)":P[planet].col+"45"),fontFamily:F,fontSize:10,color:scanning?"#6A5030":P[planet].col,letterSpacing:3,textTransform:"uppercase",cursor:scanning?"default":"pointer"}}>{scanning?"SCANNING…":"FIND ELECTIONS"}</button>
           </div>
-          {elections.map((e,i)=>{const isSel=selIdx===i,gc=sCol(e.assess.score);return<div key={i} onClick={()=>setSelIdx(isSel?null:i)} style={{marginBottom:8,borderRadius:13,background:isSel?P[planet].col+"0F":"rgba(8,5,22,0.65)",border:"2px solid "+(isSel?gc+"60":gc+"22"),padding:"12px 13px",cursor:"pointer"}}>
+          {elections.some(e=>e.mem?.available)&&<button onClick={()=>setRankByRecord(r=>!r)} style={{width:"100%",padding:"8px 0",marginBottom:8,borderRadius:9,background:rankByRecord?"rgba(92,168,92,0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(rankByRecord?"rgba(92,168,92,0.35)":"rgba(200,175,100,0.12)"),fontFamily:F,fontSize:8.5,color:rankByRecord?"#7AB07A":"rgba(200,175,100,0.5)",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>{rankByRecord?"◬ Ranked by your record":"◬ Rank by your record"}</button>}
+          {(rankByRecord?elections.map((e,i)=>[e,i]).sort((a,b)=>b[0].adjusted-a[0].adjusted):elections.map((e,i)=>[e,i])).map(([e,i])=>{const isSel=selIdx===i,gc=sCol(e.assess.score),adj=e.mem?.available?e.mem.adjustment:0;return<div key={i} onClick={()=>setSelIdx(isSel?null:i)} style={{marginBottom:8,borderRadius:13,background:isSel?P[planet].col+"0F":"rgba(8,5,22,0.65)",border:"2px solid "+(isSel?gc+"60":gc+"22"),padding:"12px 13px",cursor:"pointer"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-              <div style={{flex:1}}><div style={{fontFamily:F,fontSize:11,color:gc}}>{e.assess.grade}</div><div style={{fontFamily:F,fontSize:10,color:"#C4A870",fontStyle:"italic"}}>{fmtD(e.date)}</div><div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.45)",marginTop:1}}>{P[planet].name} {e.zodiac.degree}° {e.zodiac.sym}</div></div>
-              <div style={{fontFamily:F,fontSize:30,color:gc,lineHeight:1}}>{e.assess.score}</div>
+              <div style={{flex:1}}><div style={{fontFamily:F,fontSize:11,color:gc}}>{e.assess.grade}</div><div style={{fontFamily:F,fontSize:10,color:"#C4A870",fontStyle:"italic"}}>{fmtD(e.date)}</div><div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.45)",marginTop:1}}>{P[planet].name} {e.zodiac.degree}° {e.zodiac.sym}</div>{e.mem?.available&&adj!==0&&<div style={{fontFamily:F,fontSize:8.5,color:adj>0?"#7AB07A":"#D28060",marginTop:3}}>◬ Your record {adj>0?"+":""}{adj} → {e.adjusted}{e.mem.testimony[0]?` · ${e.mem.testimony[0].key} ${e.mem.testimony[0].pct}%`:""}</div>}</div>
+              <div style={{textAlign:"right"}}><div style={{fontFamily:F,fontSize:30,color:gc,lineHeight:1}}>{e.assess.score}</div>{e.mem?.available&&adj!==0&&<div style={{fontFamily:F,fontSize:11,color:adj>0?"#7AB07A":"#D28060",marginTop:2}}>{e.adjusted}</div>}</div>
             </div>
             {isSel&&<div style={{marginTop:9,paddingTop:9,borderTop:"1px solid "+gc+"20"}}>
               <button onClick={ev=>{ev.stopPropagation();commitElection(e.date,e.assess);}} style={{width:"100%",padding:"9px 0",borderRadius:9,marginBottom:7,background:committed?"rgba(92,168,92,0.15)":gc+"14",border:"1px solid "+(committed?"rgba(92,168,92,0.4)":gc+"40"),fontFamily:F,fontSize:9,color:committed?"#7AB07A":gc,letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>{committed?"✓ Recorded — judge it in Review":"⚑ Commit to This Window"}</button>

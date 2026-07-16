@@ -28,6 +28,7 @@ function Deg({ lon }) {
 
 export default function LotsScreen({ eph, natalPos, profile, now }) {
   const [source, setSource] = useState("natal"); // natal | now
+  const [convention, setConvention] = useState("paulus"); // paulus | valens
   const [open, setOpen] = useState(null);
   const [reading, setReading] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -37,7 +38,7 @@ export default function LotsScreen({ eph, natalPos, profile, now }) {
     return chartFromPositions(src);
   }, [source, natalPos, eph]);
 
-  const lots = useMemo(() => (chart ? computeLots(chart) : null), [chart]);
+  const lots = useMemo(() => (chart ? computeLots(chart, { convention }) : null), [chart, convention]);
   const hasChart = chart && chart.asc != null && lots;
 
   const draftReading = async () => {
@@ -50,8 +51,9 @@ export default function LotsScreen({ eph, natalPos, profile, now }) {
       return `${l.name}: ${z ? `${z.degree}° ${z.name}` : "—"}${h ? `, ${ordinal(h)} whole-sign house` : ""}`;
     }).join("\n");
     const sect = chart.isDayChart === false ? "a NIGHT (nocturnal) chart" : "a DAY (diurnal) chart";
+    const conv = convention === "valens" ? "the VALENS convention (Eros and Necessity as pure mirrors of Fortune and Spirit)" : "the PAULUS convention (Eros from Venus, Necessity from Mercury)";
     const sys = buildSystemPrompt(profile,
-      "You are a Hellenistic astrologer in the tradition of Paulus Alexandrinus and Vettius Valens, versed in the doctrine of the lots as revived by the modern Hellenistic school. Interpret the seven Hermetic Lots below for the practitioner. This is " + sect + ", which determines the lots' formulas. Weigh especially: the Lot of Fortune (the body and fortune) and its ruler; the Lot of Spirit (the soul, action, career) and its ruler; and how the two relate. Then read Eros, Necessity, Courage, Victory, and Nemesis by the houses they fall in and their rulers. Be concrete about the houses and rulers; name what each lot points to in this life. Keep it to a few tight paragraphs — this is chart analysis, not a sermon.");
+      "You are a Hellenistic astrologer in the tradition of Paulus Alexandrinus and Vettius Valens, versed in the doctrine of the lots as revived by the modern Hellenistic school. Interpret the seven Hermetic Lots below for the practitioner. This is " + sect + ", which determines the lots' formulas, computed under " + conv + ". Weigh especially: the Lot of Fortune (the body and fortune) and its ruler; the Lot of Spirit (the soul, action, career) and its ruler; and how the two relate. Then read Eros, Necessity, Courage, Victory, and Nemesis by the houses they fall in and their rulers. Be concrete about the houses and rulers; name what each lot points to in this life. Keep it to a few tight paragraphs — this is chart analysis, not a sermon.");
     try {
       setReading(await askAI({ apiKey: profile?.apiKey || "", system: sys,
         messages: [{ role: "user", content: `Chart: ${source === "natal" ? "natal" : "the present sky"}, ${sect}.\nAscendant: ${lonToZodiac(chart.asc).degree}° ${lonToZodiac(chart.asc).name}.\n\nThe seven lots:\n${lines}` }], maxTokens: 900 }));
@@ -69,9 +71,16 @@ export default function LotsScreen({ eph, natalPos, profile, now }) {
 
       <div style={{ flex: 1, overflowY: "auto", padding: "0 14px" }}>
         {/* Source toggle */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 7 }}>
           {[["natal", "Natal Chart"], ["now", "The Sky Now"]].map(([k, lbl]) => (
             <button key={k} onClick={() => { setSource(k); setReading(null); }} style={{ flex: 1, padding: "9px 0", borderRadius: 10, background: source === k ? "rgba(212,175,106,0.14)" : "rgba(0,0,0,0.3)", border: `1px solid ${source === k ? "rgba(212,175,106,0.4)" : "rgba(200,175,100,0.1)"}`, fontFamily: F, fontSize: 9.5, color: source === k ? GOLD : "#7A6030", letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
+          ))}
+        </div>
+        {/* Convention toggle — Eros/Necessity differ between the two schools */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center" }}>
+          <span style={{ fontFamily: F, fontSize: 8, color: "#6A5028", letterSpacing: 1.5, textTransform: "uppercase", marginRight: 2 }}>Rite</span>
+          {[["paulus", "Paulus"], ["valens", "Valens"]].map(([k, lbl]) => (
+            <button key={k} onClick={() => { setConvention(k); setReading(null); }} style={{ flex: 1, padding: "6px 0", borderRadius: 8, background: convention === k ? "rgba(120,100,180,0.16)" : "rgba(0,0,0,0.3)", border: `1px solid ${convention === k ? "rgba(120,100,180,0.4)" : "rgba(200,175,100,0.08)"}`, fontFamily: F, fontSize: 8.5, color: convention === k ? "#B0A0E0" : "#6A5028", letterSpacing: 1.5, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
           ))}
         </div>
 
@@ -130,7 +139,9 @@ export default function LotsScreen({ eph, natalPos, profile, now }) {
             )}
 
             <div style={{ fontFamily: F, fontSize: 8.5, color: "#5A4020", fontStyle: "italic", lineHeight: 1.7, padding: "4px 6px 12px" }}>
-              Formulas after Paulus Alexandrinus, sect-aware (Eros and Necessity follow the Paulus convention of the modern Hellenistic revival, not the Valens variant). Houses are whole-sign from the Ascendant.
+              {convention === "valens"
+                ? "Valens convention: Eros and Necessity are computed as pure mirrors of the Lots of Fortune and Spirit (no significator planet) — the older layer. The other five lots are unchanged. Sect-aware; houses whole-sign from the Ascendant."
+                : "Paulus Alexandrinus convention (the modern Hellenistic-revival default): Eros and Necessity take the significator planet (Venus, Mercury). Switch to Valens for the older, planet-free mirrors. Sect-aware; houses whole-sign from the Ascendant."}
             </div>
           </>
         )}

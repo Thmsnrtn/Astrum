@@ -43,12 +43,14 @@ export const LOTS = [
   {
     id: "eros", name: "Eros", latin: "Pars Amoris", glyph: "♡",
     significator: "venus", add: "venus", sub: "spirit", reverses: true,
+    valens: { add: "spirit", sub: "fortune" }, // Valens: Asc + Spirit − Fortune (no planet)
     theme: "Love · desire · what is longed for",
     meaning: "The lot of Eros — desire, love, appetite and voluntary longing; what one is drawn to and reaches toward. Swung from Venus and the Lot of Spirit (Asc + Venus − Spirit by day).",
   },
   {
     id: "necessity", name: "Necessity", latin: "Pars Necessitatis", glyph: "⚷",
     significator: "mercury", add: "fortune", sub: "mercury", reverses: true,
+    valens: { add: "fortune", sub: "spirit" }, // Valens: Asc + Fortune − Spirit (no planet)
     theme: "Constraint · fate · what binds",
     meaning: "The lot of Necessity (Ananke) — constraint, compulsion, subordination, enmities, and the unavoidable obligations fate imposes; where the world sets its terms. Swung from the Lot of Fortune and Mercury (Asc + Fortune − Mercury by day).",
   },
@@ -75,14 +77,18 @@ export const LOTS = [
 export const LOT_BY_ID = Object.fromEntries(LOTS.map(l => [l.id, l]));
 
 // chart: { asc, sun, moon, mercury, venus, mars, jupiter, saturn, isDayChart }
-// (all longitudes in degrees). Returns { fortune, spirit, eros, ... } → lon.
-export function computeLots(chart) {
+// (all longitudes in degrees). opts.convention: "paulus" (default) | "valens"
+// — Valens computes Eros/Necessity as pure mirrors of Fortune and Spirit,
+// with no significator planet. Returns { fortune, spirit, eros, ... } → lon.
+export function computeLots(chart, opts = {}) {
   if (chart == null || chart.asc == null) return null;
+  const valens = opts.convention === "valens";
   const day = chart.isDayChart !== false; // default to day if unknown
   const out = {};
   const ref = k => (k === "fortune" || k === "spirit" ? out[k] : chart[k]);
   for (const lot of LOTS) {
-    const a = ref(lot.add), b = ref(lot.sub);
+    const f = valens && lot.valens ? lot.valens : lot;
+    const a = ref(f.add), b = ref(f.sub);
     if (a == null || b == null) { out[lot.id] = null; continue; }
     out[lot.id] = day || !lot.reverses ? norm(chart.asc + a - b) : norm(chart.asc + b - a);
   }
