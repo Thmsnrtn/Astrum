@@ -17,7 +17,7 @@ const jdToDate = jd => new Date((jd - 2440587.5) * 86400000);
 const elongationAt = jd => norm(planetLon("moon", jd) - planetLon("sun", jd));
 
 // A moon-phase disc. `elong` is the Sun–Moon elongation (0=New … 180=Full).
-function MoonDisc({ elong, R = 48 }) {
+export function MoonDisc({ elong, R = 48 }) {
   const e = norm(elong);
   const rad = (e * Math.PI) / 180;
   const rx = Math.abs(Math.cos(rad)) * R;

@@ -7,10 +7,11 @@
 // is sealed — a casting recorded with the sky as it stood, so the working
 // enters the Operator's Loop and can be judged later in Review.
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { F, L, T, P, TRADITIONS, TRADITION_STEPS, conditionsFromProfile } from "../App.jsx";
 import { createCasting } from "../lib/castings.js";
 import { loadSpirits } from "../lib/spirits.js";
+import { startDrum, bell, soundAvailable } from "../lib/sound.js";
 
 const GOLD = "#D4AF6A";
 const fmtElapsed = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
@@ -28,6 +29,15 @@ export default function RitualRuntimeScreen({ eph, hour, profile, natalPos, now 
   const [saved, setSaved] = useState(false);
   const [allies, setAllies] = useState([]);
   const court = loadSpirits();
+  const [drumming, setDrumming] = useState(false);
+  const drumStop = useRef(null);
+  const toggleDrum = () => {
+    if (drumming) { drumStop.current?.(); drumStop.current = null; setDrumming(false); }
+    else { drumStop.current = startDrum(4.5); if (drumStop.current) setDrumming(true); }
+  };
+  // Stop the drum when leaving the running phase or unmounting.
+  useEffect(() => () => { drumStop.current?.(); }, []);
+  useEffect(() => { if (phase !== "running" && drumming) { drumStop.current?.(); drumStop.current = null; setDrumming(false); } }, [phase]); // eslint-disable-line
 
   const steps = TRADITION_STEPS[tradition] || TRADITION_STEPS["western-ceremonial"];
   const hourPlanet = hour?.planet;
@@ -49,7 +59,7 @@ export default function RitualRuntimeScreen({ eph, hour, profile, natalPos, now 
   }, [phase]);
 
   const begin = () => { setStepIdx(0); setStartedAt(Date.now()); setElapsed(0); setPhase("running"); };
-  const next = () => { if (stepIdx < steps.length - 1) setStepIdx(stepIdx + 1); else setPhase("done"); };
+  const next = () => { if (stepIdx < steps.length - 1) setStepIdx(stepIdx + 1); else { try { bell(432); } catch {} setPhase("done"); } };
   const prev = () => { if (stepIdx > 0) setStepIdx(stepIdx - 1); };
 
   const seal = () => {
@@ -137,7 +147,8 @@ export default function RitualRuntimeScreen({ eph, hour, profile, natalPos, now 
       <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "12px 16px", borderBottom: "1px solid rgba(200,175,100,0.08)" }}>
         <span style={{ fontSize: 18, color: P[hourPlanet]?.col || GOLD }}>{P[hourPlanet]?.sym}</span>
         <span style={{ fontFamily: F, fontSize: 10, color: aligned ? "#7AB07A" : "rgba(200,175,100,0.5)" }}>Hour of {P[hourPlanet]?.name}{aligned ? " ✓" : ""}</span>
-        <span style={{ fontFamily: F, fontSize: 10, color: "rgba(200,175,100,0.35)", marginLeft: "auto" }}>{fmtElapsed(elapsed)}</span>
+        {soundAvailable() && <button onClick={toggleDrum} style={{ marginLeft: "auto", background: drumming ? pc + "1A" : "none", border: `1px solid ${drumming ? pc + "50" : "rgba(200,175,100,0.15)"}`, borderRadius: 8, color: drumming ? pc : "rgba(200,175,100,0.45)", fontFamily: F, fontSize: 9, padding: "4px 10px", letterSpacing: 1, cursor: "pointer" }}>{drumming ? "◉ drum" : "○ drum"}</button>}
+        <span style={{ fontFamily: F, fontSize: 10, color: "rgba(200,175,100,0.35)", marginLeft: soundAvailable() ? 0 : "auto" }}>{fmtElapsed(elapsed)}</span>
       </div>
       {/* Progress dots */}
       <div style={{ display: "flex", gap: 5, justifyContent: "center", padding: "12px 0 4px" }}>

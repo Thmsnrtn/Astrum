@@ -25,6 +25,7 @@ import LunarCycleScreen from "./screens/LunarCycleScreen.jsx";
 import RitualRuntimeScreen from "./screens/RitualRuntimeScreen.jsx";
 import SpiritCourtScreen from "./screens/SpiritCourtScreen.jsx";
 import ChaptersScreen from "./screens/ChaptersScreen.jsx";
+import AltarScreen from "./screens/AltarScreen.jsx";
 import { profection as calcProfection } from "./engine/profections.js";
 import OmenScreen from "./screens/OmenScreen.jsx";
 import { loadSpirits, upcomingObservances } from "./lib/spirits.js";
@@ -1191,6 +1192,7 @@ const TINT_PRESETS = {
 // ═══════════════════════════════════════════════════════════════════════
 const NAV_SECTIONS = [
   {id:"sky",     icon:"⊙", label:"Sky",       desc:"Live celestial state"},
+  {id:"altar",   icon:"🕯", label:"Altar",     desc:"Glanceable temple face — the hour, held"},
   {id:"aspects", icon:"△", label:"Aspects",    desc:"Live aspect grid & meanings"},
   {id:"decans",  icon:"✦", label:"Decans",     desc:"36 Faces of Heaven"},
   {id:"fractal", icon:"◎", label:"Fractal",    desc:"Nested time"},
@@ -1262,6 +1264,7 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
     {id:"spirits",label:"The Spirit Court",desc:"Allies, offerings, and the ancestor calendar",icon:"🕯",screen:"spirits"},
     {id:"omens",label:"Capture an Omen or Dream",desc:"Fast capture, sky-stamped, feeds the Oracle",icon:"◬",screen:"omens"},
     {id:"chapters",label:"Chapters — What Year Is This?",desc:"Annual profection, Lord of the Year, zodiacal releasing",icon:"◔",screen:"chapters"},
+    {id:"altar",label:"Altar Mode",desc:"Full-screen temple face — hour, moon, observances",icon:"🕯",screen:"altar"},
     {id:"horary",label:"Cast a Horary Question",desc:"Chart of the question with significators",icon:"?",screen:"horary"},
     {id:"geomancy",label:"Cast Geomancy",desc:"The shield of the sixteen figures",icon:"⚏",screen:"geomancy"},
     {id:"talisman",label:"New Talisman",desc:"Election → design → consecration pipeline",icon:"◈",screen:"talisman"},
@@ -1647,7 +1650,7 @@ function BriefingCard({now,eph,hour,profile}){
   const [gloss,setGloss]=useState(null);
   const [glossing,setGlossing]=useState(false);
   const text=useMemo(()=>{
-    try{return composeBriefing({now,eph,hour,castings:loadCastings(),athanor:loadJSON("astrum_athanor",[]),observances:upcomingObservances(loadSpirits(),now,1)});}catch{return "";}
+    try{const ds=new Date(now);ds.setHours(0,0,0,0);return composeBriefing({now,eph,hour,castings:loadCastings(),athanor:loadJSON("astrum_athanor",[]),observances:upcomingObservances(loadSpirits(),ds,1)});}catch{return "";}
     // eslint-disable-next-line
   },[Math.floor(now.getTime()/60000),open]);
   const getGloss=async()=>{
@@ -6463,6 +6466,7 @@ export default function App(){
           {tab==="spirits" &&<SpiritCourtScreen profile={profile}/>}
           {tab==="omens"   &&<OmenScreen profile={profile} natalPos={natalPos}/>}
           {tab==="chapters"&&<ChaptersScreen profile={profile} natalPos={natalPos} now={now}/>}
+          {tab==="altar"   &&<AltarScreen now={now} hour={hour} eph={eph} setTab={setTab}/>}
           {tab==="horary"  &&<HoraryScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="geomancy"&&<GeomancyScreen profile={profile} natalPos={natalPos}/>}
           {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
