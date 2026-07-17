@@ -24,6 +24,8 @@ import LotsScreen from "./screens/LotsScreen.jsx";
 import LunarCycleScreen from "./screens/LunarCycleScreen.jsx";
 import RitualRuntimeScreen from "./screens/RitualRuntimeScreen.jsx";
 import SpiritCourtScreen from "./screens/SpiritCourtScreen.jsx";
+import ChaptersScreen from "./screens/ChaptersScreen.jsx";
+import { profection as calcProfection } from "./engine/profections.js";
 import OmenScreen from "./screens/OmenScreen.jsx";
 import { loadSpirits, upcomingObservances } from "./lib/spirits.js";
 import { computeLots } from "./engine/lots.js";
@@ -1198,6 +1200,7 @@ const NAV_SECTIONS = [
   {id:"mansions", icon:"☾", label:"Mansions",  desc:"28 lunar stations"},
   {id:"lunar",    icon:"☾", label:"Lunar Cycle",desc:"The monthly rhythm — plant, fruit, release"},
   {id:"lots",     icon:"⊗", label:"Lots",       desc:"The seven Hermetic Lots"},
+  {id:"chapters", icon:"◔", label:"Chapters",   desc:"Profections & zodiacal releasing"},
   {id:"elect",    icon:"◈", label:"Elections",  desc:"Optimal windows"},
   {id:"calendar", icon:"◫", label:"Calendar",  desc:"Election planning grid"},
   {id:"almanac",  icon:"❋", label:"Almanac",   desc:"Liturgical month — sky, elections & timing letters"},
@@ -1256,6 +1259,7 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
     {id:"rite",label:"Begin a Rite",desc:"Step through a working under the planetary hour",icon:"✧",screen:"rite"},
     {id:"spirits",label:"The Spirit Court",desc:"Allies, offerings, and the ancestor calendar",icon:"🕯",screen:"spirits"},
     {id:"omens",label:"Capture an Omen or Dream",desc:"Fast capture, sky-stamped, feeds the Oracle",icon:"◬",screen:"omens"},
+    {id:"chapters",label:"Chapters — What Year Is This?",desc:"Annual profection, Lord of the Year, zodiacal releasing",icon:"◔",screen:"chapters"},
     {id:"horary",label:"Cast a Horary Question",desc:"Chart of the question with significators",icon:"?",screen:"horary"},
     {id:"geomancy",label:"Cast Geomancy",desc:"The shield of the sixteen figures",icon:"⚏",screen:"geomancy"},
     {id:"talisman",label:"New Talisman",desc:"Election → design → consecration pipeline",icon:"◈",screen:"talisman"},
@@ -2413,6 +2417,14 @@ function ElectScreen({now,natalPos,eph,profile}){
   const memStats=useMemo(()=>computeStats(loadCastings()),[committed]);
   const mem=useMemo(()=>electiveMemory(memStats,electionFactors(now,planet,live.score)),[memStats,planet,live.score,now]);
   const adjusted=mem.available?Math.max(0,Math.min(100,live.score+mem.adjustment)):null;
+  // Lord of the Year (annual profection) — a standing weight on this year's elections
+  const yearLord=useMemo(()=>{
+    try{
+      if(!profile?.natal?.date||natalPos?.asc==null)return null;
+      const bd=new Date(`${profile.natal.date}T${profile.natal.time||"12:00"}:00`);
+      return calcProfection(bd,now,Math.floor(natalPos.asc/30));
+    }catch{return null;}
+  },[profile,natalPos,now]);
   // Operator's Loop: committing an election creates a casting record
   const commitElection=(date,assess)=>{
     try{
@@ -2519,6 +2531,7 @@ function ElectScreen({now,natalPos,eph,profile}){
               {live.trans&&<span style={{fontFamily:F,fontSize:8,color:"#7CB8E0",background:"rgba(124,184,224,0.1)",border:"1px solid rgba(124,184,224,0.25)",borderRadius:6,padding:"2px 7px"}}>Translation: {P[live.trans.from]?.sym} to {P[live.trans.to]?.sym}</span>}
               {live.prohib&&<span style={{fontFamily:F,fontSize:8,color:"#D24B31",background:"rgba(210,75,49,0.1)",border:"1px solid rgba(210,75,49,0.25)",borderRadius:6,padding:"2px 7px"}}>Prohibited by {P[live.prohib.planet]?.name}</span>}
               {live.speed.fast&&<span style={{fontFamily:F,fontSize:8,color:"#D4AF6A",background:"rgba(212,175,106,0.1)",border:"1px solid rgba(212,175,106,0.2)",borderRadius:6,padding:"2px 7px"}}>Fast Moon {live.speed.speed}°/day</span>}
+              {yearLord&&yearLord.lord===planet&&<span style={{fontFamily:F,fontSize:8,color:"#FFD700",background:"rgba(255,215,0,0.08)",border:"1px solid rgba(255,215,0,0.3)",borderRadius:6,padding:"2px 7px"}}>★ {P[planet].name} is Lord of the Year — carries double weight</span>}
               {live.stars.map(s=><span key={s.name} style={{fontFamily:F,fontSize:8,color:s.col,background:"rgba(200,200,255,0.08)",border:"1px solid "+s.col+"25",borderRadius:6,padding:"2px 7px"}}>{s.name}</span>)}
             </div>
             <button onClick={()=>commitElection(now,live)} style={{width:"100%",padding:"9px 0",borderRadius:9,marginBottom:6,background:committed?"rgba(92,168,92,0.15)":gCol(live.grade)+"14",border:"1px solid "+(committed?"rgba(92,168,92,0.4)":gCol(live.grade)+"40"),fontFamily:F,fontSize:9,color:committed?"#7AB07A":gCol(live.grade),letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>{committed?"✓ Recorded — judge it in Review":"⚑ Cast Now — Record This Sky"}</button>
@@ -4297,6 +4310,7 @@ function buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile){
     case "geomancy": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a master geomancer in the tradition of Agrippa and Greer: The practitioner is casting the sixteen figures. Counsel them on the asking — geomancy answers a clear, sincere, single question best. How should they frame this matter, and which house does it truly belong to? Speak briefly to the character of geomancy as an elemental oracle: the figures are built of odd and even, the whole answer folded into a single Judge — earthier and more decisive than the horary chart.`;
     case "spirits": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a diplomat of the unseen: The practitioner is tending their Spirit Court — the ancestors, planetary intelligences, saints, and spirits of place they work with. Counsel them on relationship as the foundation of the art: reciprocity before petition, offerings given freely and regularly, attention as the truest gift, and starting simple (water for the ancestors) before complicating the court. Remind them that spirits have their own natures and agendas — this is diplomacy, not commanding.`;
     case "omens": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a reader of signs: The practitioner is logging dreams, omens, and synchronicities. Counsel them on discernment — what distinguishes a genuine sign from noise, how the spirit world's call-and-response tends to arrive (clusters, repetitions, the uncanny angle), and how to hold an omen lightly until the pattern confirms itself. Synchronicity around a working is its confirmation; silence for a full lunar cycle is information too.`;
+    case "chapters": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a Hellenistic astrologer versed in Valens: The practitioner is studying their Chapters — the annual profection (whose Lord of the Year colours everything) and zodiacal releasing from the Lots of Spirit and Fortune. Counsel them on reading the current period: the period ruler's natal condition, whether the time is a peak (angular from Fortune, the 10th being the culmination), what the loosing of the bond means when it comes (a decisive change of narrative), and how to align major undertakings with peak periods rather than fighting the quiet chapters.`;
     case "lunar": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a practitioner steeped in lunar timing: The practitioner is working with the current lunation. Counsel them on the rhythm of the month — planting intentions at the New Moon, taking action at the First Quarter, bringing workings to fruition and reviewing them at the Full, releasing and clearing at the Last Quarter, and resting/banishing in the Balsamic dark before the next New. Speak to how this cycle's intentions should be framed and what practice fits the current phase.`;
     case "lots": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a Hellenistic astrologer in the tradition of Paulus Alexandrinus and Vettius Valens: The practitioner is contemplating the seven Hermetic Lots — Fortune (the body and what fortune gives), Spirit (the soul and what one does by will), and the five that swing from them: Eros, Necessity, Courage, Victory, Nemesis. Remember that the lots are sect-aware — the formulas reverse between a day and a night chart. Counsel them on how to read Fortune and Spirit together as the two hinges of the chart, and how the lesser lots and their rulers colour the life. Be precise and traditional.`;
     case "talisman": {
@@ -6218,13 +6232,9 @@ function TalismanScreen({eph,natalPos,profile,now}){
 // ═══════════════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════════════
-function calcProfection(bd,now){
-  const age=Math.floor((now-bd)/(365.25*86400000)),house=(age%12)+1;
-  const signs=["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"];
-  const lords={Aries:"mars",Taurus:"venus",Gemini:"mercury",Cancer:"moon",Leo:"sun",Virgo:"mercury",Libra:"venus",Scorpio:"mars",Sagittarius:"jupiter",Capricorn:"saturn",Aquarius:"saturn",Pisces:"jupiter"};
-  const hs=signs[(house-1)%12];
-  return{age,house,houseSign:hs,lord:lords[hs],desc:"Age "+age+": House "+house+" ("+hs+") — Year Lord: "+P[lords[hs]]?.name};
-}
+// (The old inline calcProfection was removed: it profected from Aries instead
+// of the natal Ascendant and aged by 365.25-day division instead of the
+// birthday. The verified engine in engine/profections.js replaces it.)
 
 export default function App(){
   const [tab,setTab]=useState("sky");
@@ -6386,6 +6396,7 @@ export default function App(){
           {tab==="rite"    &&<RitualRuntimeScreen eph={eph} hour={hour} profile={profile} natalPos={natalPos} now={now}/>}
           {tab==="spirits" &&<SpiritCourtScreen profile={profile}/>}
           {tab==="omens"   &&<OmenScreen profile={profile} natalPos={natalPos}/>}
+          {tab==="chapters"&&<ChaptersScreen profile={profile} natalPos={natalPos} now={now}/>}
           {tab==="horary"  &&<HoraryScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="geomancy"&&<GeomancyScreen profile={profile} natalPos={natalPos}/>}
           {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
