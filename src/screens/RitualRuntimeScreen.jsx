@@ -10,6 +10,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { F, L, T, P, TRADITIONS, TRADITION_STEPS, conditionsFromProfile } from "../App.jsx";
 import { createCasting } from "../lib/castings.js";
+import { loadSpirits } from "../lib/spirits.js";
 
 const GOLD = "#D4AF6A";
 const fmtElapsed = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
@@ -25,6 +26,8 @@ export default function RitualRuntimeScreen({ eph, hour, profile, natalPos, now 
   const [elapsed, setElapsed] = useState(0);
   const [breathIn, setBreathIn] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [allies, setAllies] = useState([]);
+  const court = loadSpirits();
 
   const steps = TRADITION_STEPS[tradition] || TRADITION_STEPS["western-ceremonial"];
   const hourPlanet = hour?.planet;
@@ -56,7 +59,7 @@ export default function RitualRuntimeScreen({ eph, hour, profile, natalPos, now 
         kind: "working", title: intent.slice(0, 60) || `${P[planet].name} rite`, intent,
         planet, tradition,
         conditions: conditionsFromProfile(new Date(), profile, natalPos),
-        links: { ritual: { tradition, steps: steps.length, elapsedMs: elapsed, sealedAt: new Date().toISOString() } },
+        links: { ritual: { tradition, steps: steps.length, elapsedMs: elapsed, sealedAt: new Date().toISOString() }, ...(allies.length ? { spirits: allies } : {}) },
       });
       setSaved(true);
     } catch {}
@@ -93,6 +96,17 @@ export default function RitualRuntimeScreen({ eph, hour, profile, natalPos, now 
               {Object.keys(TRADITION_STEPS).map(t => <option key={t} value={t}>{TRADITIONS[t]?.label || t} — {TRADITION_STEPS[t].length} steps</option>)}
             </select>
             <textarea value={intent} onChange={e => setIntent(e.target.value)} rows={2} placeholder="Name the intent of this working…" style={{ ...IS, marginTop: 8 }} />
+            {court.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.4)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 6 }}>Working With (optional)</div>
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  {court.slice(0, 12).map(s => {
+                    const on = allies.includes(s.name);
+                    return <button key={s.id} onClick={() => setAllies(a => on ? a.filter(x => x !== s.name) : [...a, s.name])} style={{ fontFamily: F, fontSize: 8.5, color: on ? GOLD : "#7A6030", background: on ? "rgba(212,175,106,0.14)" : "rgba(0,0,0,0.3)", border: `1px solid ${on ? "rgba(212,175,106,0.4)" : "rgba(200,175,100,0.12)"}`, borderRadius: 12, padding: "4px 10px", cursor: "pointer" }}>{on ? "✓ " : ""}{s.name}</button>;
+                  })}
+                </div>
+              </div>
+            )}
           </div>
           <button onClick={begin} style={{ width: "100%", padding: "14px 0", borderRadius: 12, background: pc + "18", border: `1px solid ${pc}45`, fontFamily: F, fontSize: 11, color: pc, letterSpacing: 3, textTransform: "uppercase", cursor: "pointer" }}>✦ Begin the Rite</button>
         </div>

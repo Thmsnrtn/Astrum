@@ -171,6 +171,7 @@ export default function ReviewScreen({ profile }) {
               <div style={{ textAlign: "center", padding: "24px 30px", fontFamily: F, fontSize: 11, color: "#5A4020", fontStyle: "italic", lineHeight: 1.8 }}>Judge at least 3 castings and the condition statistics appear — hit rate by planet, hour, phase, mansion, and election score.</div>
             ) : (
               <>
+                {stats.byAlly?.length > 0 && <StatTable title="By Ally (Spirit Court)" rows={stats.byAlly} />}
                 <StatTable title="By Working Planet" rows={stats.byPlanet} />
                 <StatTable title="By Planetary Hour" rows={stats.byHourRuler} />
                 <StatTable title="By Moon Phase" rows={stats.byMoonPhase} />

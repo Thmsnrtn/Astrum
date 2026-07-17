@@ -17,7 +17,7 @@ import { loadJSON, saveJSON } from "./storage.js";
 
 export const DEFAULT_NOTIFY_PREFS = {
   enabled: false,
-  kinds: { hourChange: true, voc: true, elections: true, briefing: true, athanor: true },
+  kinds: { hourChange: true, voc: true, elections: true, briefing: true, athanor: true, observances: true },
   hourPlanets: ["jupiter", "venus"],
   briefingTime: "07:30",
   horizonDays: 3,
@@ -31,7 +31,7 @@ export function saveNotifyPrefs(p) { saveJSON("astrum_notify_prefs", p); }
 
 const cap = s => s ? s[0].toUpperCase() + s.slice(1) : s;
 
-export function planUpcoming({ now, location, prefs, castings = [], athanor = [] }) {
+export function planUpcoming({ now, location, prefs, castings = [], athanor = [], observances = [] }) {
   const plans = [];
   const horizonDays = prefs.horizonDays ?? 3;
   const end = new Date(now.getTime() + horizonDays * 86400000);
@@ -94,6 +94,15 @@ export function planUpcoming({ now, location, prefs, castings = [], athanor = []
     });
   }
 
+  // ── Spirit Court observances (feast days, anniversaries) ──
+  if (prefs.kinds.observances !== false) {
+    observances.forEach(o => {
+      const at = new Date(o.date);
+      if (at > now && at < end) plans.push({ id: `obs_${o.spiritId}_${at.getTime()}`, at, kind: "observance", priority: 1,
+        title: `🕯 ${o.label}`, body: `${o.name}'s day. Light the candle, pour the water — relationship is kept by keeping it.` });
+    });
+  }
+
   // ── Morning briefing ──
   if (prefs.kinds.briefing && prefs.briefingTime) {
     const [hh, mm] = prefs.briefingTime.split(":").map(Number);
@@ -117,7 +126,7 @@ function briefingBodyFor(at, location) {
 }
 
 // Full live briefing for the SkyScreen card.
-export function composeBriefing({ now, eph, hour, castings = [], athanor = [] }) {
+export function composeBriefing({ now, eph, hour, castings = [], athanor = [], observances = [] }) {
   const lines = [];
   lines.push(`Day of ${cap(hour.dayRuler)}, hour of ${cap(hour.planet)}${hour.isDayHour === false ? " (night)" : ""}.`);
   const moon = eph?.pos?.moon;
@@ -136,6 +145,8 @@ export function composeBriefing({ now, eph, hour, castings = [], athanor = [] })
   openElections.slice(0, 2).forEach(c => lines.push(`◈ Committed: ${c.title} — ${new Date(c.links.electionWindow.start).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}.`));
   const dueSteps = athanor.filter(op => op.status === "active").flatMap(op => (op.steps || []).filter(s => !s.completedAt && s.scheduledFor && new Date(s.scheduledFor).toDateString() === now.toDateString()).map(s => ({ op, s })));
   dueSteps.slice(0, 2).forEach(({ op, s }) => lines.push(`🜍 ${op.name}: ${s.title} due today.`));
+  observances.filter(o => new Date(o.date).toDateString() === now.toDateString()).slice(0, 2)
+    .forEach(o => lines.push(`🕯 ${o.label} — ${o.name}'s day. Tend the relationship.`));
   // Ingested timing letters — anything they flag for today or the next few days
   try {
     const todayStr = now.toISOString().split("T")[0];

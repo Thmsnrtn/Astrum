@@ -20,6 +20,10 @@ export const STORAGE_KEYS = [
   "astrum_notify_prefs",// ambient notification preferences
   "astrum_ai",          // AI engine settings (provider, local endpoint, model)
   "astrum_feed",        // ingested timing events (Intake → Almanac)
+  "astrum_spirits",     // the Spirit Court — allies, offerings, feast days
+  "astrum_omens",       // omen & dream log
+  "astrum_watchlist",   // standing electional intentions (the Vigil)
+  "astrum_srs",         // spaced-repetition state over the canon
   "astrum_schema",      // data schema version (gates migrations)
   "astrum_last_export", // ISO timestamp of last backup export
 ];

@@ -23,6 +23,9 @@ import GeomancyScreen from "./screens/GeomancyScreen.jsx";
 import LotsScreen from "./screens/LotsScreen.jsx";
 import LunarCycleScreen from "./screens/LunarCycleScreen.jsx";
 import RitualRuntimeScreen from "./screens/RitualRuntimeScreen.jsx";
+import SpiritCourtScreen from "./screens/SpiritCourtScreen.jsx";
+import OmenScreen from "./screens/OmenScreen.jsx";
+import { loadSpirits, upcomingObservances } from "./lib/spirits.js";
 import { computeLots } from "./engine/lots.js";
 import { electiveMemory, memoryVerdict } from "./lib/electiveMemory.js";
 import { groundingFor } from "./lib/rag.js";
@@ -1204,6 +1207,8 @@ const NAV_SECTIONS = [
   {id:"rite",    icon:"✧", label:"Rite",       desc:"Step through a working under the hour"},
   {id:"talisman",icon:"◈", label:"Talisman",   desc:"Election → design → consecration"},
   {id:"athanor", icon:"🜍", label:"Athanor",    desc:"Alchemical operations lab"},
+  {id:"spirits", icon:"🕯", label:"Spirit Court",desc:"Allies, offerings, and the ancestor calendar"},
+  {id:"omens",   icon:"◬", label:"Omens",      desc:"Dreams, signs, and synchronicities"},
   {id:"journal", icon:"✎", label:"Journal",    desc:"Practice record"},
   {id:"sigils",  icon:"⟁", label:"Sigils",     desc:"Sigil workshop"},
   {id:"grimoire",icon:"📖", label:"Grimoire",   desc:"Personal book of shadows"},
@@ -1249,6 +1254,8 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
     {id:"lots",label:"The Hermetic Lots",desc:"Fortune, Spirit, and the five sect-aware lots",icon:"⊗",screen:"lots"},
     {id:"lunar",label:"Lunar Cycle",desc:"Phase, the coming turns, and this lunation's intention",icon:"☾",screen:"lunar"},
     {id:"rite",label:"Begin a Rite",desc:"Step through a working under the planetary hour",icon:"✧",screen:"rite"},
+    {id:"spirits",label:"The Spirit Court",desc:"Allies, offerings, and the ancestor calendar",icon:"🕯",screen:"spirits"},
+    {id:"omens",label:"Capture an Omen or Dream",desc:"Fast capture, sky-stamped, feeds the Oracle",icon:"◬",screen:"omens"},
     {id:"horary",label:"Cast a Horary Question",desc:"Chart of the question with significators",icon:"?",screen:"horary"},
     {id:"geomancy",label:"Cast Geomancy",desc:"The shield of the sixteen figures",icon:"⚏",screen:"geomancy"},
     {id:"talisman",label:"New Talisman",desc:"Election → design → consecration pipeline",icon:"◈",screen:"talisman"},
@@ -1634,7 +1641,7 @@ function BriefingCard({now,eph,hour,profile}){
   const [gloss,setGloss]=useState(null);
   const [glossing,setGlossing]=useState(false);
   const text=useMemo(()=>{
-    try{return composeBriefing({now,eph,hour,castings:loadCastings(),athanor:loadJSON("astrum_athanor",[])});}catch{return "";}
+    try{return composeBriefing({now,eph,hour,castings:loadCastings(),athanor:loadJSON("astrum_athanor",[]),observances:upcomingObservances(loadSpirits(),now,1)});}catch{return "";}
     // eslint-disable-next-line
   },[Math.floor(now.getTime()/60000),open]);
   const getGloss=async()=>{
@@ -4288,6 +4295,8 @@ function buildOracleContext(tab,now,eph,fractal,natalPos,hour,profile){
     }
     case "horary": return `${base} Moon: ${eph.moonPhase}${eph.voc?.isVoC?" — VOID OF COURSE (judgment unreliable)":""}. ${natalStr}\n\n${runeContext}\n\nAs my Oracle in the tradition of Lilly's Christian Astrology: The practitioner is considering a horary question. Counsel them on the asking itself — is this moment radical enough to bear judgment (consider the void Moon above)? How should the question be framed so the chart can answer it? What makes a question sincere enough for horary?`;
     case "geomancy": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a master geomancer in the tradition of Agrippa and Greer: The practitioner is casting the sixteen figures. Counsel them on the asking — geomancy answers a clear, sincere, single question best. How should they frame this matter, and which house does it truly belong to? Speak briefly to the character of geomancy as an elemental oracle: the figures are built of odd and even, the whole answer folded into a single Judge — earthier and more decisive than the horary chart.`;
+    case "spirits": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a diplomat of the unseen: The practitioner is tending their Spirit Court — the ancestors, planetary intelligences, saints, and spirits of place they work with. Counsel them on relationship as the foundation of the art: reciprocity before petition, offerings given freely and regularly, attention as the truest gift, and starting simple (water for the ancestors) before complicating the court. Remind them that spirits have their own natures and agendas — this is diplomacy, not commanding.`;
+    case "omens": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a reader of signs: The practitioner is logging dreams, omens, and synchronicities. Counsel them on discernment — what distinguishes a genuine sign from noise, how the spirit world's call-and-response tends to arrive (clusters, repetitions, the uncanny angle), and how to hold an omen lightly until the pattern confirms itself. Synchronicity around a working is its confirmation; silence for a full lunar cycle is information too.`;
     case "lunar": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a practitioner steeped in lunar timing: The practitioner is working with the current lunation. Counsel them on the rhythm of the month — planting intentions at the New Moon, taking action at the First Quarter, bringing workings to fruition and reviewing them at the Full, releasing and clearing at the Last Quarter, and resting/banishing in the Balsamic dark before the next New. Speak to how this cycle's intentions should be framed and what practice fits the current phase.`;
     case "lots": return `${base} ${natalStr}\n\n${runeContext}\n\nAs my Oracle and a Hellenistic astrologer in the tradition of Paulus Alexandrinus and Vettius Valens: The practitioner is contemplating the seven Hermetic Lots — Fortune (the body and what fortune gives), Spirit (the soul and what one does by will), and the five that swing from them: Eros, Necessity, Courage, Victory, Nemesis. Remember that the lots are sect-aware — the formulas reverse between a day and a night chart. Counsel them on how to read Fortune and Spirit together as the two hinges of the chart, and how the lesser lots and their rulers colour the life. Be precise and traditional.`;
     case "talisman": {
@@ -6291,7 +6300,7 @@ export default function App(){
       if(cancelled)return;
       try{
         const loc=profile?.natal?.lat&&profile?.natal?.lon?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
-        const plans=planUpcoming({now:new Date(),location:loc,prefs:notifyPrefs,castings:loadCastings(),athanor:loadJSON("astrum_athanor",[])});
+        const plans=planUpcoming({now:new Date(),location:loc,prefs:notifyPrefs,castings:loadCastings(),athanor:loadJSON("astrum_athanor",[]),observances:upcomingObservances(loadSpirits(),new Date(),notifyPrefs.horizonDays??3)});
         reschedule(plans);
       }catch(e){}
     };
@@ -6375,6 +6384,8 @@ export default function App(){
           {tab==="lots"    &&<LotsScreen     eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
           {tab==="lunar"   &&<LunarCycleScreen now={now} profile={profile} natalPos={natalPos}/>}
           {tab==="rite"    &&<RitualRuntimeScreen eph={eph} hour={hour} profile={profile} natalPos={natalPos} now={now}/>}
+          {tab==="spirits" &&<SpiritCourtScreen profile={profile}/>}
+          {tab==="omens"   &&<OmenScreen profile={profile} natalPos={natalPos}/>}
           {tab==="horary"  &&<HoraryScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="geomancy"&&<GeomancyScreen profile={profile} natalPos={natalPos}/>}
           {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}

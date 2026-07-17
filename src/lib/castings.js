@@ -83,11 +83,16 @@ export function computeStats(castings) {
     });
     return Object.entries(groups).map(([k, list]) => ({ key: k, ...rate(list) })).sort((a, b) => b.n - a.n);
   };
+  // Allies can be several per casting, so group with multi-membership.
+  const allyGroups = {};
+  judged.forEach(c => (c.links?.spirits || []).forEach(name => { (allyGroups[name] = allyGroups[name] || []).push(c); }));
+  const byAlly = Object.entries(allyGroups).map(([k, list]) => ({ key: k, ...rate(list) })).sort((a, b) => b.n - a.n);
   return {
     total: castings.length,
     judged: judged.length,
     open: castings.filter(c => c.status === "open").length,
     overall: rate(judged),
+    byAlly,
     byPlanet: groupBy(c => c.planet),
     byHourRuler: groupBy(c => c.conditions?.hourPlanet),
     byMoonPhase: groupBy(c => c.conditions?.moonPhase),

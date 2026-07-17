@@ -36,6 +36,8 @@ export function gatherSources() {
     castings: loadJSON("astrum_castings", []),
     athanor: loadJSON("astrum_athanor", []),
     feed: loadJSON("astrum_feed", []),
+    spirits: loadJSON("astrum_spirits", []),
+    omens: loadJSON("astrum_omens", []),
   };
 }
 
@@ -72,6 +74,13 @@ export function buildCorpus(sources = {}) {
   });
   (sources.feed || []).forEach(f => {
     push(`Timing letter (${f.source || "feed"})`, "almanac", f.title, [f.title, f.note].filter(Boolean).join(" "), f.date);
+  });
+  (sources.spirits || []).forEach(s => {
+    const log = (s.log || []).map(l => `${l.type}: ${l.text}`).join(" ");
+    push("Spirit Court", "spirits", s.name, [s.name, s.epithet, s.notes, s.offerings && `Offerings: ${s.offerings}`, log].filter(Boolean).join(". "), s.createdAt);
+  });
+  (sources.omens || []).forEach(o => {
+    push(`Omen (${o.kind})`, "omens", o.text.slice(0, 50), o.text, o.at);
   });
 
   return docs;
