@@ -22,7 +22,8 @@ import {
   alchemicalSeason, moonSignOperation, moonWorkGuidance, MANSION_LAB_NOTES,
 } from "../data/alchemy.js";
 import { getMansion } from "../data/mansions.js";
-import { loadAthanor, createOperation, completeStep, addLabNote, abandonOperation, deleteOperation, describeDueRule } from "../lib/athanor.js";
+import { loadAthanor, createOperation, completeStep, addLabNote, abandonOperation, deleteOperation, describeDueRule, setOpPhotos } from "../lib/athanor.js";
+import PhotoStrip from "./PhotoStrip.jsx";
 import { createCasting, loadCastings, addOutcome } from "../lib/castings.js";
 import { loadJSON, saveJSON } from "../lib/storage.js";
 
@@ -192,6 +193,7 @@ export default function AthanorScreen({ profile, natalPos, eph, now }) {
         <div style={{ marginTop: 8 }}>
           <div style={{ fontFamily: F, fontSize: 9, color: "rgba(200,175,100,0.5)", letterSpacing: 3, textTransform: "uppercase", marginBottom: 4 }}>Lab Notebook</div>
           <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.3)", fontStyle: "italic", marginBottom: 7, lineHeight: 1.5 }}>“The exact keeping of a laboratory diary should be the duty of every practicing spagyrist.” — Junius</div>
+          <PhotoStrip photoIds={op.photoIds || []} onChange={ids => { setOpPhotos(op.id, ids); refresh(); }} label="The vessel's record — colour is data" />
           <div style={{ display: "flex", gap: 6 }}>
             <input value={labText} onChange={e => setLabText(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && labText.trim()) { addLabNote(op.id, labText.trim()); setLabText(""); refresh(); } }} placeholder="Color change, smell, consistency, dream…" style={{ ...IS, flex: 1 }} />
             <button onClick={() => { if (labText.trim()) { addLabNote(op.id, labText.trim()); setLabText(""); refresh(); } }} style={{ padding: "0 14px", borderRadius: 10, background: "rgba(212,175,106,0.1)", border: "1px solid rgba(212,175,106,0.3)", fontFamily: F, fontSize: 9, color: GOLD, letterSpacing: 1, cursor: "pointer" }}>LOG</button>

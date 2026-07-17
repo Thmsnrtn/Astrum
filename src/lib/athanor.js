@@ -122,6 +122,13 @@ export function completeStep(opId, stepId, note, location) {
   return { op: next.find(o => o.id === opId), finished };
 }
 
+export function setOpPhotos(opId, photoIds) {
+  const list = loadAthanor();
+  const next = list.map(op => (op.id === opId ? { ...op, photoIds } : op));
+  saveAthanor(next);
+  return next.find(o => o.id === opId) || null;
+}
+
 export function addLabNote(opId, text) {
   const list = loadAthanor().map(op => op.id === opId
     ? { ...op, labNotes: [{ id: newId(), ts: new Date().toISOString(), text }, ...(op.labNotes || [])] }

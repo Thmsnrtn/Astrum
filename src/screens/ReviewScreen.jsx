@@ -7,7 +7,8 @@
 
 import { useState, useEffect } from "react";
 import { F, L, T, P, TRADITIONS, buildSystemPrompt } from "../App.jsx";
-import { loadCastings, addOutcome, closeCasting, deleteCasting, effectiveVerdict, computeStats, castingsToTSV } from "../lib/castings.js";
+import { loadCastings, addOutcome, closeCasting, deleteCasting, effectiveVerdict, computeStats, castingsToTSV, updateCasting } from "../lib/castings.js";
+import PhotoStrip from "./PhotoStrip.jsx";
 import { askClaude } from "../ai/client.js";
 
 const GOLD = "#D4AF6A";
@@ -122,6 +123,7 @@ export default function ReviewScreen({ profile }) {
                 {o.note && <div style={{ fontFamily: F, fontSize: 10, color: "#9A8060", fontStyle: "italic", marginTop: 3, lineHeight: 1.6 }}>{o.note}</div>}
               </div>
             ))}
+            <PhotoStrip photoIds={c.photoIds || []} onChange={ids => { updateCasting(c.id, { photoIds: ids }); refresh(); }} label="Talisman · altar · evidence" />
             <textarea value={note} onChange={e => setNote(e.target.value)} rows={2} placeholder="What happened? (optional note)"
               style={{ background: "rgba(0,0,0,0.45)", border: "1px solid rgba(200,175,100,0.18)", borderRadius: 10, color: "#C4A870", fontFamily: F, outline: "none", padding: "8px 10px", width: "100%", fontSize: 11, resize: "none", boxSizing: "border-box" }} />
             <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
