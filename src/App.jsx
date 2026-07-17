@@ -30,6 +30,8 @@ import OmenScreen from "./screens/OmenScreen.jsx";
 import { loadSpirits, upcomingObservances } from "./lib/spirits.js";
 import { computeLots } from "./engine/lots.js";
 import { electiveMemory, memoryVerdict } from "./lib/electiveMemory.js";
+import { loadWatchlist, createWatch, deleteWatch, updateWatch, windowStale, refreshWatch, watchPlans } from "./lib/watchlist.js";
+import { heliacalRising, starPhase, DEFAULT_ARCUS_VISIONIS, HELIACAL_STARS } from "./engine/heliacal.js";
 import { groundingFor } from "./lib/rag.js";
 import RecallScreen from "./screens/RecallScreen.jsx";
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
@@ -2261,9 +2263,26 @@ function PlanetsScreen({eph,natalPos,now}){
 // ═══════════════════════════════════════════════════════════════════════
 // STARS SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-function StarsScreen({eph,natalPos}){
+function StarsScreen({eph,natalPos,profile}){
   const [sel,setSel]=useState(null);
   const s=sel!==null?FIXED_STARS[sel]:null;
+  // ── Appearances: morning/evening stars + coming heliacal risings ──
+  const appearances=useMemo(()=>{
+    const sunL=eph?.pos?.sun?.lon;
+    const phases=sunL!=null?[["venus",starPhase(eph.pos.venus.lon,sunL)],["mercury",starPhase(eph.pos.mercury.lon,sunL)]]:[];
+    const lat=profile?.natal?.lat,lon=profile?.natal?.lon;
+    let risings=[];
+    if(lat!=null&&lon!=null&&eph?.jd){
+      const sunAt=jd=>planetLon("sun",jd);
+      risings=HELIACAL_STARS.map(st=>{
+        try{
+          const hr=heliacalRising(st.lon,st.lat,eph.jd,lat,lon,sunAt,DEFAULT_ARCUS_VISIONIS);
+          return hr?{...st,date:new Date((hr.jd-2440587.5)*86400000)}:null;
+        }catch{return null;}
+      }).filter(Boolean).sort((a,b)=>a.date-b.date);
+    }
+    return{phases,risings};
+  },[Math.floor((eph?.jd||0)),profile]);
   const starActivity = FIXED_STARS.map((star,i)=>{
     const sLon=starLonAt(star,eph.jd);
     const nearTransit=Object.entries(eph.pos).filter(([pk,p])=>{let d=Math.abs(norm(sLon-p.lon));if(d>180)d=360-d;return d<3;}).map(([pk])=>pk);
@@ -2277,6 +2296,18 @@ function StarsScreen({eph,natalPos}){
         <div style={T(20)}>Fixed Stars</div>
         <div style={{fontFamily:F,fontSize:10,color:"#6A5030",fontStyle:"italic",marginTop:3,lineHeight:1.6}}>The Royal Stars and fixed stellar powers. Stars within 3° of a transiting or natal planet confer their nature on that planet's operations.</div>
       </div>
+      {(appearances.phases.length>0||appearances.risings.length>0)&&(
+        <div style={{margin:"0 14px 8px",padding:"10px 13px",borderRadius:12,background:"rgba(8,5,22,0.6)",border:"1px solid rgba(200,175,100,0.12)"}}>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.45)",letterSpacing:2,textTransform:"uppercase",marginBottom:6}}>Appearances</div>
+          {appearances.phases.map(([pk,ph])=>(
+            <div key={pk} style={{fontFamily:F,fontSize:10,color:P[pk].col,padding:"2px 0"}}>{P[pk].sym} {P[pk].name} is the <span style={{color:"#D4C098"}}>{ph.phase}</span> ({ph.elongation>0?"+":""}{ph.elongation}° from the Sun)</div>
+          ))}
+          {appearances.risings.slice(0,4).map(st=>(
+            <div key={st.name} style={{fontFamily:F,fontSize:9.5,color:"#B8A578",padding:"2px 0"}}>★ {st.name} rises heliacally ~{st.date.toLocaleDateString("en-US",{month:"short",day:"numeric"})} <span style={{color:"#6A5028",fontStyle:"italic"}}>— {st.note}</span></div>
+          ))}
+          <div style={{fontFamily:F,fontSize:8,color:"#5A4020",fontStyle:"italic",marginTop:4}}>Arcus visionis 10° (Ptolemaic convention) — approximate; haze and horizon shift the true first sighting by days.</div>
+        </div>
+      )}
       <div style={{display:"flex",justifyContent:"center",marginBottom:4}}>
         <svg width={280} height={160} viewBox="0 0 280 160">
           <rect width={280} height={160} fill="rgba(4,4,16,0.9)" rx={12}/>
@@ -2472,7 +2503,16 @@ function ElectScreen({now,natalPos,eph,profile}){
     }catch(e){setSeasonReport(e.message||"Season report unavailable — check connection.");}
     setSeasonLoading(false);
   };
-  const TABS=[{id:"live",label:"Live"},{id:"scan",label:"Scan"},{id:"intents",label:"Intents"},{id:"season",label:"Season"},{id:"theory",label:"Theory"}];
+  const TABS=[{id:"live",label:"Live"},{id:"scan",label:"Scan"},{id:"vigil",label:"Vigil"},{id:"intents",label:"Intents"},{id:"season",label:"Season"},{id:"theory",label:"Theory"}];
+  // ── The Vigil: standing intentions the app keeps watch for ──
+  const [watches,setWatches]=useState(loadWatchlist);
+  const [vigilForm,setVigilForm]=useState({label:"",planet:"jupiter",minScore:70});
+  const refreshVigil=()=>{setWatches(loadWatchlist());};
+  const refreshWatchWindows=()=>{
+    loadWatchlist().forEach(w=>{if(w.active&&windowStale(w,now)){refreshWatch(w,now,(pk,days)=>scanElections(new Date(now),days,pk,natalPos));}});
+    refreshVigil();
+  };
+  useEffect(()=>{if(view==="vigil")refreshWatchWindows();},[view]); // eslint-disable-line
   const THEORY=[
     {title:"The Moon — First Principle",text:"The Moon is the most important factor in all election astrology. She carries every planet's virtue to earth. Before anything else: is she void of course? In Via Combusta? Besieged by malefics? Slow in motion? Dorotheus: 'Look always to the Moon first.' A perfect election with a bad Moon delivers nothing. A mediocre election with an excellent Moon often succeeds."},
     {title:"Via Combusta — The Burnt Path",text:"15° Libra to 15° Scorpio — the Burnt Path. The Sun falls in Libra, the Moon falls in Scorpio. Both malefics (Mars domicile in Scorpio, Saturn exaltation ended) hold power here. Dozens of malefic fixed stars cluster in this band. Moon in Via Combusta vitiates any election without exception. Do not attempt to compensate with other dignities."},
@@ -2571,6 +2611,30 @@ function ElectScreen({now,natalPos,eph,profile}){
               {e.assess.criteria.map(c=><div key={c.id} style={{display:"flex",gap:7,padding:"4px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}><span style={{fontSize:10,color:c.pass?"#5CA85C":"#8B4040",width:14}}>{c.pass?"✓":"✗"}</span><div style={{flex:1}}><div style={{fontFamily:F,fontSize:10,color:c.pass?"#C4A870":"#9A7060"}}>{c.label}</div><div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:1}}>{c.note}</div></div></div>)}</div>}
           </div>;})}
           {elections.length===0&&!scanning&&<div style={{textAlign:"center",padding:"30px 20px",fontFamily:F,fontSize:11,color:"#5A4020",fontStyle:"italic",lineHeight:1.8}}>Configure intent and planet, then scan. Only elections passing all 5 critical criteria shown.</div>}
+        </>}
+        {view==="vigil"&&<>
+          <div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",lineHeight:1.7,margin:"2px 4px 9px"}}>Standing intentions the app keeps watch for — each caches its next qualifying window and warns you at T−24h and T−1h.</div>
+          <div style={{padding:"12px 14px",borderRadius:13,background:"rgba(8,5,22,0.65)",border:"1px solid rgba(200,175,100,0.1)",marginBottom:9}}>
+            <input value={vigilForm.label} onChange={e=>setVigilForm(f=>({...f,label:e.target.value}))} placeholder="The intention — 'Jupiter working for the business'…" style={{width:"100%",background:"rgba(0,0,0,0.45)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"9px 11px",fontSize:12,boxSizing:"border-box",marginBottom:7}}/>
+            <div style={{display:"flex",gap:4,marginBottom:7}}>{Object.keys(P).map(pk=>{const a=vigilForm.planet===pk;return<button key={pk} onClick={()=>setVigilForm(f=>({...f,planet:pk}))} style={{flex:1,padding:"6px 2px",borderRadius:8,background:a?P[pk].col+"16":"rgba(8,5,22,0.5)",border:"1px solid "+(a?P[pk].col+"45":"rgba(200,175,100,0.09)"),cursor:"pointer"}}><div style={{fontSize:13,textAlign:"center",color:P[pk].col}}>{P[pk].sym}</div></button>;})}</div>
+            <div style={{display:"flex",gap:5,marginBottom:8}}>{[60,70,80,90].map(s=><button key={s} onClick={()=>setVigilForm(f=>({...f,minScore:s}))} style={{flex:1,padding:"6px 0",borderRadius:8,background:vigilForm.minScore===s?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(vigilForm.minScore===s?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.12)"),fontFamily:F,fontSize:8,color:vigilForm.minScore===s?"#D4AF6A":"#6A5030",letterSpacing:1,cursor:"pointer"}}>≥{s}</button>)}</div>
+            <button onClick={()=>{if(!vigilForm.label.trim())return;createWatch(vigilForm);setVigilForm({label:"",planet:"jupiter",minScore:70});refreshWatchWindows();}} disabled={!vigilForm.label.trim()} style={{width:"100%",padding:"11px 0",borderRadius:10,background:vigilForm.label.trim()?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(vigilForm.label.trim()?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.1)"),fontFamily:F,fontSize:9.5,color:vigilForm.label.trim()?"#D4AF6A":"#5A4020",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>👁 Keep Watch</button>
+          </div>
+          {watches.map(w=>{const win=w.nextWindow;return(
+            <div key={w.id} style={{marginBottom:8,padding:"11px 13px",borderRadius:12,background:"rgba(8,5,22,0.6)",border:"1px solid "+(win?"rgba(92,168,92,0.3)":"rgba(200,175,100,0.1)"),opacity:w.active?1:0.5}}>
+              <div style={{display:"flex",alignItems:"center",gap:9}}>
+                <span style={{fontSize:16,color:P[w.planet]?.col}}>{P[w.planet]?.sym}</span>
+                <div style={{flex:1}}>
+                  <div style={{fontFamily:F,fontSize:12,color:"#D4C098"}}>{w.label}</div>
+                  <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.45)",marginTop:1}}>{P[w.planet]?.name} · score ≥{w.minScore}</div>
+                </div>
+                <button onClick={()=>{updateWatch(w.id,{active:!w.active});refreshVigil();}} style={{background:"none",border:"1px solid rgba(200,175,100,0.2)",borderRadius:7,color:"#8A7050",fontFamily:F,fontSize:8,padding:"3px 8px",cursor:"pointer"}}>{w.active?"pause":"resume"}</button>
+                <button onClick={()=>{deleteWatch(w.id);refreshVigil();}} style={{background:"none",border:"none",color:"rgba(200,175,100,0.3)",fontSize:12,cursor:"pointer"}}>✕</button>
+              </div>
+              {win?<div style={{fontFamily:F,fontSize:10.5,color:"#7AB07A",marginTop:6}}>Next window: {fmtD(new Date(win.date))} — score {win.score} ({win.grade})</div>
+                :<div style={{fontFamily:F,fontSize:9.5,color:"#8A7050",fontStyle:"italic",marginTop:6}}>{w.computedAt?"No qualifying window in the horizon — the vigil continues.":"Watching…"}</div>}
+            </div>);})}
+          {watches.length===0&&<div style={{textAlign:"center",padding:"22px 16px",fontFamily:F,fontSize:10.5,color:"#5A4020",fontStyle:"italic",lineHeight:1.8}}>No vigils yet. Name an intention and the app will keep watch for its window.</div>}
         </>}
         {view==="intents"&&<>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:9}}>{Object.entries(INTENTS).map(([k,m])=><button key={k} onClick={()=>setIk(k)} style={{padding:"8px",borderRadius:10,background:ik===k?m.col+"14":"rgba(0,0,0,0.3)",border:"1px solid "+(ik===k?m.col+"45":"rgba(200,175,100,0.1)"),fontFamily:F,fontSize:9,color:ik===k?m.col:"#7A6030",cursor:"pointer",textAlign:"left"}}>{m.icon} {m.label}</button>)}</div>
@@ -6310,7 +6374,9 @@ export default function App(){
       if(cancelled)return;
       try{
         const loc=profile?.natal?.lat&&profile?.natal?.lon?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
-        const plans=planUpcoming({now:new Date(),location:loc,prefs:notifyPrefs,castings:loadCastings(),athanor:loadJSON("astrum_athanor",[]),observances:upcomingObservances(loadSpirits(),new Date(),notifyPrefs.horizonDays??3)});
+        const horizonEnd=new Date(Date.now()+(notifyPrefs.horizonDays??3)*86400000);
+        const plans=[...planUpcoming({now:new Date(),location:loc,prefs:notifyPrefs,castings:loadCastings(),athanor:loadJSON("astrum_athanor",[]),observances:upcomingObservances(loadSpirits(),new Date(),notifyPrefs.horizonDays??3)}),
+          ...watchPlans(loadWatchlist(),new Date(),horizonEnd)].sort((a,b)=>a.at-b.at);
         reschedule(plans);
       }catch(e){}
     };
@@ -6384,7 +6450,7 @@ export default function App(){
           {tab==="decans"  &&<DecansScreen  eph={eph} fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode}/>}
           {tab==="fractal" &&<FractalScreen fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode} now={now}/>}
           {tab==="planets" &&<PlanetsScreen eph={eph} natalPos={natalPos} now={now}/>}
-          {tab==="stars"   &&<StarsScreen   eph={eph} natalPos={natalPos}/>}
+          {tab==="stars"   &&<StarsScreen   eph={eph} natalPos={natalPos} profile={profile}/>}
           {tab==="natal"   &&<NatalScreen   natalData={natalData} setNatalData={setNatalData} eph={eph} fractal={fractal} natalPos={natalPos} profile={profile}/>}
           {tab==="transits"&&<TransitsScreen natalPos={natalPos} now={now}/>}
           {tab==="ephemeris"&&<EphemerisScreen now={now}/>}
