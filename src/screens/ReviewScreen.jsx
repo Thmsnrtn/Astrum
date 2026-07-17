@@ -9,6 +9,10 @@ import { useState, useEffect } from "react";
 import { F, L, T, P, TRADITIONS, buildSystemPrompt } from "../App.jsx";
 import { loadCastings, addOutcome, closeCasting, deleteCasting, effectiveVerdict, computeStats, castingsToTSV, updateCasting } from "../lib/castings.js";
 import PhotoStrip from "./PhotoStrip.jsx";
+import { composeBook } from "../lib/bookOfResults.js";
+import { loadOmens } from "../lib/omens.js";
+import { loadJSON } from "../lib/storage.js";
+import { downloadText } from "../lib/backup.js";
 import { askClaude } from "../ai/client.js";
 
 const GOLD = "#D4AF6A";
@@ -180,6 +184,11 @@ export default function ReviewScreen({ profile }) {
                 <StatTable title="By Lunar Mansion" rows={stats.byMansion} />
                 <StatTable title="By Void of Course" rows={stats.byVoC} />
                 <StatTable title="By Election Score" rows={stats.byElectionBand} />
+                <button onClick={() => {
+                  const to = new Date(); const from = new Date(to.getTime() - 365.25 * 86400000);
+                  const html = composeBook({ from, to, castings, omens: loadOmens(), grimoire: loadJSON("astrum_grimoire", []), title: `The Book of Results · ${from.getFullYear()}–${to.getFullYear()}` });
+                  downloadText(`astrum-book-of-results-${to.toISOString().slice(0, 10)}.html`, html);
+                }} style={{ width: "100%", marginTop: 6, padding: "12px 0", borderRadius: 11, background: "rgba(212,175,106,0.1)", border: "1px solid rgba(212,175,106,0.3)", fontFamily: F, fontSize: 9.5, color: GOLD, letterSpacing: 2.5, textTransform: "uppercase", cursor: "pointer" }}>📖 Bind the Year — export the Book of Results</button>
               </>
             )}
             {stats.judged >= 3 && (
