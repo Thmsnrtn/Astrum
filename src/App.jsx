@@ -33,6 +33,7 @@ import { computeLots } from "./engine/lots.js";
 import { electiveMemory, memoryVerdict } from "./lib/electiveMemory.js";
 import { loadWatchlist, createWatch, deleteWatch, updateWatch, windowStale, refreshWatch, watchPlans } from "./lib/watchlist.js";
 import { heliacalRising, starPhase, DEFAULT_ARCUS_VISIONIS, HELIACAL_STARS } from "./engine/heliacal.js";
+import { buildDeck, loadSRS, dueCards, gradeCard } from "./lib/srs.js";
 import { groundingFor } from "./lib/rag.js";
 import RecallScreen from "./screens/RecallScreen.jsx";
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
@@ -5428,6 +5429,39 @@ export const FOUNDATIONS=[
   {id:"f8",title:"Narrative Magic & Synchronicity",subtitle:"Story as technology — enchanting the frame, reading the response",lessons:4,topics:["narrative-magic","synchronicity","fortune-divination"],icon:"◎",color:"#78C8A8"},
   {id:"f9",title:"The Stellar Tradition",subtitle:"Star.Ships, decan spirits, and the Laurasian wellspring",lessons:5,topics:["stellar-cult","fixed-stars","star-ships-thesis","headless-rite"],icon:"★",color:"#7888E8"},
 ];
+// ── The Daily Card: spaced repetition over the canon ───────────────────
+function DailyCard(){
+  const deck=useMemo(()=>buildDeck(DECANS.map((d,i)=>({id:`decan_${i+1}`,topic:"Decan",front:`Decan ${i+1} — ${d.name} (${d.sign}, ${P[d.ruler]?.name})`,back:d.magic}))),[]);
+  const [states,setStates]=useState(loadSRS);
+  const [card,setCard]=useState(null);
+  const [flipped,setFlipped]=useState(false);
+  useEffect(()=>{const due=dueCards(deck,states,new Date(),1);setCard(due[0]||null);setFlipped(false);},[deck,states]);
+  const dueCount=deck.filter(c=>{const s=states[c.id];return !s||new Date(s.due)<=new Date();}).length;
+  const grade=g=>{if(!card)return;gradeCard(card.id,g);setStates(loadSRS());};
+  if(!card)return(
+    <div style={{padding:"12px 14px",borderRadius:12,background:"rgba(8,5,22,0.5)",border:"1px solid rgba(200,175,100,0.1)",marginBottom:10,textAlign:"center"}}>
+      <div style={{fontFamily:F,fontSize:10,color:"#7AB07A"}}>✓ The canon rests — no cards due today.</div>
+    </div>);
+  return(
+    <div style={{padding:"13px 15px",borderRadius:13,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(212,175,106,0.25)",marginBottom:10}}>
+      <div style={{display:"flex",alignItems:"center",marginBottom:7}}>
+        <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.5)",letterSpacing:2,textTransform:"uppercase"}}>Daily Card · {card.topic}</span>
+        <span style={{fontFamily:F,fontSize:8.5,color:"rgba(200,175,100,0.35)",marginLeft:"auto"}}>{dueCount} due</span>
+      </div>
+      <div onClick={()=>setFlipped(f=>!f)} style={{cursor:"pointer"}}>
+        <div style={{fontFamily:F,fontSize:14,color:"#D4AF6A"}}>{card.front}</div>
+        {flipped
+          ?<div style={{fontFamily:F,fontSize:10.5,color:"#9A8060",lineHeight:1.7,marginTop:6}}>{card.back}</div>
+          :<div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:6}}>Tap to reveal, then judge your recall.</div>}
+      </div>
+      {flipped&&<div style={{display:"flex",gap:6,marginTop:9}}>
+        {[["again","Again","#D28060"],["good","Good","#D4AF6A"],["easy","Easy","#7AB07A"]].map(([g,lbl,col])=>(
+          <button key={g} onClick={()=>grade(g)} style={{flex:1,padding:"8px 0",borderRadius:9,background:col+"14",border:`1px solid ${col}45`,fontFamily:F,fontSize:9,color:col,letterSpacing:1.5,textTransform:"uppercase",cursor:"pointer"}}>{lbl}</button>
+        ))}
+      </div>}
+    </div>);
+}
+
 function LearnScreen({profile}){
   const [learnMode,setLearnMode]=useState("topics"); // "foundations" | "topics"
   const [primerOpen,setPrimerOpen]=useState(null);
@@ -5539,6 +5573,7 @@ function LearnScreen({profile}){
         <div style={L()}>Magical Education</div>
         <div style={T(20)}>Learn ⬡</div>
       </div>
+      <div style={{padding:"0 14px"}}><DailyCard/></div>
       {/* Mode Toggle */}
       <div style={{padding:"0 14px 10px",display:"flex",gap:5}}>
         {[{id:"foundations",label:"Foundations Path"},{id:"topics",label:"Topics Library"}].map(m=>(

@@ -107,6 +107,39 @@ export function computeStats(castings) {
   };
 }
 
+// ── Deeper analytics ───────────────────────────────────────────────────
+
+// Days from casting to its first decisive outcome — how long your workings
+// take to land, overall and by planet.
+export function timeToResult(castings) {
+  const spans = [];
+  const byPlanet = {};
+  castings.forEach(c => {
+    const first = (c.outcomes || []).find(o => o.verdict && o.verdict !== "unknown");
+    if (!first) return;
+    const days = (new Date(first.date) - new Date(c.createdAt)) / 86400000;
+    if (!isFinite(days) || days < 0) return;
+    spans.push(days);
+    if (c.planet) (byPlanet[c.planet] = byPlanet[c.planet] || []).push(days);
+  });
+  const stat = arr => {
+    if (!arr.length) return null;
+    const sorted = [...arr].sort((a, b) => a - b);
+    return { n: arr.length, avgDays: +(arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1),
+      medianDays: +sorted[Math.floor(sorted.length / 2)].toFixed(1) };
+  };
+  return {
+    overall: stat(spans),
+    byPlanet: Object.entries(byPlanet).map(([k, arr]) => ({ key: k, ...stat(arr) })).sort((a, b) => b.n - a.n),
+  };
+}
+
+// Open castings that have gone quiet — candidates for judgment or closure.
+export function staleOpen(castings, now = new Date(), days = 60) {
+  return castings.filter(c => c.status === "open" && (now - new Date(c.createdAt)) / 86400000 > days)
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+
 // Compact TSV of the dataset for AI correlation analysis.
 export function castingsToTSV(castings) {
   const rows = [["kind", "planet", "intent", "day_ruler", "hour", "moon_phase", "mansion", "voc", "election_score", "verdict", "outcome_notes"].join("\t")];

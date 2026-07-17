@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from "react";
 import { F, L, T, P, TRADITIONS, buildSystemPrompt } from "../App.jsx";
-import { loadCastings, addOutcome, closeCasting, deleteCasting, effectiveVerdict, computeStats, castingsToTSV, updateCasting } from "../lib/castings.js";
+import { loadCastings, addOutcome, closeCasting, deleteCasting, effectiveVerdict, computeStats, castingsToTSV, updateCasting, timeToResult, staleOpen } from "../lib/castings.js";
 import PhotoStrip from "./PhotoStrip.jsx";
 import { composeBook } from "../lib/bookOfResults.js";
 import { loadOmens } from "../lib/omens.js";
@@ -160,6 +160,10 @@ export default function ReviewScreen({ profile }) {
         {view === "open" && (
           <div style={{ padding: "0 14px" }}>
             {open.length === 0 && <div style={{ textAlign: "center", padding: "36px 20px", fontFamily: F, fontSize: 12, color: "#5A4020", fontStyle: "italic", lineHeight: 1.8 }}>No castings awaiting outcomes.<br />Workings, sigils, and committed elections will appear here for judgment.</div>}
+            {(() => { const stale = staleOpen(castings, new Date(), 60); return stale.length > 0 && (
+              <div style={{ padding: "9px 12px", borderRadius: 11, background: "rgba(180,120,60,0.08)", border: "1px solid rgba(180,120,60,0.3)", marginBottom: 9 }}>
+                <div style={{ fontFamily: F, fontSize: 9.5, color: "#D2A060", lineHeight: 1.6 }}>◷ {stale.length} casting{stale.length === 1 ? " has" : "s have"} waited over 60 days — a working that never lands is itself a verdict. Judge or close {stale.length === 1 ? "it" : "the oldest"}: <span style={{ fontStyle: "italic" }}>“{stale[0].title}”</span> ({new Date(stale[0].createdAt).toLocaleDateString()}).</div>
+              </div>); })()}
             {open.map(c => <CastingRow key={c.id} c={c} />)}
           </div>
         )}
@@ -184,6 +188,12 @@ export default function ReviewScreen({ profile }) {
                 <StatTable title="By Lunar Mansion" rows={stats.byMansion} />
                 <StatTable title="By Void of Course" rows={stats.byVoC} />
                 <StatTable title="By Election Score" rows={stats.byElectionBand} />
+                {(() => { const ttr = timeToResult(castings); return ttr.overall && (
+                  <div style={{ padding: "11px 13px", borderRadius: 12, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(200,175,100,0.1)", marginBottom: 9 }}>
+                    <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.45)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>Time to Result</div>
+                    <div style={{ fontFamily: F, fontSize: 11, color: "#C4A870", lineHeight: 1.7 }}>Your workings land in a median of <span style={{ color: GOLD }}>{ttr.overall.medianDays} days</span> (mean {ttr.overall.avgDays}, over {ttr.overall.n} judged).</div>
+                    {ttr.byPlanet.slice(0, 4).map(r => <div key={r.key} style={{ fontFamily: F, fontSize: 9.5, color: "#9A8060", padding: "2px 0" }}>{r.key}: median {r.medianDays}d · n{r.n}</div>)}
+                  </div>); })()}
                 <button onClick={() => {
                   const to = new Date(); const from = new Date(to.getTime() - 365.25 * 86400000);
                   const html = composeBook({ from, to, castings, omens: loadOmens(), grimoire: loadJSON("astrum_grimoire", []), title: `The Book of Results · ${from.getFullYear()}–${to.getFullYear()}` });
