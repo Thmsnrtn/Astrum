@@ -134,6 +134,11 @@ export default function HoraryScreen({ profile, natalPos }) {
                   Translation of light: {P[chart.translation.planet].name} carries the light of {P[chart.translation.from].name} to {P[chart.translation.to].name} — a third party joins the matter.
                 </div>
               )}
+              {chart.collection && (
+                <div style={{ marginTop: 6, padding: "7px 10px", borderRadius: 9, background: "rgba(160,140,220,0.08)", border: "1px solid rgba(160,140,220,0.25)", fontFamily: F, fontSize: 10, color: "#A08CDC" }}>
+                  Collection of light: both significators apply to the weightier {P[chart.collection.planet].name} — a third party gathers and joins the matter.
+                </div>
+              )}
             </div>
 
             <div style={{ display: "flex", gap: 7, marginBottom: 9 }}>

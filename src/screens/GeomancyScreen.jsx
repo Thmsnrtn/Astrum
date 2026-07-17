@@ -11,7 +11,7 @@
 
 import { useState } from "react";
 import { F, L, T, P, TRADITIONS, buildSystemPrompt, conditionsFromProfile } from "../App.jsx";
-import { castShield, judgeIsValid, identify, judgeVerdict, houseChart, randomMothers, figureFromTallies } from "../lib/geomancy.js";
+import { castShield, judgeIsValid, identify, judgeVerdict, houseChart, randomMothers, figureFromTallies, perfection, company } from "../lib/geomancy.js";
 import { QUESTION_HOUSES } from "../engine/horary.js";
 import { createCasting } from "../lib/castings.js";
 import { askAI, aiConfigured, aiUnconfiguredMessage } from "../ai/client.js";
@@ -64,10 +64,15 @@ export default function GeomancyScreen({ profile, natalPos }) {
   const chart = shield ? houseChart(shield) : null;
   const quesitedFig = chart ? chart[qh.house - 1].figure : null;
   const querentFig = chart ? chart[0].figure : null;
+  const housePatterns = chart ? chart.map(h => h.figure) : null;
+  const perf = housePatterns ? perfection(housePatterns, qh.house) : null;
+  const querentCompany = housePatterns ? company(housePatterns, 1) : null;
+  const quesitedCompany = housePatterns ? company(housePatterns, qh.house) : null;
 
   const serialize = () => {
     const hc = houseChart(shield).map(h => `H${h.house}=${identify(h.figure)?.name}`).join(", ");
-    return `QUESTION: ${question}\nMatter of the ${qh.house}th house (${qh.label}).\nMothers: ${shield.mothers.map(m => identify(m)?.name).join(", ")}.\nDaughters: ${shield.daughters.map(m => identify(m)?.name).join(", ")}.\nNieces: ${shield.nieces.map(m => identify(m)?.name).join(", ")}.\nRight Witness: ${identify(shield.rightWitness)?.name}. Left Witness: ${identify(shield.leftWitness)?.name}. Judge: ${identify(shield.judge)?.name}. Reconciler: ${identify(shield.reconciler)?.name}.\nHouse chart: ${hc}.\nQuerent significator (1st house): ${identify(querentFig)?.name}. Quesited significator (${qh.house}th house): ${identify(quesitedFig)?.name}.`;
+    const perfLine = perf ? (perf.perfects ? `PERFECTION (computed): ${perf.modes.map(m => m.mode).join(", ")} — ${perf.modes.map(m => m.note).join("; ")}.` : "PERFECTION (computed): DENIAL — no occupation, conjunction, mutation, or translation.") : "";
+    return `QUESTION: ${question}\nMatter of the ${qh.house}th house (${qh.label}).\n${perfLine}\nMothers: ${shield.mothers.map(m => identify(m)?.name).join(", ")}.\nDaughters: ${shield.daughters.map(m => identify(m)?.name).join(", ")}.\nNieces: ${shield.nieces.map(m => identify(m)?.name).join(", ")}.\nRight Witness: ${identify(shield.rightWitness)?.name}. Left Witness: ${identify(shield.leftWitness)?.name}. Judge: ${identify(shield.judge)?.name}. Reconciler: ${identify(shield.reconciler)?.name}.\nHouse chart: ${hc}.\nQuerent significator (1st house): ${identify(querentFig)?.name}. Quesited significator (${qh.house}th house): ${identify(quesitedFig)?.name}.`;
   };
 
   const draftReading = async () => {
@@ -151,6 +156,24 @@ export default function GeomancyScreen({ profile, natalPos }) {
                 <FigCell label="Judge" pattern={shield.judge} highlight />
               </div>
             </div>
+
+            {/* Perfection — the mechanical judgment */}
+            {perf && (
+              <div style={{ borderRadius: 13, background: perf.perfects ? "rgba(92,168,92,0.08)" : "rgba(180,80,60,0.07)", border: `1px solid ${perf.perfects ? "rgba(92,168,92,0.3)" : "rgba(180,80,60,0.28)"}`, padding: "11px 13px", marginBottom: 9 }}>
+                <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.5)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 5 }}>Perfection</div>
+                {perf.perfects ? perf.modes.map((m, i) => (
+                  <div key={i} style={{ fontFamily: F, fontSize: 10.5, color: "#7AB07A", lineHeight: 1.65, padding: "1px 0" }}>✓ <span style={{ textTransform: "capitalize" }}>{m.mode}</span> — {m.note}</div>
+                )) : (
+                  <div style={{ fontFamily: F, fontSize: 10.5, color: "#D28060", lineHeight: 1.65 }}>✗ Denial — the significators do not connect by occupation, conjunction, mutation, or translation. The matter does not perfect as asked.</div>
+                )}
+                {(querentCompany || quesitedCompany) && (
+                  <div style={{ fontFamily: F, fontSize: 9, color: "#9A8060", fontStyle: "italic", marginTop: 5 }}>
+                    {querentCompany && <>Querent keeps {querentCompany.kind} company with house {querentCompany.partner}. </>}
+                    {quesitedCompany && <>Quesited keeps {quesitedCompany.kind} company with house {quesitedCompany.partner}.</>}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* House chart */}
             <div style={{ borderRadius: 13, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(200,175,100,0.1)", padding: "12px 10px", marginBottom: 9 }}>

@@ -1,7 +1,7 @@
 // The geomantic shield mathematics — verified independently of the figures'
 // names/attributions, which live in data/geomancy.js.
 import { describe, it, expect } from "vitest";
-import { addFigures, deriveDaughters, castShield, judgeIsValid, figureFromTallies, houseChart, randomMothers, identify } from "./geomancy.js";
+import { addFigures, deriveDaughters, castShield, judgeIsValid, figureFromTallies, houseChart, randomMothers, identify, perfection, company, invertFigure } from "./geomancy.js";
 import { FIGURES, EVEN_JUDGES, figureByPattern } from "../data/geomancy.js";
 
 describe("addFigures", () => {
@@ -73,6 +73,67 @@ describe("houseChart", () => {
 describe("figureFromTallies", () => {
   it("reduces mark counts to parity rows", () => {
     expect(figureFromTallies([7, 4, 3, 10])).toEqual([1, 2, 1, 2]);
+  });
+});
+
+describe("perfection — the four modes (Greer)", () => {
+  const VIA = [1,1,1,1], POP = [2,2,2,2], LAE = [1,2,2,2], RUB = [2,1,2,2], ALB = [2,2,1,2];
+  // Build a 12-house chart from a base fill with overrides {house: pattern}.
+  const chart = over => Array.from({ length: 12 }, (_, i) => over[i + 1] || [
+    [1,1,2,2],[2,2,1,1],[1,2,1,2],[2,1,2,1],[1,1,1,2],[2,1,1,1],
+    [1,2,2,1],[2,1,1,2],[1,1,2,1],[1,2,1,1],[2,2,2,1],[2,2,1,2]][i]);
+
+  it("occupation: the same figure in both houses", () => {
+    const p = perfection(chart({ 1: VIA, 7: VIA }), 7);
+    expect(p.perfects).toBe(true);
+    expect(p.modes[0].mode).toBe("occupation");
+  });
+  it("conjunction: the querent's figure beside the quesited", () => {
+    const p = perfection(chart({ 1: VIA, 7: POP, 6: VIA }), 7);
+    expect(p.modes.some(m => m.mode === "conjunction")).toBe(true);
+  });
+  it("mutation: the significators side-by-side elsewhere", () => {
+    const p = perfection(chart({ 1: VIA, 7: POP, 9: VIA, 10: POP }), 7);
+    expect(p.modes.some(m => m.mode === "mutation")).toBe(true);
+  });
+  it("translation: the same third figure beside both", () => {
+    const p = perfection(chart({ 1: VIA, 7: POP, 2: ALB, 6: ALB }), 7);
+    expect(p.modes.some(m => m.mode === "translation")).toBe(true);
+  });
+  it("denial: no connection anywhere", () => {
+    // The default fill has all-distinct figures with no adjacencies to 1/7.
+    const p = perfection(chart({ 1: VIA, 7: POP }), 7);
+    expect(p.perfects).toBe(false);
+    expect(p.modes).toHaveLength(0);
+  });
+  it("a chart can perfect in more than one mode", () => {
+    const p = perfection(chart({ 1: VIA, 7: VIA, 6: VIA }), 7);
+    expect(p.modes.length).toBeGreaterThan(1);
+  });
+});
+
+describe("company of houses", () => {
+  const base = Array.from({ length: 12 }, () => [1,1,2,2]);
+  it("simple: the same figure in the paired house", () => {
+    const h = [...base]; h[0] = [1,1,1,1]; h[1] = [1,1,1,1];
+    expect(company(h, 1)).toMatchObject({ kind: "simple", partner: 2 });
+  });
+  it("compound: a figure and its inverse", () => {
+    const h = [...base]; h[0] = [1,2,2,2]; h[1] = invertFigure([1,2,2,2]); // Laetitia + Tristitia? inverse of 1222 = 2111
+    expect(company(h, 1)?.kind).toBe("compound");
+  });
+  it("demi-simple: same ruling planet (Laetitia & Acquisitio — both Jupiter)", () => {
+    const h = [...base]; h[2] = [1,2,2,2]; h[3] = [2,1,2,1];
+    expect(company(h, 3)).toMatchObject({ kind: "demi-simple", partner: 4 });
+  });
+  it("capitular: matching Fire line only", () => {
+    const h = [...base]; h[4] = [1,1,1,1]; h[5] = [1,2,1,2]; // both Fire=1; Via(moon) vs Amissio(venus): not demi
+    expect(company(h, 5)?.kind).toBe("capitular");
+    expect(company(h, 6)?.kind).toBe("capitular"); // symmetric from either side
+  });
+  it("null when nothing matches", () => {
+    const h = [...base]; h[6] = [1,1,1,1]; h[7] = [2,1,2,2]; // Via(moon,Fire1) vs Rubeus(mars,Fire2)
+    expect(company(h, 7)).toBeNull();
   });
 });
 

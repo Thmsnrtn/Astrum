@@ -29,12 +29,12 @@ import AltarScreen from "./screens/AltarScreen.jsx";
 import { profection as calcProfection } from "./engine/profections.js";
 import OmenScreen from "./screens/OmenScreen.jsx";
 import { loadSpirits, upcomingObservances } from "./lib/spirits.js";
-import { computeLots } from "./engine/lots.js";
+import { computeLots, chartFromPositions } from "./engine/lots.js";
 import { electiveMemory, memoryVerdict } from "./lib/electiveMemory.js";
 import { loadWatchlist, createWatch, deleteWatch, updateWatch, windowStale, refreshWatch, watchPlans } from "./lib/watchlist.js";
 import { heliacalRising, starPhase, DEFAULT_ARCUS_VISIONIS, HELIACAL_STARS } from "./engine/heliacal.js";
 import { buildDeck, loadSRS, dueCards, gradeCard } from "./lib/srs.js";
-import { groundingFor } from "./lib/rag.js";
+import { groundingForAsync } from "./lib/rag.js";
 import RecallScreen from "./screens/RecallScreen.jsx";
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
 import { reschedule, ensurePermission } from "./lib/notify.js";
@@ -3554,6 +3554,20 @@ function NatalScreen({natalData,setNatalData,eph,fractal,natalPos,profile}){
                     <div style={{textAlign:"center",fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)",marginBottom:4}}>
                       Inner: You · Outer: {synPerson.name}
                     </div>
+                    {/* Their lots and profection (needs their birth time+place for an Asc) */}
+                    {(()=>{try{
+                      const theirLots=computeLots(chartFromPositions(synPerson.pos));
+                      const theirProf=synPerson.date&&synPerson.pos.asc!=null?calcProfection(new Date(synPerson.date+"T"+(synPerson.time||"12:00")),new Date(),Math.floor(synPerson.pos.asc/30)):null;
+                      if(!theirLots&&!theirProf)return null;
+                      return(<div className="card" style={{margin:"0 14px 8px"}}>
+                        <div style={L()}>{synPerson.name}'s Lots & Year</div>
+                        <div style={{marginTop:7,fontFamily:F,fontSize:10,color:"#C4A870",lineHeight:1.8}}>
+                          {theirLots?.fortune!=null&&<div>⊕ Fortune: {lonToZodiac(theirLots.fortune).degree}° {lonToZodiac(theirLots.fortune).name} · ⊗ Spirit: {lonToZodiac(theirLots.spirit).degree}° {lonToZodiac(theirLots.spirit).name} · ♡ Eros: {lonToZodiac(theirLots.eros).degree}° {lonToZodiac(theirLots.eros).name}</div>}
+                          {theirProf&&<div style={{color:P[theirProf.lord]?.col}}>Age {theirProf.age} — {theirProf.house}th house year in {theirProf.sign}; {P[theirProf.lord]?.name} is their Lord of the Year.</div>}
+                          {theirLots?.fortune==null&&<div style={{color:"#8A7050",fontStyle:"italic"}}>Add their birth time and place for the lots and profection.</div>}
+                        </div>
+                      </div>);
+                    }catch{return null;}})()}
                     <NatalWheelChart natalPos={natalPos} outerPos={synPerson.pos} outerLabel={synPerson.name} cusps={cusps} houseSys={houseSys} onSelectPlanet={setSelPlanet} selPlanet={selPlanet}/>
                     <div className="card" style={{margin:"8px 14px"}}>
                       <div style={L()}>Synastry Aspects</div>
@@ -4222,8 +4236,9 @@ function AIScreen({now,eph,fractal,natalPos,hour,profile}){
     setMessages(m=>[...m,userMsg]);
     setInput("");setLoading(true);
     const context=buildContext();
-    // RAG: ground the answer in the practitioner's own corpus.
-    const grounding=groundingFor(input);
+    // RAG: ground the answer in the practitioner's own corpus — semantic
+    // (hybrid) when a local embedding model is configured, BM25 otherwise.
+    const grounding=await groundingForAsync(input);
     const systemPrompt=buildSystemPrompt(profile,context)+grounding;
     const apiKey=profile?.apiKey||"";
     if(!aiConfigured()){setMessages(m=>[...m,{role:"assistant",content:aiUnconfiguredMessage()}]);setLoading(false);return;}
@@ -5666,7 +5681,7 @@ function LearnScreen({profile}){
 // KNOWLEDGE BASE COMPONENT (embedded in ProfileScreen)
 // ═══════════════════════════════════════════════════════════════════════
 function AIEngineCard(){
-  const [cfg,setCfg]=useState(()=>{const c=resolveAIConfig();return {provider:c.provider,localUrl:c.localUrl,localModel:c.localModel,localKey:c.localKey,webllmModel:c.webllmModel};});
+  const [cfg,setCfg]=useState(()=>{const c=resolveAIConfig();const stored=loadJSON("astrum_ai",{})||{};return {provider:c.provider,localUrl:c.localUrl,localModel:c.localModel,localKey:c.localKey,webllmModel:c.webllmModel,embedModel:stored.embedModel||""};});
   const [msg,setMsg]=useState("");
   const [busy,setBusy]=useState(false);
   const [prog,setProg]=useState("");
@@ -5716,6 +5731,7 @@ function AIEngineCard(){
         <div style={{marginTop:4}}>
           <input value={cfg.localUrl} onChange={e=>save({localUrl:e.target.value})} placeholder="http://localhost:11434/v1" style={IS}/>
           <input value={cfg.localModel} onChange={e=>save({localModel:e.target.value})} placeholder="model name (e.g. llama3.1)" style={IS}/>
+          <input value={cfg.embedModel} onChange={e=>save({embedModel:e.target.value})} placeholder="embedding model (optional — e.g. nomic-embed-text; upgrades Recall/Oracle to semantic search)" style={IS}/>
           <input type="password" value={cfg.localKey} onChange={e=>save({localKey:e.target.value})} placeholder="API key (optional)" style={IS}/>
           <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:5,lineHeight:1.5}}>The URL should include the version path (…/v1). A dedicated iPad can reach a server on the same network.</div>
         </div>

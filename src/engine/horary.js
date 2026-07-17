@@ -112,11 +112,24 @@ export function castHorary({ date, lat, lon, quesitedHouse }) {
     });
   }
 
+  // ── Collection of light: a weightier (slower) planet to which BOTH
+  //    significators apply — it gathers and joins their matter ──
+  let collection = null;
+  if (!sameRuler) {
+    PLANETS.forEach(pk => {
+      if (pk === querentRuler || pk === quesitedRuler || collection) return;
+      const C = pos[pk], A = pos[querentRuler], B = pos[quesitedRuler];
+      if (Math.abs(C.speed) > Math.abs(A.speed) || Math.abs(C.speed) > Math.abs(B.speed)) return;
+      const a = aspectState(A, C), b2 = aspectState(B, C);
+      if (a?.applying && b2?.applying) collection = { planet: pk, aspects: [a.aspect, b2.aspect] };
+    });
+  }
+
   return {
     jd, date: date.toISOString(), asc, mc, cusps, pos, considerations, radical, voc,
     querent: { ruler: querentRuler, coSignificator: "moon", ascSign },
     quesited: { house: quesitedHouse, ruler: quesitedRuler, sign: quesitedSign, sameRuler },
-    aspects: pairs, translation,
+    aspects: pairs, translation, collection,
   };
 }
 
@@ -160,6 +173,7 @@ export function horaryToText(chart, question) {
     `Planets: ${Object.entries(chart.pos).map(([pk, p]) => `${pk} ${f(p.lon)} (${p.dignity}${p.retro ? " ℞" : ""}, house ${p.house}, ${p.speed.toFixed(2)}°/d)`).join("; ")}`,
     `Significator aspects: ${chart.aspects.length ? chart.aspects.map(a => `${a.p1} ${a.aspect} ${a.p2} (orb ${a.orb}°, ${a.applying ? `applying — perfects in ~${a.daysToPerfect}d` : "separating"})`).join("; ") : "none within orb"}`,
     chart.translation ? `Translation of light: ${chart.translation.planet} carries light from ${chart.translation.from} to ${chart.translation.to}` : `No translation of light`,
+    chart.collection ? `Collection of light: ${chart.collection.planet} (heavier) receives the application of both significators (${chart.collection.aspects.join(", ")}) — a third party joins the matter` : `No collection of light`,
     chart.voc.isVoC ? "Moon is VOID OF COURSE" : "",
   ];
   return lines.filter(Boolean).join("\n");

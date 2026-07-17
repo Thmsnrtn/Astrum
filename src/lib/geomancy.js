@@ -13,6 +13,65 @@
 
 import { FIGURES, figureByPattern } from "../data/geomancy.js";
 
+// ═══ Perfection — does the chart connect querent and quesited? ═══════════
+// After Greer's Art and Practice of Geomancy: four modes of perfection,
+// judged mechanically over the twelve-house chart (array of 12 patterns,
+// houses 1-indexed). Any mode = the chart perfects (a yes, in the manner
+// the mode describes); none = denial.
+const eqFig = (a, b) => !!a && !!b && a.join("") === b.join("");
+const neighbours = h => [((h - 2 + 12) % 12) + 1, (h % 12) + 1];
+
+export function perfection(houses, quesitedHouse, querentHouse = 1) {
+  const q = houses[querentHouse - 1], s = houses[quesitedHouse - 1];
+  const modes = [];
+  // Occupation: the same figure holds both houses — the strongest yes.
+  if (eqFig(q, s)) modes.push({ mode: "occupation", note: "the same figure holds both houses — the matter and the querent are one; the strongest perfection" });
+  // Conjunction: one significator's figure stands in a house beside the other.
+  if (neighbours(quesitedHouse).some(h => h !== querentHouse && eqFig(houses[h - 1], q)))
+    modes.push({ mode: "conjunction", note: "the querent's figure stands beside the quesited's house — the querent must go to the matter" });
+  else if (neighbours(querentHouse).some(h => h !== quesitedHouse && eqFig(houses[h - 1], s)))
+    modes.push({ mode: "conjunction", note: "the quesited's figure stands beside the querent's house — the matter comes to the querent" });
+  // Mutation: both significators appear side-by-side elsewhere in the chart.
+  for (let h = 1; h <= 12; h++) {
+    const nh = (h % 12) + 1;
+    if ([h, nh].some(x => x === querentHouse || x === quesitedHouse)) continue;
+    if ((eqFig(houses[h - 1], q) && eqFig(houses[nh - 1], s)) || (eqFig(houses[h - 1], s) && eqFig(houses[nh - 1], q))) {
+      modes.push({ mode: "mutation", note: `the two significators meet in houses ${h} and ${nh} — the matter resolves in an unexpected place` });
+      break;
+    }
+  }
+  // Translation: the same third figure stands beside both significators.
+  const qN = neighbours(querentHouse).filter(h => h !== quesitedHouse);
+  const sN = neighbours(quesitedHouse).filter(h => h !== querentHouse);
+  outer: for (const a of qN) for (const b of sN) {
+    const f = houses[a - 1];
+    if (a !== b && eqFig(f, houses[b - 1]) && !eqFig(f, q) && !eqFig(f, s)) {
+      modes.push({ mode: "translation", note: `${figureByPattern(f)?.name || "a third figure"} stands beside both — a go-between carries the matter` });
+      break outer;
+    }
+  }
+  return { perfects: modes.length > 0, modes };
+}
+
+// ═══ Company of houses ═══════════════════════════════════════════════════
+// Houses pair odd-even (1·2, 3·4 … 11·12). Company strengthens the paired
+// house's figure as a co-significator. Kinds in traditional priority:
+// simple (same figure), demi-simple (same ruling planet), compound (a figure
+// and its inverse), capitular (matching first/Fire line).
+export const invertFigure = p => p.map(r => (r === 1 ? 2 : 1));
+
+export function company(houses, houseN) {
+  const partner = houseN % 2 === 1 ? houseN + 1 : houseN - 1;
+  const a = houses[houseN - 1], b = houses[partner - 1];
+  if (!a || !b) return null;
+  const fa = figureByPattern(a), fb = figureByPattern(b);
+  if (eqFig(a, b)) return { kind: "simple", partner, note: "the same figure — full company" };
+  if (fa && fb && fa.planet === fb.planet) return { kind: "demi-simple", partner, note: `both ruled by ${fa.planet} — company of the ruler` };
+  if (eqFig(invertFigure(a), b)) return { kind: "compound", partner, note: "a figure and its inverse — company of opposites" };
+  if (a[0] === b[0]) return { kind: "capitular", partner, note: "matching Fire lines — company of the head" };
+  return null;
+}
+
 // Add two figures row by row: like parities → double, unlike → single.
 // (Dot counts summed; even total → double (2), odd → single (1).)
 export function addFigures(a, b) {
