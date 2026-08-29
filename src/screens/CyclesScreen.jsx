@@ -54,7 +54,7 @@ export default function CyclesScreen({now,profile,eph}){
     }catch(e){setAiReport(e.message||"Cycles report unavailable — check connection.");}
     setAiLoading(false);
   };
-  const GOLD=GOLD;const G=`rgba(var(--tint-rgb),`;
+  const G=`rgba(var(--tint-rgb),`;
   return(
     <div style={{flex:1,overflowY:"auto",paddingBottom:32}}>
       <div style={{padding:"16px 18px 10px"}}>
