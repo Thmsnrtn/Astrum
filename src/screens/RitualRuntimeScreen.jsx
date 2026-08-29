@@ -15,6 +15,7 @@ import { conditionsFromProfile } from "../engine/chart.js";
 import { createCasting } from "../lib/castings.js";
 import { loadSpirits } from "../lib/spirits.js";
 import { startDrum, bell, soundAvailable } from "../lib/sound.js";
+import { ORPHIC_HYMNS } from "../data/orphicHymns.js";
 import { useWakeLock } from "../lib/wakeLock.js";
 
 const fmtElapsed = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
@@ -33,6 +34,7 @@ export default function RitualRuntimeScreen({ eph, hour, profile, natalPos, now 
   const [allies, setAllies] = useState([]);
   const court = loadSpirits();
   const [drumming, setDrumming] = useState(false);
+  const [hymnOpen, setHymnOpen] = useState(false);
   const drumStop = useRef(null);
   const toggleDrum = () => {
     if (drumming) { drumStop.current?.(); drumStop.current = null; setDrumming(false); }
@@ -151,7 +153,8 @@ export default function RitualRuntimeScreen({ eph, hour, profile, natalPos, now 
       <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "12px 16px", borderBottom: "1px solid rgba(var(--tint-rgb),0.08)" }}>
         <span style={{ fontSize: 18, color: P[hourPlanet]?.col || GOLD }}>{P[hourPlanet]?.sym}</span>
         <span style={{ fontFamily: F, fontSize: 10, color: aligned ? "#7AB07A" : "rgba(var(--tint-rgb),0.5)" }}>Hour of {P[hourPlanet]?.name}{aligned ? " ✓" : ""}</span>
-        {soundAvailable() && <button onClick={toggleDrum} style={{ marginLeft: "auto", background: drumming ? pc + "1A" : "none", border: `1px solid ${drumming ? pc + "50" : "rgba(var(--tint-rgb),0.15)"}`, borderRadius: 8, color: drumming ? pc : "rgba(var(--tint-rgb),0.45)", fontFamily: F, fontSize: 9, padding: "4px 10px", letterSpacing: 1, cursor: "pointer" }}>{drumming ? "◉ drum" : "○ drum"}</button>}
+        {ORPHIC_HYMNS[planet] && <button onClick={() => setHymnOpen(true)} aria-label="Recite the Orphic hymn" style={{ marginLeft: "auto", background: "none", border: "1px solid rgba(var(--tint-rgb),0.2)", borderRadius: 8, color: "rgba(var(--tint-rgb),0.6)", fontFamily: F, fontSize: 9, padding: "4px 10px", letterSpacing: 1, cursor: "pointer" }}>✦ hymn</button>}
+        {soundAvailable() && <button onClick={toggleDrum} style={{ background: drumming ? pc + "1A" : "none", border: `1px solid ${drumming ? pc + "50" : "rgba(var(--tint-rgb),0.15)"}`, borderRadius: 8, color: drumming ? pc : "rgba(var(--tint-rgb),0.45)", fontFamily: F, fontSize: 9, padding: "4px 10px", letterSpacing: 1, cursor: "pointer" }}>{drumming ? "◉ drum" : "○ drum"}</button>}
         <span style={{ fontFamily: F, fontSize: 10, color: "rgba(var(--tint-rgb),0.35)", marginLeft: soundAvailable() ? 0 : "auto" }}>{fmtElapsed(elapsed)}</span>
       </div>
       {/* Progress dots */}
@@ -168,6 +171,17 @@ export default function RitualRuntimeScreen({ eph, hour, profile, natalPos, now 
         <div style={{ fontFamily: F, fontSize: 21, color: GOLD, marginBottom: 14 }}>{step.t}</div>
         <div style={{ fontFamily: F, fontSize: 13, color: "#B8A578", lineHeight: 2, maxWidth: 420 }}>{step.d}</div>
       </div>
+      {hymnOpen && ORPHIC_HYMNS[planet] && (() => { const h = ORPHIC_HYMNS[planet]; return (
+        <div onClick={() => setHymnOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 600, background: "rgba(2,3,10,0.96)", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 26px", overflowY: "auto", cursor: "pointer" }}>
+          <div style={{ fontFamily: F, fontSize: 8.5, color: "rgba(var(--tint-rgb),0.5)", letterSpacing: 3, textTransform: "uppercase" }}>Orphic Hymn {h.taylorNumber} · Taylor 1792 · {h.deity}</div>
+          <div style={{ fontFamily: F, fontSize: 17, color: pc, letterSpacing: 4, textTransform: "uppercase", margin: "6px 0 2px" }}>{h.title}</div>
+          {h.fumigation && <div style={{ fontFamily: F, fontSize: 9.5, color: "rgba(var(--tint-rgb),0.45)", fontStyle: "italic", marginBottom: 14 }}>{h.fumigation}</div>}
+          <div style={{ maxWidth: 440 }}>
+            {h.lines.map((l, i) => <div key={i} style={{ fontFamily: F, fontSize: 13.5, color: "#C8B588", lineHeight: 2.05, textAlign: "center" }}>{l}</div>)}
+          </div>
+          <div style={{ fontFamily: F, fontSize: 8.5, color: "rgba(var(--tint-rgb),0.35)", marginTop: 16, letterSpacing: 2, textTransform: "uppercase" }}>tap anywhere to return to the rite</div>
+        </div>
+      ); })()}
       {/* Controls */}
       <div style={{ display: "flex", gap: 9, padding: "14px 18px 20px" }}>
         <button onClick={prev} disabled={stepIdx === 0} style={{ padding: "13px 20px", borderRadius: 11, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(var(--tint-rgb),0.15)", fontFamily: F, fontSize: 10, color: stepIdx === 0 ? "#4A3818" : "rgba(var(--tint-rgb),0.55)", letterSpacing: 1, cursor: stepIdx === 0 ? "default" : "pointer" }}>← Back</button>

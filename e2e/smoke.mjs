@@ -1,7 +1,7 @@
 // Smoke: every nav room opens without a pageerror.
 // Run: node e2e/smoke.mjs   (expects `vite preview` on :4174)
-import { chromium } from 'playwright';
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+import { launch } from './_browser.mjs';
+const b = await launch();
 const p = await b.newPage();
 await p.setViewportSize({ width: 1400, height: 1200 });
 const errs = [];

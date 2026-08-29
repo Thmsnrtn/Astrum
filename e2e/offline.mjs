@@ -1,6 +1,6 @@
 // SW v3 verification: install → offline reload works; storage card renders.
-import { chromium } from 'playwright';
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+import { launch } from './_browser.mjs';
+const b = await launch();
 const ctx = await b.newContext();
 const p = await ctx.newPage();
 await p.setViewportSize({ width: 1400, height: 1200 });
@@ -50,3 +50,5 @@ const card = await p.evaluate(() => {
 console.log('storage card:', JSON.stringify(card));
 console.log('errors:', errs.length ? JSON.stringify([...new Set(errs)]) : 'none');
 await b.close();
+const pass = offlineOk.hasApp && card.health && card.holds && card.vault;
+process.exit(pass ? 0 : 1);

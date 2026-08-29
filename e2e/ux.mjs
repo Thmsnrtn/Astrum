@@ -1,8 +1,8 @@
 // P5 verification: first-run welcome → profile seeded; tint switching
 // actually recolors (the audit's "broken by construction" bug); grouped
 // nav renders; active tab persists across reload; Sky hint without place.
-import { chromium } from 'playwright';
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+import { launch } from './_browser.mjs';
+const b = await launch();
 const p = await (await b.newContext()).newPage();
 await p.setViewportSize({ width: 1400, height: 1200 });
 const errs = [];

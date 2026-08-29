@@ -12,6 +12,8 @@ import { MANSIONS } from "../data/mansions.js";
 import { FIGURES } from "../data/geomancy.js";
 import { LOTS } from "../engine/lots.js";
 import { PHASES } from "./lunation.js";
+import { BEHENIAN } from "../data/behenian.js";
+import { BOUNDS } from "../engine/astro.js";
 
 // ── Scheduling (pure) ──────────────────────────────────────────────────
 // state: { ease, intervalDays, due (ISO), reps }. grade: "again"|"good"|"easy".
@@ -50,6 +52,13 @@ export function buildDeck(extra = []) {
     front: `Lot of ${l.name}`, back: l.meaning }));
   PHASES.forEach(p => cards.push({ id: `phase_${p.key}`, topic: "Lunar phase",
     front: p.name, back: p.keynote }));
+  Object.entries(BEHENIAN).forEach(([name, b]) => cards.push({ id: `behenian_${name}`, topic: "Behenian star",
+    front: `${name} (${b.latin})`, back: `${b.virtue} · Stone: ${b.stone} · Herb: ${b.herb} · Nature: ${b.nature}` }));
+  const SIGN_NAMES_SRS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"];
+  const CAP = p => p[0].toUpperCase() + p.slice(1);
+  BOUNDS.forEach((bs, si) => cards.push({ id: `bounds_${si}`, topic: "Egyptian bounds",
+    front: `The bounds of ${SIGN_NAMES_SRS[si]}`,
+    back: bs.map(b => `${CAP(b.p)} ${b.f}–${b.t}°`).join(" · ") + " — a planet in its own bound gains +2 essential dignity." }));
   extra.forEach(c => cards.push(c));
   return cards;
 }

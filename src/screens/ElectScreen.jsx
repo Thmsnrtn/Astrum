@@ -3,6 +3,7 @@ import { OUTER_META, fmtD } from "../data/uiTables.jsx";
 import { useState, useEffect, useMemo } from "react";
 import { aiConfigured, aiUnconfiguredMessage, askClaude } from "../ai/client.js";
 import { INTENTS } from "../data/intents.js";
+import { PICATRIX_ELECTIONS, PICATRIX_PRECONDITIONS } from "../data/picatrixElections.js";
 import { P } from "../data/planets.js";
 import { TRADITIONS } from "../data/traditions.js";
 import { DAY_NAMES, OUTER_EPOCHS, fmtTime, outerPlanetLon } from "../engine/astro.js";
@@ -226,6 +227,22 @@ export default function ElectScreen({now,natalPos,eph,profile}){
           {watches.length===0&&<div style={{textAlign:"center",padding:"22px 16px",fontFamily:F,fontSize:10.5,color:"#5A4020",fontStyle:"italic",lineHeight:1.8}}>No vigils yet. Name an intention and the app will keep watch for its window.</div>}
         </>}
         {view==="intents"&&<>
+          {/* The classical catalog — Picatrix named elections, triple-witnessed */}
+          <div style={{padding:"11px 13px",borderRadius:12,background:"rgba(8,5,22,0.6)",border:"1px solid rgba(var(--tint-rgb),0.12)",marginBottom:9}}>
+            <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.5)",letterSpacing:2,textTransform:"uppercase",marginBottom:5}}>Picatrix — The Named Elections</div>
+            <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.4)",fontStyle:"italic",lineHeight:1.6,marginBottom:8}}>{PICATRIX_PRECONDITIONS}</div>
+            {PICATRIX_ELECTIONS.map(pe=>(
+              <details key={pe.id} style={{marginBottom:5}}>
+                <summary style={{fontFamily:F,fontSize:10.5,color:P[pe.planet]?.col||GOLD,cursor:"pointer",padding:"3px 0"}}>{P[pe.planet]?.sym} {pe.name}</summary>
+                <div style={{padding:"5px 0 7px 16px"}}>
+                  <div style={{fontFamily:F,fontSize:9.5,color:"#B8A578",lineHeight:1.7}}>{pe.conditions}</div>
+                  <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.5)",fontStyle:"italic",lineHeight:1.6,marginTop:4}}>{pe.summary}</div>
+                  {pe.flag&&<div style={{fontFamily:F,fontSize:8.5,color:"#D2A060",lineHeight:1.6,marginTop:4}}>⚑ {pe.flag}</div>}
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.32)",marginTop:4}}>{pe.citation}</div>
+                </div>
+              </details>
+            ))}
+          </div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:9}}>{Object.entries(INTENTS).map(([k,m])=><button key={k} onClick={()=>setIk(k)} style={{padding:"8px",borderRadius:10,background:ik===k?m.col+"14":"rgba(0,0,0,0.3)",border:"1px solid "+(ik===k?m.col+"45":"rgba(var(--tint-rgb),0.1)"),fontFamily:F,fontSize:9,color:ik===k?m.col:"#7A6030",cursor:"pointer",textAlign:"left"}}>{m.icon} {m.label}</button>)}</div>
           <div style={{borderRadius:14,background:"rgba(8,5,22,0.85)",border:"1px solid "+meta.col+"25",padding:"14px 15px"}}>
             <div style={{fontFamily:F,fontSize:15,color:meta.col,marginBottom:9}}>{meta.icon} {meta.label}</div>

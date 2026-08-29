@@ -2,8 +2,8 @@
 // (same DirectoryHandle interface as a picked folder). A peer envelope is
 // planted in the folder as if another device wrote it; syncNow must fold it
 // in, honor its tombstone, and write this device's own snapshot.
-import { chromium } from 'playwright';
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+import { launch } from './_browser.mjs';
+const b = await launch();
 const p = await (await b.newContext()).newPage();
 await p.setViewportSize({ width: 1400, height: 1200 });
 const errs = [];

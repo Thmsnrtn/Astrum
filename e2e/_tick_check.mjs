@@ -1,6 +1,6 @@
 // Tick-cadence check: 1 Hz header clock, live fractal windows, calm root.
-import { chromium } from 'playwright';
-const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+import { launch } from './_browser.mjs';
+const b = await launch();
 const p = await b.newPage();
 await p.goto('http://127.0.0.1:4174/Astrum/', { waitUntil: 'domcontentloaded' });
 await p.evaluate(() => { localStorage.setItem('astrum_profile', JSON.stringify({ name: 'T', traditions: ['western-ceremonial'], natal: { date: '1990-06-15', time: '12:00', lat: 51.5, lon: -0.12 } })); localStorage.setItem('astrum_schema', '2'); });
