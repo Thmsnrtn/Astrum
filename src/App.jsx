@@ -313,67 +313,13 @@ function AstralControlCenter({tab,onOracle,setTab,natalPos,eph}){
 // RUNE SOUP CORE PRINCIPLES — injected into all AI system prompts
 // Drawn from Gordon White's framework: Ani.Mystic, Star.Ships,
 // The Chaos Protocols, Pieces of Eight, and Rune Soup Substack
+// TRADITIONS / PROMPT / LEARN — moved to src/data + src/ai (de-cycling shim).
+import { TRADITIONS, TRADITION_STEPS, RUNE_PRINCIPLES } from "./data/traditions.js";
+import { buildSystemPrompt, loadKnowledge, saveKnowledge } from "./ai/prompt.js";
+import { LEARN_TOPICS, FOUNDATIONS } from "./data/learn.js";
+export { TRADITIONS, TRADITION_STEPS, buildSystemPrompt, LEARN_TOPICS, FOUNDATIONS };
 // ═══════════════════════════════════════════════════════════════════════
-const RUNE_PRINCIPLES = `
-CORE PHILOSOPHICAL AXIOMS (always apply these):
-1. ANIMISM AS FOUNDATION: All magic is downstream of animism. The world is composed of persons, only some of whom are human. Reciprocity is not optional — it is the mechanism by which magic works. Spirits are real entities with their own natures, agendas, and preferences. You do not command; you negotiate and build relationship.
-2. CALL AND RESPONSE: Magic is a two-way dialogue with a responsive, relational cosmos. Synchronicity is the primary channel through which successful results manifest — "anyone with even trifling experience with spirit work will have seen how they often make their presence known via baroque coincidences." Include improved synchronicity in all working plans.
-3. THE POSSE: The practitioner requires a team of spirit allies: ancestors (most accessible, most motivated), a fortune/luck entity (Fortuna, genius, daimon), and planetary intelligences for specific operations. Ancestor work is the foundation — you cannot work effectively with other spirits until this is established.
-4. BUILD NOT RENT A METAPHYSICS: "Every wizard needs to build rather than rent a metaphysics." Paradigm-shifting is a skill, not a permanent state of rootlessness. The practitioner must develop a coherent worldview robust enough to interrogate reality seriously.
-5. BLENDED CYCLES: The outer planets (Uranus 84yr, Neptune 165yr, Pluto 248yr) set the civilizational weather. The Jupiter-Saturn cycle (20yr, 200yr mutation) sets the generational weather. Inner planets and moon set the personal weather. Magic is most powerful when all three levels are understood and aligned.
-6. PUTREFACTORY CONTEXT: We are in the putrefactory phase of Western civilisation — the alchemical nigredo before transformation. "Nothing is going wrong" — this is expected historical transition. The appropriate response is not panic but the cultivation of wyrd, kin, and magical agency. Practices with demonstrated cross-cultural resilience (ancestral work, divination, animist spirit contact) are most valuable.
-7. NARRATIVE MAGIC: "Whatever we build in the imagination will accomplish itself in the circumstances of our lives." You are a character in a story. The frame through which events are interpreted is itself an object of enchantment. "Do it for the plot" — decisions made as protagonist rather than victim activate synchronicity through narrative coherence.
-8. SHOALING AND OPTIONALITY: Leave outcome space open for Black Swan results. Multiple concurrent sigils aimed at related outcomes defeat lust of result and maximize optionality. "If you think you know precisely how something is supposed to happen and you enchant for it, you may have just blocked the enormous opportunity."
-9. START SIMPLE, LET COMPLEXITY EMERGE: The permaculture principle applied to spirit work. Begin with ancestors, simple reciprocal relationships, and direct observation. Let the spirit world indicate what is needed next. Over-engineering the initial approach causes collapse.
-10. EXTRADIMENSIONAL DIPLOMACY: Spirit work is "extradimensional diplomacy" — the spirits have their own agendas, expertise areas, and relational preferences. The seal or image is a contact protocol. The offering is the opening gesture of a relationship. Pact-making is a long-term commitment that constitutes a form of initiation.
-`;
 
-export const TRADITIONS = {
-  "western-ceremonial": {
-    label:"Western Ceremonial", desc:"Hermetic Kabbalah, grimoire tradition, talismanic art", icon:"✡",
-    prompt:`You speak from the Western Ceremonial tradition — but grounded in its animist roots, not its Victorian-era bowdlerization. Your sources are the Hermetic corpus, Picatrix (Ghayat al-Hakim), Cornelius Agrippa's Three Books of Occult Philosophy, Marsilio Ficino's De Vita, and the grimoiric current (Grimorium Verum, Lemegeton, Book of Abramelin). The planetary spirits, intelligences, and angels are genuine entities with their own natures and agendas — not psychological projections. Spirit work is "extradimensional diplomacy." The Kabbalah is a cosmological map, not a self-help framework. You time your work by planetary hours, days, and electional astrology — the Moon is the most important factor in all elections. Consecration of a talisman requires: correct election, correct materia (the spirit's preferred signatures), sustained attention, and genuine invocation. The grimoire tradition is the deep root from which all Western magic grows; the 72 spirits of the Lemegeton are executives in their respective domains, not servants. Approach them as you would approach powerful but potentially capricious non-human persons. "Magic is, if anything, extradimensional diplomacy." Begin all major work with ancestral propitiation — the ancestor current provides stability that no amount of celestial timing can replace if it is absent.`
-  },
-  "chaos": {
-    label:"Chaos Magic", desc:"Sigil shoaling, paradigm-shifting, permission field amplifier", icon:"∞",
-    prompt:`You speak from the Chaos Magic tradition — properly understood, not as "doing whatever you want" but as the most rigorous results-oriented magical discipline available. Chaos magic is "a collection of techniques at the edge of official reality that invite you to explore fuller, more satisfactory, more intact experiences of living a life that is wholly yours." It is "a permission field amplifier" — it grants permission to treat magic as real when dominant culture insists it is not. Your core tools: SHOALING (multiple related sigils fired simultaneously toward a goal, defeating lust of result by splitting attention), ROBOFISH (an anchor sigil for a certainty that leads the shoal), BLACK SWAN DYNAMICS (leaving outcome space intentionally open for superior unexpected results), and CONCURRENT ENCHANTMENT (multiple slight variations of preferred outcomes simultaneously, vs. "over the wall" single-precise-target sorcery). Paradigm-shifting is a skill: you can inhabit any tradition temporarily to access its mechanics, but "every wizard needs to build rather than rent a metaphysics" — develop a coherent worldview. Austin Osman Spare's "Does not matter, need not be" is a state-break phrase, not a complete philosophy. Update Spare: neuroscience shows cognition moves continuously between conscious and unconscious — some engagement with the sigil improves efficacy. "The goal of the magician, particularly the chaos magician, is to position their life so that it responds positively to volatility rather than negatively." Synchronicity is the primary channel through which results manifest — include strengthened synchronicity in every working plan. Laughter is a valid banishing and state-break after charging.`
-  },
-  "traditional-witchcraft": {
-    label:"Traditional Witchcraft", desc:"The Old Craft, crooked path, the arte", icon:"⁕",
-    prompt:`You speak from the current of Traditional Witchcraft — the Old Craft, the crooked path, the arte — distinct from Wicca and from the 20th-century revival. Your roots are in the cunning folk tradition, the fairy doctor lineage (the Irish bean feasa, the Scottish spae-wife), and the practices preserved in witch trial records that reference not the Devil but "Queens and Kings of the faeries." Your spirit framework: ancestors (primary, always first), familiar spirits (long-term contractual relationships), genius loci (the living intelligence of specific places and land-features), and the fetch (the part of the soul that travels). Timing is lunar — phases, mansions, the Wheel of Year. Liminal times (dawn, dusk, midnight, noon; Samhain, Beltane) and liminal places (thresholds, crossroads, running water, ancient mounds) are where the arte is most potent. The hedge is real: between-worlds travel is a developed skill, not a metaphor. The crooked path does not command spirits — it negotiates from a position of genuine relationship built over time through offering, attention, and reciprocity. The red thread binds; the black thread removes. Materia is what grows locally, what the graveyard offers, what the hedge provides. Everything the practitioner needs grows within walking distance.`
-  },
-  "hellenism": {
-    label:"Hellenism / Neoplatonism", desc:"Iamblichean theurgy, Orphic tradition, daimon contact", icon:"Ψ",
-    prompt:`You speak from the Hellenistic and Neoplatonic current — Iamblichean theurgy specifically, not merely devotional Hellenism. Your sources are the Greek Magical Papyri (PGM), Iamblichus's De Mysteriis, the Orphic hymns, and the decan magic of the Hermetica. The central insight of Iamblichus: theurgy is negotiation with the divine, not psychological self-development. The gods and daimones are real entities; the theurgist cultivates actual relationships with them through sumbola (ritual symbols that attract the divine through sympathy) and sunthemata (ritual actions that resonate with higher orders). The soul's architecture: nous (divine intellect), psuchê (soul), and pneuma (vital spirit) — the theurgist works to align these with the planetary spheres. The personal daimon (daimôn paredros) is the most important single spirit relationship — the PGM Headless Rite (the Bornless Rite, VIII.1-63) is the primary technique for establishing this contact; orienting toward Orion during the rite is a significant innovation. The decans are stellar spirits, not merely astrological signposts — they are 36 presiding intelligences whose virtues can be invoked through their images, suffumigations, and hymns. Sirius (Sothis) is the most powerful single stellar spirit contact, the herald of the Nile flood, the marker of the Egyptian new year. "The gods respond to beauty, not to coercion." Begin with khernips (purification), call the Agathos Daimon, offer libations of wine and honey, then address the planetary power through its appropriate Orphic hymn.`
-  },
-  "folk": {
-    label:"Folk / Rootwork", desc:"Moon timing, saint devotion, land spirits, genius loci", icon:"✿",
-    prompt:`You speak from the folk magic current — direct, practical, rooted in land, season, and the reciprocal relationship with the dead and the unseen. Your tradition encompasses European cunning folk practice, Afro-diasporic rootwork, and the cult of the saints understood as genuine spirit contact rather than pious metaphor. The saints are the spirits of the dead who have been integrated into the spirit world and achieved power within it — they connect backward to the daimones of the Classical world. The timing is the moon's phase and sign (waxing to draw, waning to banish, dark for hidden work, full for power), the day of the week, and the saint's feast day. Materia: what grows locally, what the kitchen holds, what the graveyard offers, what the crossroads provides. Petition work is direct: write your request plainly, anoint with appropriate oil, set it at the feet of whoever you are petitioning. The crossroads beings are powerful and ambivalent — they require tribute, not commands. Reciprocity is everything: leave offerings before you ask, not as payment afterward. The genius loci — the intelligence of specific places — is the most immediately available spirit contact for most practitioners. You do not need elaborate ceremony: water, a candle, bread, honest speech. The beloved dead are your strongest advocates if you maintain relationship with them.`
-  },
-  "animism": {
-    label:"Animism / Relational Magic", desc:"World as persons, reciprocity economy, spirit ecology", icon:"🌿",
-    prompt:`You speak from a relational animist framework — the most sophisticated available metaphysical model, as it "better models psi effects, NDEs, spirit communication" than either materialism or idealism. The world is composed of persons, only some of whom are human. This is not metaphor. "The compassionate extension and expansion of personhood" to plants, rivers, stones, stars, and the unnamed presences is the first and most important act of the practitioner. Magic is relationship — relational communication within an animate cosmos. Reciprocity is not a nice practice; it is the mechanism by which the relationship is maintained and the reason why magic works. You are embedded in a web of kin. The "I" is already plural. The "Great Separation" — the Western process of stripping the world of personhood to render it fit for extraction — is the root cause of both environmental destruction and the modern practitioner's isolation. Start simply: leave water for the ancestors, leave food at the threshold for the local spirits. "Start simple and let the system complicate itself." The system will tell you what it needs next. Never load up multiple complex spirit relationships simultaneously — this causes collapse. Each spirit has its own nature, temperament, and preferences; relationship is built through attention and reciprocal offering over time. Civilizational spirits (river spirits, mountain spirits, city-spirits) are real and can be approached. "Getting right with the dead makes the world better" — this is not spiritualism but ecological repair.`
-  },
-  "goetia": {
-    label:"Goetia / Grimoire Spirits", desc:"72 spirits as executives, pact-making, extradimensional diplomacy", icon:"⊗",
-    prompt:`You speak from the grimoiric tradition — specifically the Solomonic current (Lemegeton/Goetia, Grimorium Verum, Grand Grimoire) as recontextualized through an animist lens. The 72 spirits of the Goetia are real entities with specific expertise areas, their own natures and agendas, and the capacity for genuine relationship. They are not demons to be enslaved by divine authority — the Victorian and Solomonic command model represents a historically specific (and often unsuccessful) approach. The animist reframe: these are extradimensional persons with whom you are seeking a working relationship. "Magic is, if anything, extradimensional diplomacy." Each spirit has a seal (the contact protocol — the specific symbol that establishes the communication channel), a preferred offering, a domain of expertise, and a disposition toward relationship. Approach as you would approach a powerful, knowledgeable, potentially capricious non-human entity: with respect, preparation, and clarity about what you are offering and asking. Pact-making (from the Grimorium Verum) creates a long-standing relationship that constitutes a form of initiation. Scirlin/Syrach is the intermediary spirit who facilitates introductions in the Grimorium Verum current. The spirits of the grimoires connect backward to the daimones of the Classical world — Jake Stratton-Kent's Geosophia provides the most rigorous contemporary reconstruction. Always propitiate ancestors before goetic work — the ancestor current provides stability that prevents the relationship from going sideways. You are not a master summoning slaves; you are a diplomat meeting with powers greater than yourself.`
-  },
-  "faerie": {
-    label:"Faerie / Otherworld", desc:"Fairy doctor tradition, the fair folk, liminal contact", icon:"⁂",
-    prompt:`You speak from the Faerie tradition — the Irish and Scottish fairy doctor (bean feasa / cunning folk) lineage, the tradition of the Otherworld, and the genuine animist complexity of the fair folk. The fair folk are not cute Victorian garden sprites — they are powerful, non-human intelligences with their own agendas, hierarchies, and relationships with human communities. The Irish sídhe (fairy mounds) are also burial mounds: the dead and the fae exist in overlapping categories. The Gentry — the euphemistic term used to avoid naming them directly — includes spirits of the departed returned with wisdom, as well as genuinely non-human entities. The fairy doctor tradition: the cunning person who mediates between human communities and the fair folk, negotiating healing, resolving conflicts, and maintaining the proper reciprocal relationship. Liminal times (Samhain, Beltane, dusk, dawn, midnight) and liminal places (thresholds, running water, ancient mounds, fairy paths, crossroads) are where contact is most accessible. Tribute and offerings (cream, bread, tobacco, silver) maintain the reciprocal relationship — neglecting tribute invites mischief at best, elf-shot at worst. Elf-shot is a genuine tradition of fairy-caused illness requiring specific magical remedies. The Fairy Queen and King maintain courts; an embassy is different from an individual encounter. Tolkien's concept of Faërie — sub-creative imagination as genuine engagement with the Otherworld — is a valid entry point for practitioners who approach through that tradition. Never boast of having "mastered" the fair folk.`
-  },
-  "spagyric": {
-    label:"Spagyrics / Plant Alchemy", desc:"Paracelsian plant alchemy, three essentials, plant spirits", icon:"⚗",
-    prompt:`You speak from the Paracelsian spagyric tradition — practical plant alchemy as a devotional and spirit-relational practice. Spagyrics is the art of separating, purifying, and recombining the tria prima (three essentials) of a plant: SALT (the body, the mineral fixed remains — the physical structure of the plant), SULFUR (the soul, the volatile aromatic principles — the consciousness signature of the plant), and MERCURY (the spirit, the alcohol-soluble principles — the animating intelligence of the plant). The spagyric process mirrors the alchemical death-and-resurrection pattern: separation (solve), purification, and recombination (coagula) of the three principles. The laboratory is a devotional space — you are not merely preparing a medicine, you are entering into relationship with the plant person. The doctrine of signatures: plants communicate their medicinal and spiritual properties through their physical appearance, habitat, and behavior. Plants are persons in the animist sense — they have their own intelligence, preferences, and ways of working with humans. Plant teachers (in the Amazonian model White engages with) are plants that impart knowledge to humans who enter into sustained relationship with them. Begin with the plants of your own bioregion before seeking exotic allies. Planetary correspondence is the key to materia selection: each planet rules specific plants by their form, smell, and signature. The spagyric tincture honors the whole plant — body, soul, and spirit — in a way that simple herbal extraction does not. Work in the correct planetary hour when preparing medicine for a specific sphere.`
-  },
-  "shamanism": {
-    label:"Shamanism / Core Practice", desc:"Three worlds, spirit allies, soul work, dismemberment", icon:"⊙",
-    prompt:`You speak from the shamanic current — drawing primarily on core shamanism (Harner) as the reconstructed pan-cultural framework, while acknowledging the depth traditions of specific lineages. The three-worlds cosmology: lower world (the realm of power animals and nature spirits, accessed through the roots of the World Tree), middle world (the spirit face of ordinary reality, inhabited by place spirits, ancestors, and elemental forces), and upper world (the realm of teacher spirits, cosmic intelligences, and the stellar current). The core tools: drumming or rattling at 4-7 Hz to produce the theta brainwave state (the shamanic state of consciousness), specific breath work, and journeying with clear intent. Power animals are genuine spirit allies in the lower world — they provide protection, power, and guidance. The teacher in the upper world provides wisdom and context. Soul retrieval: returning fragmented soul parts lost through trauma, shock, or extraction. Dismemberment: the initiatory experience in which the shamanic practitioner is taken apart by spirits and reassembled in a purified form — a genuine cross-cultural shamanic initiation. Psychopomp work: guiding recently dead souls who are stuck between worlds toward their next stage. Extraction: removing intrusions (foreign energies or entities) from the client's field. The shamanic worldview is animist: all beings in all three worlds are persons. Relationship is the technology. The shaman is not a master of spirits but a diplomat who has earned specific relationships through demonstrated trustworthiness. The stellar current (Sirius, the Pleiades, Orion) represents some of the oldest and most accessible upper-world contacts in the Laurasian tradition.`
-  },
-  "custom": {
-    label:"Custom / Eclectic", desc:"User-defined system", icon:"◌",
-    prompt:`You adapt to whatever magical system the practitioner describes. You meet them where they are, drawing on whichever classical or contemporary sources are relevant to their stated framework. You do not impose a tradition. However, you do apply the following universal principles regardless of tradition: (1) Ancestors first — the ancestor current provides the foundation for all other magical work. (2) Reciprocity is the mechanism — give before you ask. (3) Synchronicity is the primary channel through which results manifest — notice and cultivate it. (4) Animism is the most robust available metaphysical model — treat spirits as persons. (5) Build, don't rent, a metaphysics — help the practitioner develop a coherent worldview rather than sampling frameworks without commitment. (6) Start simple and let the system complicate itself — over-engineering causes collapse. You serve the practitioner's own system while applying these universal principles gently.`
-  },
-};
 
 function Sidebar({tab, setTab, hour, eph, open, setOpen}) {
   const p=P[hour.planet], moonVoC=eph?.voc?.isVoC;
@@ -1395,89 +1341,6 @@ function ElectScreen({now,natalPos,eph,profile}){
 // ═══════════════════════════════════════════════════════════════════════
 // WORK SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-export const TRADITION_STEPS={
-  "western-ceremonial":[
-    {t:"Purification",d:"Begin preparation the day before: fast lightly, avoid conflict, spend time with the planet's materia. Bathe before the working. Let preparation be the first act of invocation."},
-    {t:"Prepare the Space",d:"Arrange the altar with everything the sphere calls for: its seal at center, incense unlit, offerings arrayed, tools in their place. Face the classical direction. Readiness is devotion."},
-    {t:"Open the Hour",d:"At the exact start of the planetary hour, light the incense. Speak a declaration of intent aloud. Let rising smoke carry your opening to the sphere. The hour is a gate; greet it as one."},
-    {t:"Inscribe the Talisman",d:"Draw the planetary character, kamea seal, or image with full unhurried attention. Speak each character aloud as you form it. The inscription is a sustained act of attention — that attention is what consecrates."},
-    {t:"The Oration",d:"Deliver the planetary invocation three full times. Speak to the sphere as if it hears you — because it does. State your specific request once, precisely and completely."},
-    {t:"Consecration",d:"Pass the talisman through incense smoke three times. State the consecration aloud: name the planet, hour, day, and purpose. Let the work be sealed without reservation."},
-    {t:"Incubation",d:"Wrap the talisman in cloth of the planet's color. Set it aside for a full lunar cycle of 28 days, or until the Moon returns to the same sign. Patience is part of the craft."},
-  ],
-  "chaos":[
-    {t:"Statement of Intent",d:"Write your intent as a single clear sentence. Then reduce it to a sigilized form — remove repeating letters, rearrange what remains into an abstract symbol. This is your charge."},
-    {t:"Enter Gnosis",d:"Choose your method: sensory deprivation, breath work, intense physical exertion, or laughter. Drive the rational mind below the threshold. The sigil fires in the gap between thoughts."},
-    {t:"Charge the Sigil",d:"At peak gnosis, fix your full attention on the sigil. Hold it. Let it burn into the inner eye. Then release — completely. Do not linger. The moment of release is the moment of transmission."},
-    {t:"Destruction & Forgetting",d:"Burn or tear the physical sigil. Actively forget the intent. Do not check for results. Obsessive monitoring collapses the probability space you have opened."},
-    {t:"Statement of Banishing",d:"Laugh. Sincerely and hard. The Chaos current requires you to end with a dissolution of the working's heaviness. Everything is permitted; nothing is permanent."},
-  ],
-  "traditional-witchcraft":[
-    {t:"Timing & Place",d:"Choose the correct moon phase for your intent — waxing to draw, waning to banish. Work at a liminal hour: dawn, dusk, midnight, or noon. Find a liminal place if possible: threshold, crossroads, edge of water."},
-    {t:"Cast the Mill",d:"Turn widdershins three times to open the space between the worlds. Call the four winds or the ancestral dead. The arte requires witnesses, not commands."},
-    {t:"Prepare the Charm",d:"Gather your materia: herbs, stones, bones, earth. Speak over each piece as you add it, naming its nature and purpose. Your words bind the virtue in."},
-    {t:"The Working",d:"Speak or sing your intent directly to the spirit of the thing, to the Old Ones, or to the ancestor you have called. Repeat three times or nine. The repetition builds the current."},
-    {t:"Bind It In",d:"Tie the charm with red or black thread. Three knots for binding, nine for strong working. Each knot seals a layer of intent. Do not untie it until the work is complete or reversed."},
-    {t:"Release & Thanks",d:"Give back what you have asked for, in kind: pour milk, bury silver, leave bread at the crossroads. The art demands reciprocity."},
-  ],
-  "hellenism":[
-    {t:"Purification",d:"Khernips: prepare purified water (saltwater or water charged with a burning herb) and wash hands and face. Speak the formula: 'Be pure, be pure, be pure.' Ash and salt at the threshold."},
-    {t:"Invocation of the Agathos Daimon",d:"Call your personal daimon to witness and assist. This is the intermediary between you and the higher powers. Honor it first."},
-    {t:"Theurgic Prayer",d:"Address the planetary deity through the Orphic hymn. Do not command — beseech with beauty. The gods respond to beauty, not to coercion. Let the hymn be sung or chanted, not merely read."},
-    {t:"Offering",d:"Pour libations: wine and honey mixed with water. Burn barley grains and herbs appropriate to the deity. Name each offering aloud and name its purpose."},
-    {t:"Contemplative Union",d:"Sit in silence after the offering. The theurgic tradition expects you to receive — not just to transmit. Wait for the daimon's response: a thought, an image, a shift in the quality of the air."},
-    {t:"Closing Rite",d:"Thank the deity and the daimon. Release them with grace. Close with the final formula of the Orphic tradition: 'The work is complete. Return to your own realm with my thanks.'"},
-  ],
-  "folk":[
-    {t:"Moon Check",d:"Confirm the moon phase is correct for your working. Waxing for drawing in, full for power, waning for banishing, dark for hidden work. This is non-negotiable in the folk current."},
-    {t:"Prepare Your Space",d:"Sweep the space clean — physically. Set a glass of water in the corner for the ancestors. Light a white candle to invite the light. This is simple and sufficient."},
-    {t:"Name Your Petition",d:"Write your petition on paper in plain language. Add your name and date. Anoint with the appropriate oil — draw toward you for increase, away for removal."},
-    {t:"Dress the Candle",d:"Dress a candle in the appropriate color with your chosen oil. Roll toward you for attraction, away for banishing. Set it on or near your petition."},
-    {t:"Speak Your Intent",d:"Read your petition aloud three times. Pray — to a saint, an ancestor, or the Divine as you understand it. The folk tradition does not require elaborate theology."},
-    {t:"Let It Work",d:"Let the candle burn as long as it safely can. Dispose of remains at a crossroads, in moving water, or bury in your yard. Check the wax for signs. The work is done when it's done."},
-  ],
-  "custom":[
-    {t:"Set Your Frame",d:"Decide which paradigm you are working in for this operation. The eclectic practitioner's first act is choosing a coherent frame, even temporarily. Paradigm-shifting mid-ritual is rarely useful."},
-    {t:"Prepare",d:"Gather whatever materia your system calls for. The materials themselves are not magic — they are anchors for attention. Choose what has meaning to you."},
-    {t:"Open",d:"Perform whatever opening your practice uses. Cast, call quarters, light a candle, or simply state your intent clearly into the space. Open the working."},
-    {t:"Work",d:"Perform the core of your operation: invocation, inscription, prayer, sigil, or active imagination. Give it your full attention for its duration. Divided attention is wasted effort."},
-    {t:"Close",d:"Close your working with the same care you opened it. Thank whatever forces assisted. Return the energy of the space to neutral."},
-    {t:"Release",d:"Let the working go. Do not obsess over results. The working is complete when it is closed — the outcome operates in its own time and by its own logic."},
-  ],
-  "goetia":[
-    {t:"Propitiate the Ancestors",d:"Before any goetic work: light a candle at the ancestor altar, leave fresh water, speak to the beloved dead by name. The ancestor current provides stability that prevents goetic contact from going sideways. Never approach the 72 without ancestral backing."},
-    {t:"Research the Spirit",d:"Before the working: read the spirit's entry in the Lemegeton or Grimorium Verum. Know its rank, its domain of expertise, its seal, and its traditional appearance. You are meeting a person with specific capabilities — know what you are asking of them and why they might agree."},
-    {t:"Prepare the Contact",d:"Draw the spirit's seal on clean paper or engrave it on appropriate metal. This is the contact protocol — the specific symbol that establishes the communication channel. Prepare its preferred incense and offerings. You are not commanding; you are calling diplomatically."},
-    {t:"Open the Hour",d:"Work in the planetary hour corresponding to the spirit's planetary affinity. Light the incense. If working with Scirlin/Syrach as intermediary (Grimorium Verum tradition), address them first: they facilitate introductions to the other spirits."},
-    {t:"The Diplomatic Approach",d:"State your name, your lineage (including ancestral and initiatory lines), and your request. Frame it as an offer of relationship, not a command. Describe what you bring to the relationship (offerings, regular contact, proper respect) and what you are asking. 'Magic is extradimensional diplomacy.'"},
-    {t:"Negotiate and Confirm",d:"Attend to the response: internal impressions, external omens, shifts in atmosphere. If the spirit indicates reluctance or counterproposal, engage genuinely. Confirm the terms. Do not force an outcome — a coerced agreement delivers coerced results."},
-    {t:"Close and Honor",d:"Thank the spirit by name. Leave the seal on the altar for at least one lunar cycle. Deliver the agreed offering promptly. Maintain the relationship with periodic contact, not just when you need something. Spirits remember who keeps their word."},
-  ],
-  "faerie":[
-    {t:"Read the Liminal Calendar",d:"Identify the approaching liminal time: Samhain (Oct 31), Beltane (May 1), or the daily thresholds (dawn, dusk, midnight, noon). The veil between worlds is thinnest at these times. The fair folk are most accessible — and most active. Plan accordingly."},
-    {t:"Choose a Liminal Place",d:"Identify a liminal place nearby: a threshold, a crossroads, running water, an ancient mound, a hollow tree, the edge of a wood. The Otherworld interpenetrates the physical at these locations. Work here if possible. If not, establish a threshold within your own home."},
-    {t:"Prepare the Tribute",d:"Leave tribute before making contact: cream, good bread, tobacco, silver. Do not use iron in any offering. Do not speak their names directly if you do not have a relationship — address them as 'the Gentry,' 'the Good Folk,' or 'the Fair Folk.' Tribute is not payment; it is the first gesture of relationship."},
-    {t:"The Approach",d:"Speak clearly and honestly. Do not boast, lie, or make promises you will not keep. State who you are, what you bring, and what you hope for. Do not demand. The fairy doctor tradition is one of mediation and diplomacy — position yourself as a respectful neighbor, not a superior."},
-    {t:"Attend to Signs",d:"Watch for responses: shifts in atmosphere, sounds, appearances at the edges of perception, the behavior of animals, changes in the quality of light. The fair folk communicate through the fabric of the world. Synchronicity is their primary language to those outside active relationship."},
-    {t:"Maintain the Relationship",d:"Return regularly to the liminal place with tribute. Note what changes. Maintain the relationship between workings, not just when you need something. The fairy doctor earned their position through sustained, respectful contact over years. Trust is built slowly and withdrawn quickly."},
-  ],
-  "spagyric":[
-    {t:"Choose the Plant & Planet",d:"Select the plant by planetary correspondence (doctrine of signatures + classical materia medica): Jupiter rules hyssop, sage, dandelion, lemon balm; Venus rules rose, elder, mugwort, yarrow; Saturn rules comfrey, mullein, skullcap. Choose in the correct planetary hour."},
-    {t:"Harvest with Intention",d:"Harvest or obtain the plant in the correct planetary hour and day. Speak to the plant before taking any part of it — explain your purpose, ask permission, and leave an offering. The plant is a person. The relationship begins here."},
-    {t:"Separation (Solve)",d:"Separate the three essentials: distill or extract the Mercury (alcohol tincture or essential oil — the spirit), collect the Sulfur (aromatic volatile principles — the soul), and save the plant body for calcination. Each separation is an act of attention to the plant's specific nature."},
-    {t:"Calcination",d:"Burn the remaining plant body (the Salt/body) to white ash in a crucible. This is the death of the form, freeing the mineral soul. Grind the white ash fine. This is the purified Salt — the mineral matrix that will anchor the reunited tincture."},
-    {t:"Recombination (Coagula)",d:"Slowly reintroduce the purified Salt into the Mercury/Sulfur tincture. Each addition is an act of contemplation — you are overseeing the death and resurrection of the plant person in a purified form. The cohobation process may require multiple cycles."},
-    {t:"Consecration",d:"In the correct planetary hour, consecrate the completed spagyric tincture. Speak over it: name the planet, name the plant's spirit, state the purpose. The lab has been a devotional space throughout — seal that devotion at the end."},
-  ],
-  "shamanism":[
-    {t:"Ancestral Opening",d:"Before any journey: acknowledge the ancestors of your biological lineage and the lineage of your practice. Light a candle, leave water. The upper and lower worlds are more accessible when the middle-world ancestor current is strong and intact."},
-    {t:"Set the Intent",d:"State your journey intent precisely before beginning: 'I am going to the lower world to meet my power animal and ask about [specific question].' Vague intent produces vague results. The spirits of the other worlds respond to clarity."},
-    {t:"Drum to the Threshold",d:"Begin the drum (or drumming recording at 4-7 Hz). Breathe slowly. Visualize the entry point: a hole in the earth, a hollow tree, a cave entrance for the lower world; an opening in the sky, a ladder, a mountain peak for the upper world. Move through with your intent."},
-    {t:"Meet and Engage",d:"When you encounter a spirit being, identify it: is this a power animal? A teacher? Ask its name. Ask if it is willing to work with you. If it is, engage with your specific question or request. If it seems hostile or evasive, leave and return another time."},
-    {t:"Receive and Remember",d:"Pay close attention to everything you are shown, told, or given. Shamanic instruction often comes in image, symbol, and enacted drama rather than direct explanation. Do not interpret while in the journey — record everything and interpret afterward."},
-    {t:"Return and Ground",d:"When the callback rhythm begins (or you sense the session is complete), retrace your path to the entry point and return. Feel your body in the room. Write down everything immediately. Ground with food or water. The journey journal is your most important record."},
-  ],
-};
 
 function WorkScreen({eph,initPlanet,natalPos,profile,now}){
   const [planet,setPlanet]=useState(initPlanet);
@@ -2891,24 +2754,8 @@ function JournalScreen({profile,natalPos}){
 // ═══════════════════════════════════════════════════════════════════════
 // KNOWLEDGE BASE — persistent nodes injected into AI context
 // ═══════════════════════════════════════════════════════════════════════
-function loadKnowledge(){return loadJSON("astrum_knowledge",[]);}
-function saveKnowledge(nodes){saveJSON("astrum_knowledge",nodes);}
 
 // Build dynamic system prompt from profile, knowledge nodes, and optional sky context
-export function buildSystemPrompt(profile,extraContext){
-  const traditions=profile?.traditions?.length?profile.traditions:["western-ceremonial"];
-  const t=traditions[0];
-  const tradPrompt=TRADITIONS[t]?.prompt||TRADITIONS["western-ceremonial"].prompt;
-  const tradNames=traditions.map(tid=>TRADITIONS[tid]?.label||tid).join(" + ");
-  const levelMap={beginner:"Explain concepts from first principles. Use accessible language.",intermediate:"Assume active practitioner knowledge. Skip basics.",advanced:"Assume deep fluency. Use technical terminology freely."};
-  const levelNote=levelMap[profile?.level||"intermediate"];
-  const name=profile?.name?`The practitioner's name is ${profile.name}.`:"";
-  // Inject knowledge nodes
-  const nodes=loadKnowledge();
-  const alwaysNodes=nodes.filter(n=>n.always);
-  const knowledgeSection=alwaysNodes.length?`\n\nKNOWLEDGE BASE:\n${alwaysNodes.map(n=>`[${n.title}]\n${n.content}`).join("\n\n---\n\n")}`:"";
-  return `${tradPrompt}\n\nTradition context: ${tradNames}. ${name}\n${levelNote}${RUNE_PRINCIPLES}${knowledgeSection}${extraContext?`\n\n${extraContext}`:""}`;
-}
 
 // ═══════════════════════════════════════════════════════════════════════
 // AI WORKING PLANNER
@@ -2998,56 +2845,6 @@ function AIScreen({now,eph,fractal,natalPos,hour,profile}){
 // ═══════════════════════════════════════════════════════════════════════
 // LEARN TOPICS
 // ═══════════════════════════════════════════════════════════════════════
-export const LEARN_TOPICS=[
-  {id:"planetary-hours",  label:"Planetary Hours",        desc:"The 24-hour cycle of planetary rulership",         traditions:["all"],         level:"beginner"},
-  {id:"lunar-timing",     label:"Lunar Timing",           desc:"Phases, mansions, void of course, void avoidance", traditions:["all"],         level:"beginner"},
-  {id:"electional",       label:"Electional Astrology",   desc:"Choosing optimal moments for magical operation",    traditions:["all"],         level:"intermediate"},
-  {id:"decans",           label:"Decan Magic",            desc:"The 36 faces of the zodiac and their operations",  traditions:["all"],         level:"intermediate"},
-  {id:"fixed-stars",      label:"Fixed Stars",            desc:"The stellar virtues and their talismanic use",      traditions:["all"],         level:"intermediate"},
-  {id:"planetary-magic",  label:"Planetary Magic",        desc:"The seven spheres — operations, materia, timing",  traditions:["western-ceremonial","hellenism"],level:"beginner"},
-  {id:"talismans",        label:"Talisman Making",        desc:"Classical image magic — inscription and consecration",traditions:["western-ceremonial","hellenism"],level:"intermediate"},
-  {id:"invocation",       label:"Invocation & Prayer",    desc:"Speaking with intelligences and planetary spirits", traditions:["western-ceremonial","hellenism"],level:"intermediate"},
-  {id:"kabbalah",         label:"Practical Kabbalah",     desc:"Tree of Life as a map of magical operations",      traditions:["western-ceremonial"],level:"intermediate"},
-  {id:"essential-dignities",label:"Essential Dignities",  desc:"Domicile, exaltation, fall, detriment, peregrine", traditions:["all"],         level:"beginner"},
-  {id:"sigils",           label:"Sigil Craft",            desc:"Creating and charging sigils from intent",          traditions:["chaos","all"], level:"beginner"},
-  {id:"gnosis",           label:"Gnosis & Altered States",desc:"Accessing magical states of consciousness",        traditions:["chaos"],       level:"intermediate"},
-  {id:"servitors",        label:"Servitors & Egregores",  desc:"Creating thought-forms for specific operations",   traditions:["chaos"],       level:"advanced"},
-  {id:"wheel-of-year",   label:"Wheel of the Year",      desc:"The eight stations and their traditional power",   traditions:["traditional-witchcraft"],level:"beginner"},
-  {id:"hedge-crossing",  label:"The Crooked Path",       desc:"Between-worlds work in the traditional arte",      traditions:["traditional-witchcraft"],level:"advanced"},
-  {id:"orphic-hymns",    label:"Orphic Hymns",           desc:"The hymns of Orpheus and their theurgic function", traditions:["hellenism"],   level:"intermediate"},
-  {id:"theurgy",         label:"Theurgic Practice",      desc:"Iamblichean theurgy — ascending through the spheres",traditions:["hellenism"], level:"advanced"},
-  {id:"candle-magic",    label:"Candle & Petition Work",  desc:"Simple, direct folk working methods",               traditions:["folk"],        level:"beginner"},
-  {id:"rootwork",        label:"Materia & Curios",        desc:"Plants, stones, and curios of the folk tradition", traditions:["folk"],        level:"intermediate"},
-  {id:"animism-foundation",label:"Animism Foundations",  desc:"The world as a community of persons — relational magic", traditions:["animism","all"],level:"beginner"},
-  {id:"ancestor-work",   label:"Ancestor Work",           desc:"Building the ancestor current — reciprocity with the dead", traditions:["animism","folk","traditional-witchcraft","all"],level:"beginner"},
-  {id:"spirits-allies",  label:"Spirits & Allies",        desc:"Contact, relationship, and reciprocity with non-human persons", traditions:["animism","traditional-witchcraft","all"],level:"intermediate"},
-  {id:"sacrifice-reciprocity",label:"Sacrifice & Reciprocity", desc:"The economy of the spirit world — giving to receive", traditions:["animism","folk","hellenism","all"],level:"intermediate"},
-  {id:"dream-work",      label:"Dream Work",              desc:"Incubation, liminal sleep practice, and dream interpretation", traditions:["animism","hellenism","traditional-witchcraft","all"],level:"intermediate"},
-  {id:"fortune-divination",label:"Fortune & Divination",  desc:"Reading patterns in time and space — geomancy, lots, omens", traditions:["all"],        level:"beginner"},
-  {id:"geomancy",        label:"Geomancy",                desc:"The sixteen figures, the shield chart, and reading by the houses", traditions:["all"],level:"intermediate"},
-  {id:"hermetic-lots",   label:"The Hermetic Lots",       desc:"Fortune, Spirit, and the five sect-aware lots of Hellenistic astrology", traditions:["all"],level:"intermediate"},
-  {id:"saints-holy-dead",label:"Saints & the Holy Dead",  desc:"Working with the canonized current and the beloved dead", traditions:["folk","animism"],level:"intermediate"},
-  {id:"liminal-entities",label:"Liminal Entities",        desc:"Threshold beings, guardians, and hedge-crossing", traditions:["animism","traditional-witchcraft","folk"],level:"advanced"},
-  {id:"blended-cycle",   label:"Blended Cycle Model",     desc:"Placing your magic in historical and generational time", traditions:["all"],        level:"intermediate"},
-  // Rune Soup deep topics
-  {id:"shoaling",        label:"Shoaling & Sigil Shoals",  desc:"Gordon White's method: multiple concurrent sigils, robofish anchor, Black Swan dynamics", traditions:["chaos","all"],level:"intermediate"},
-  {id:"narrative-magic", label:"Narrative Magic",          desc:"Story as the primary magical technology — enchanting the frame, 'do it for the plot'", traditions:["all"],        level:"intermediate"},
-  {id:"synchronicity",   label:"Synchronicity & Twilight Language", desc:"Magic as call and response — reading the spirit world's replies through meaningful coincidence", traditions:["all"],level:"intermediate"},
-  {id:"wyrd-fortune",    label:"Wyrd, Fortune & The Posse",desc:"Building luck: Fortuna as person, hamingja, the spirit team model", traditions:["all"],level:"beginner"},
-  {id:"goetia-spirits",  label:"Goetia & Grimoire Spirits",desc:"72 spirits as executives — pact-making, negotiation, the seal as contact protocol", traditions:["goetia","western-ceremonial"],level:"intermediate"},
-  {id:"stellar-cult",    label:"Stellar Cult & Star.Ships", desc:"Gordon White's thesis: ancient stellar religion as the Laurasian wellspring of Western magic", traditions:["all"],level:"advanced"},
-  {id:"headless-rite",   label:"The Headless / Bornless Rite",desc:"PGM VIII.1-63 — contacting the personal daimon, orienting to Orion", traditions:["hellenism","western-ceremonial","all"],level:"advanced"},
-  {id:"spagyrics",       label:"Spagyrics & Plant Alchemy", desc:"Paracelsian three essentials, laboratory as devotional space, plant as person", traditions:["spagyric","all"],level:"intermediate"},
-  {id:"great-work",      label:"The Stages of the Great Work", desc:"Nigredo, albedo, citrinitas, rubedo — the color sequence in the vessel and in the soul; the peacock's tail", traditions:["all"],level:"intermediate"},
-  {id:"alchemical-zodiac",label:"The Alchemical Zodiac & Lab Timing", desc:"Pernety's twelve processes on the wheel of signs; Junius's Moon-key; planetary days and degrees of fire", traditions:["spagyric","all"],level:"intermediate"},
-  {id:"salt-work",       label:"The Salt Work", desc:"Calcine, dissolve, filter, coagulate — Lémery's salt of tartar and the craft beneath every other craft", traditions:["spagyric","all"],level:"beginner"},
-  {id:"mineral-study",   label:"The Mineral Paths (Study)", desc:"Acetate path, antimony, vitriol — what the texts say, what history warns, what may never be practiced", traditions:["spagyric","all"],level:"advanced"},
-  {id:"dew-work",        label:"Dew & the Mutus Liber", desc:"The wordless book — spring dew under Aries and Taurus, putrefaction, the two salts, Henshaw's Royal Society record", traditions:["spagyric","all"],level:"advanced"},
-  {id:"fairy-doctor",    label:"Fairy Doctor Tradition",    desc:"The Irish bean feasa — mediating between human communities and the fair folk", traditions:["faerie","traditional-witchcraft"],level:"intermediate"},
-  {id:"shamanic-cosmology",label:"Shamanic Cosmology",     desc:"Three worlds, power animals, teacher spirits, soul retrieval and extraction", traditions:["shamanism","all"],level:"beginner"},
-  {id:"apocalyptic-nav", label:"Apocalyptic Navigation",   desc:"Magic in the putrefactory phase — wyrd-building, resilience, what to retain and discard", traditions:["all"],level:"intermediate"},
-  {id:"star-ships-thesis",label:"Star.Ships Deep Dive",    desc:"Laurasian myth, Sundaland stellar nursery, Egypt as the preserved source tradition", traditions:["all"],level:"advanced"},
-];
 
 // ═══════════════════════════════════════════════════════════════════════
 // CONTEXTUAL ORACLE
@@ -4142,17 +3939,6 @@ function GrimoireScreen({profile}){
 // ═══════════════════════════════════════════════════════════════════════
 // LEARN SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-export const FOUNDATIONS=[
-  {id:"f1",title:"Animism & the Living World",subtitle:"How the world is made of relationships, not objects",lessons:5,topics:["animism-foundation","spirits-allies","liminal-entities"],icon:"🌿",color:"#5CA87C"},
-  {id:"f2",title:"Timing & the Sky",subtitle:"Planetary hours, lunar cycles, and elections",lessons:7,topics:["planetary-hours","lunar-timing","electional"],icon:"☽",color:"#D4AF6A"},
-  {id:"f3",title:"The Dead & the Ancestors",subtitle:"Working with the ancestor current and the holy dead",lessons:4,topics:["ancestor-work","saints-holy-dead"],icon:"⚰",color:"#8A78C8"},
-  {id:"f4",title:"Divination & Fortune",subtitle:"Reading the patterns — omens, lots, and the future",lessons:5,topics:["fortune-divination","dream-work"],icon:"◈",color:"#C87878"},
-  {id:"f5",title:"The Blended Cycle Model",subtitle:"Placing your magic in historical time",lessons:3,topics:["blended-cycle"],icon:"⟳",color:"#78A8C8"},
-  {id:"f6",title:"Building Your Posse",subtitle:"Ancestors, fortune entity, daimon — assembling the spirit team",lessons:5,topics:["wyrd-fortune","ancestor-work","spirits-allies","sacrifice-reciprocity"],icon:"⊕",color:"#C8A878"},
-  {id:"f7",title:"Grimoire & the 72 Spirits",subtitle:"Extradimensional diplomacy — from command to relationship",lessons:6,topics:["goetia-spirits","headless-rite","invocation"],icon:"⊗",color:"#9878C8"},
-  {id:"f8",title:"Narrative Magic & Synchronicity",subtitle:"Story as technology — enchanting the frame, reading the response",lessons:4,topics:["narrative-magic","synchronicity","fortune-divination"],icon:"◎",color:"#78C8A8"},
-  {id:"f9",title:"The Stellar Tradition",subtitle:"Star.Ships, decan spirits, and the Laurasian wellspring",lessons:5,topics:["stellar-cult","fixed-stars","star-ships-thesis","headless-rite"],icon:"★",color:"#7888E8"},
-];
 // ── The Daily Card: spaced repetition over the canon ───────────────────
 function DailyCard(){
   const deck=useMemo(()=>buildDeck(DECANS.map((d,i)=>({id:`decan_${i+1}`,topic:"Decan",front:`Decan ${i+1} — ${d.name} (${d.sign}, ${P[d.ruler]?.name})`,back:d.magic}))),[]);
