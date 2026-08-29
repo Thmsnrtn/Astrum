@@ -259,7 +259,7 @@ function AstralLiveBarInner({tab,eph,now,natalPos,hour}){
   const nav=NAV_SECTIONS.find(s=>s.id===tab);
   const events=useMemo(()=>{
     const list=[];
-    if(eph?.voc?.isVoC)list.push(`⚠ Moon VoC · enters ${eph.voc.nextSign?.name||"?"} in ${fmtTime(eph.voc.hoursToIngress*3600)}`);
+    if(eph?.voc?.isVoC)list.push(`⚠ Moon VoC${eph.voc.mode==="hellenistic"?" (Hellenistic)":""} · enters ${eph.voc.nextSign?.name||"?"} in ${fmtTime(eph.voc.hoursToIngress*3600)}`);
     if(eph?.pos?.moon){const z=eph.pos.moon.zodiac;list.push(`☽ ${z.degree}° ${z.name} · ${eph.moonPhase||""}`);}
     if(hour?.planet&&P[hour.planet]){const p=P[hour.planet];list.push(`${p.sym} Hour of ${p.name} · ${Math.floor((hour.msRemaining||0)/60000)}m`);}
     if(eph?.pos?.sun){const z=eph.pos.sun.zodiac;list.push(`☉ ${z.degree}° ${z.name}`);}

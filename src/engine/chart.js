@@ -9,7 +9,7 @@ import { FIXED_STARS } from "../data/fixedStars.js";
 import { computeLots } from "./lots.js";
 import { captureConditions } from "./snapshot.js";
 
-export function computeEphemeris(date,location){
+export function computeEphemeris(date,location,opts={}){
   const jd=dateToJD(date);
   const pos={};
   const sunLon0=planetLon("sun",jd);
@@ -27,7 +27,7 @@ export function computeEphemeris(date,location){
   });
   const mpDeg=norm(pos.moon.lon-pos.sun.lon);
   const phases=["New","Waxing Crescent","First Quarter","Waxing Gibbous","Full","Waning Gibbous","Last Quarter","Waning Crescent"];
-  const voc=checkVoC(jd);
+  const voc=checkVoC(jd,opts.vocMode||"lilly");
   const decanIdx=Math.min(35,Math.floor(pos.sun.lon/10));
   const northNode=meanNode(jd),southNode=norm(northNode+180);
   const nearStars=FIXED_STARS.filter(s=>{

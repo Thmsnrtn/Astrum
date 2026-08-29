@@ -10,6 +10,7 @@
 // each plan carries a priority (lower = more important).
 
 import { getPlanetaryHour, getPlanetaryHourUnequal, checkVoC, dateToJD, inExaltationDegree } from "../engine/astro.js";
+import { getVoCMode } from "./prefs.js";
 import { P } from "../data/planets.js";
 import { getMansion } from "../data/mansions.js";
 import { alchemicalSeason, moonSignOperation, moonWorkGuidance } from "../data/alchemy.js";
@@ -57,9 +58,10 @@ export function planUpcoming({ now, location, prefs, castings = [], athanor = []
   // ── Void-of-course boundaries (scan at 20-minute resolution) ──
   if (prefs.kinds.voc) {
     const stepMs = 20 * 60000;
-    let prev = checkVoC(dateToJD(now)).isVoC;
+    const vocMode = getVoCMode();
+    let prev = checkVoC(dateToJD(now), vocMode).isVoC;
     for (let t = now.getTime() + stepMs; t < end.getTime(); t += stepMs) {
-      const cur = checkVoC(dateToJD(new Date(t))).isVoC;
+      const cur = checkVoC(dateToJD(new Date(t)), vocMode).isVoC;
       if (cur !== prev) {
         const at = new Date(t);
         plans.push(cur

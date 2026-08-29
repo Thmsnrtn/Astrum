@@ -10,6 +10,7 @@
 // is unit-testable in Node.
 
 import { dateToJD, planetLon, dailyMotion, checkVoC, getPlanetaryHour, getPlanetaryHourUnequal } from "../engine/astro.js";
+import { getVoCMode } from "./prefs.js";
 import { DECANS } from "../data/decans.js";
 import { getMansion } from "../data/mansions.js";
 
@@ -81,7 +82,7 @@ export function buildMonthModel({ year, month, location }) {
     const mansion = getMansion(moon.lon);
     const sunLon = norm(planetLon("sun", jdNoon));
     const decanIdx = Math.min(35, Math.floor(sunLon / 10));
-    const voc = checkVoC(jdNoon);
+    const voc = checkVoC(jdNoon, getVoCMode());
     const dow = new Date(year, month, d).getDay();
     days.push({
       day: d,

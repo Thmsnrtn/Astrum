@@ -13,6 +13,7 @@ import { ensurePermission } from "../lib/notify.js";
 import { search } from "../lib/retrieval.js";
 import { DEFAULT_NOTIFY_PREFS, saveNotifyPrefs } from "../lib/scheduler.js";
 import { review } from "../lib/srs.js";
+import { getVoCMode, setVoCMode } from "../lib/prefs.js";
 import { loadJSON, saveJSON } from "../lib/storage.js";
 import { F, GOLD, L, T, TINT_PRESETS } from "../ui/theme.js";
 
@@ -254,6 +255,28 @@ function KnowledgeBase(){
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+// Where the tradition splits, the practitioner chooses — the doctrine card.
+function DoctrineCard(){
+  const [vocMode,setMode]=useState(getVoCMode);
+  const pick=m=>{setVoCMode(m);setMode(m);};
+  const OPTS=[
+    ["lilly","Lilly","Void until the Moon perfects an aspect in her current sign, however far away it lies (CA p.112). The familiar, frequent void."],
+    ["hellenistic","Hellenistic","Kenodromia — void only when nothing perfects within the next 30°, ignoring the sign boundary. Far rarer, far stricter."],
+  ];
+  return(
+    <div className="card" style={{margin:"0 14px 10px"}}>
+      <div style={L()}>Doctrine · Void of Course</div>
+      <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>The tradition holds two definitions; the app follows the one you work by. Governs the live bar, briefing, calendar, and notifications.</div>
+      <div style={{display:"flex",gap:6,marginTop:9}}>
+        {OPTS.map(([m,lbl])=>(
+          <button key={m} onClick={()=>pick(m)} style={{flex:1,padding:"8px 0",borderRadius:9,background:vocMode===m?"rgba(var(--tint-rgb),0.14)":"rgba(0,0,0,0.25)",border:`1px solid ${vocMode===m?"rgba(var(--tint-rgb),0.45)":"rgba(var(--tint-rgb),0.1)"}`,fontFamily:F,fontSize:9.5,color:vocMode===m?GOLD:"rgba(var(--tint-rgb),0.45)",letterSpacing:1.5,textTransform:"uppercase",cursor:"pointer"}}>{lbl}</button>
+        ))}
+      </div>
+      <div style={{fontFamily:F,fontSize:9.5,color:"#9A8060",fontStyle:"italic",marginTop:8,lineHeight:1.7}}>{OPTS.find(o=>o[0]===vocMode)?.[2]}</div>
     </div>
   );
 }
@@ -590,6 +613,7 @@ export default function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyP
         </div>
         <div style={{fontFamily:F,fontSize:10,color:engineInfo()==="swiss"?"#7AB07A":"#C08050",letterSpacing:1,whiteSpace:"nowrap",marginLeft:10,textTransform:"uppercase"}}>{engineInfo()==="swiss"?"✓ Swiss":engineInfo()}</div>
       </div>
+      <DoctrineCard/>
       <NotifyCard notifyPrefs={notifyPrefs} setNotifyPrefs={setNotifyPrefs}/>
       <IntakeCard/>
       <BackupCard/>

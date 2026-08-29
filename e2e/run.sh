@@ -23,4 +23,5 @@ node e2e/smoke.mjs
 node e2e/offline.mjs
 node e2e/sync.mjs
 node e2e/ux.mjs
+node e2e/roots.mjs
 echo "ALL E2E SUITES PASSED"

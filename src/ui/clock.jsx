@@ -17,6 +17,7 @@ import { createContext, useContext, useState, useEffect, useMemo } from "react";
 import { getPlanetaryHour, getPlanetaryHourUnequal, calcFractal } from "../engine/astro.js";
 import { computeEphemeris } from "../engine/chart.js";
 import { onSwephReady } from "../engine/sweph.js";
+import { getVoCMode } from "../lib/prefs.js";
 
 const ClockContext = createContext(new Date());
 
@@ -44,13 +45,20 @@ export function useAstroNow(location, fractalMode) {
     return () => clearInterval(id);
   }, []);
   useEffect(() => { onSwephReady(() => setEngineGen(g => g + 1)); }, []);
+  // Practice-preference changes (e.g. the VoC doctrine toggle) recompute
+  // the bucket immediately instead of waiting up to 30 s.
+  useEffect(() => {
+    const bump = () => setEngineGen(g => g + 1);
+    window.addEventListener("astrum-prefs", bump);
+    return () => window.removeEventListener("astrum-prefs", bump);
+  }, []);
 
   return useMemo(() => {
     const now = new Date();
     const hour = location
       ? getPlanetaryHourUnequal(now, location.lat, location.lon)
       : getPlanetaryHour(now);
-    const eph = computeEphemeris(now, location);
+    const eph = computeEphemeris(now, location, { vocMode: getVoCMode() });
     const fractal = calcFractal(now, fractalMode);
     return { now, eph, hour, fractal };
   }, [bucket, engineGen, location?.lat, location?.lon, fractalMode]);
