@@ -1,0 +1,43 @@
+// ═══════════════════════════════════════════════════════════════════════
+// THE THIRTY-SIX FACES — Chaldean decan order, classical Picatrix imagery
+// Names and magic descriptions are original, grounded in Picatrix Book II
+// Ch.11, Agrippa Three Books II.37, and Abu Ma'shar's decan faces.
+// ═══════════════════════════════════════════════════════════════════════
+export const DECANS=[
+  {n:1, sign:"Aries",sym:"♈",ruler:"mars",   name:"The Iron Gate",              tarot:"2 of Wands",  magic:"Forced passage and initiation; claiming the right to enter by force of will; works of decisive beginning and contest."},
+  {n:2, sign:"Aries",sym:"♈",ruler:"sun",    name:"The Golden Helm",            tarot:"3 of Wands",  magic:"Command of one's domain; solar authority and sovereignty; works of public standing and rightful kingship."},
+  {n:3, sign:"Aries",sym:"♈",ruler:"venus",  name:"The Adornment",              tarot:"4 of Wands",  magic:"Desire made visible; charm over hostility; works of beauty, attraction, and winning favor through presence."},
+  {n:4, sign:"Taurus",sym:"♉",ruler:"mercury",name:"The Turning Furrow",        tarot:"5 of Pents",  magic:"Sustained intelligent labor; civilizing raw potential; works requiring methodical effort sustained over time."},
+  {n:5, sign:"Taurus",sym:"♉",ruler:"moon",  name:"The Sacred Union",           tarot:"6 of Pents",  magic:"Material fertility and abundance through sacred joining; drawing wealth through natural attraction and increase."},
+  {n:6, sign:"Taurus",sym:"♉",ruler:"saturn",name:"The Slow Lesson",            tarot:"7 of Pents",  magic:"Wisdom earned through patience and privation; protective endurance; works of threshold guardianship and long waiting."},
+  {n:7, sign:"Gemini",sym:"♊",ruler:"jupiter",name:"The Philosopher's Aim",     tarot:"8 of Swords", magic:"Opening the mind to paradox; works of philosophical study, cosmic inquiry, and the pursuit of hidden knowledge."},
+  {n:8, sign:"Gemini",sym:"♊",ruler:"mars",  name:"The Divided One",            tarot:"9 of Swords", magic:"Integration of opposing forces; reconciling inner war; works at the threshold between contrary natures."},
+  {n:9, sign:"Gemini",sym:"♊",ruler:"sun",   name:"The Serpent Wisdom",         tarot:"10 of Swords",magic:"Authority gained through knowledge of hidden things; decisive mastery over dual natures; the sword of discernment."},
+  {n:10,sign:"Cancer",sym:"♋",ruler:"venus", name:"The Nursing Bond",           tarot:"2 of Cups",   magic:"Tender and nurturing alliance; love that feeds and protects; works of maternal care and sustaining attachment."},
+  {n:11,sign:"Cancer",sym:"♋",ruler:"mercury",name:"The Shielded Hearth",       tarot:"3 of Cups",   magic:"Protection of what is growing and fragile; incubating potential; warding the inner sanctuary of development."},
+  {n:12,sign:"Cancer",sym:"♋",ruler:"moon",  name:"The Deep Well",              tarot:"4 of Cups",   magic:"Accessing what lies beneath surface; works of tidal provision and abundance drawn from the depths below."},
+  {n:13,sign:"Leo",sym:"♌",ruler:"saturn",   name:"The Hidden Face",            tarot:"5 of Wands",  magic:"Works of public persona and the crafted mask; projecting authority convincingly; the face that becomes the man."},
+  {n:14,sign:"Leo",sym:"♌",ruler:"jupiter",  name:"The Laureled Brow",          tarot:"6 of Wands",  magic:"Genuine honor earned through merit; harmonious elevation; works of authentic recognition and beneficent glory."},
+  {n:15,sign:"Leo",sym:"♌",ruler:"mars",     name:"The Raised Standard",        tarot:"7 of Wands",  magic:"Defense of rightful authority; rallying forces to a just cause; works of martial protection and legitimate standing."},
+  {n:16,sign:"Virgo",sym:"♍",ruler:"sun",    name:"The Devoted Craft",          tarot:"8 of Pents",  magic:"Patient mastery through humble service; devotional work; perfection achieved through uncounted repetitions."},
+  {n:17,sign:"Virgo",sym:"♍",ruler:"venus",  name:"The Refining Fire",          tarot:"9 of Pents",  magic:"Shaping and improving the material self; works of artistic refinement; building the form that reflects the soul."},
+  {n:18,sign:"Virgo",sym:"♍",ruler:"mercury",name:"The Sealed Vessel",          tarot:"10 of Pents", magic:"Confrontation with limitation and ending; releasing attachment to the material; works at the threshold of dissolution."},
+  {n:19,sign:"Libra",sym:"♎",ruler:"moon",   name:"The Scale and Veil",         tarot:"2 of Swords", magic:"Works of impartial justice; legal matters; restoring balance to what has tilted; lifting the blindfold of prejudice."},
+  {n:20,sign:"Libra",sym:"♎",ruler:"saturn", name:"The Sealed Covenant",        tarot:"3 of Swords", magic:"Binding agreements and sacred oaths; protection of contracts; works that hold two parties in inviolable relation."},
+  {n:21,sign:"Libra",sym:"♎",ruler:"jupiter",name:"The Balanced Sphere",        tarot:"4 of Swords", magic:"Restoring dynamic equilibrium; expanding capacity for right proportion; works that find the center between extremes."},
+  {n:22,sign:"Scorpio",sym:"♏",ruler:"mars", name:"The Primal Wound",           tarot:"5 of Cups",   magic:"Works of deep desire and primal necessity; accessing what lies buried; confronting what cannot be avoided."},
+  {n:23,sign:"Scorpio",sym:"♏",ruler:"sun",  name:"The Alchemical Marriage",    tarot:"6 of Cups",   magic:"Transformative union; purification through intimate exchange; works of regeneration and mutual transmutation."},
+  {n:24,sign:"Scorpio",sym:"♏",ruler:"venus",name:"The Poison and the Cure",    tarot:"7 of Cups",   magic:"Hidden wisdom in dangerous form; works of disillusionment; protection and navigation through perilous encounters."},
+  {n:25,sign:"Sagittarius",sym:"♐",ruler:"mercury",name:"The Sure Arrow",       tarot:"8 of Wands",  magic:"Single-pointed force directed at a goal; swift communication and transit; works of precise directed momentum."},
+  {n:26,sign:"Sagittarius",sym:"♐",ruler:"moon",name:"The Held Rein",           tarot:"9 of Wands",  magic:"Maintaining direction under pressure; strength through endurance; works of patient unity held against resistance."},
+  {n:27,sign:"Sagittarius",sym:"♐",ruler:"saturn",name:"The Returned Gift",     tarot:"10 of Wands", magic:"Honorable completion; releasing what has run its course; dignified endings and the laying down of burdens."},
+  {n:28,sign:"Capricorn",sym:"♑",ruler:"jupiter",name:"The Embodied Will",      tarot:"2 of Pents",  magic:"Full identification with material purpose; works of incarnated authority; purpose made flesh in the world."},
+  {n:29,sign:"Capricorn",sym:"♑",ruler:"mars",name:"The Rising Pyramid",        tarot:"3 of Pents",  magic:"Ambitious construction; gathering and organizing resources; blueprint made manifest through disciplined effort."},
+  {n:30,sign:"Capricorn",sym:"♑",ruler:"sun",name:"The Enduring Throne",        tarot:"4 of Pents",  magic:"Claiming legitimate authority; administering power at its apex; works of consolidation and lasting governance."},
+  {n:31,sign:"Aquarius",sym:"♒",ruler:"venus",name:"The Voluntary Exile",       tarot:"5 of Swords", magic:"Works of the innovator and heretic; radical self-determination; deliberate departure from the given order."},
+  {n:32,sign:"Aquarius",sym:"♒",ruler:"mercury",name:"The Bridge Between Worlds",tarot:"6 of Swords",magic:"Diplomatic navigation of threshold states; liminal transit; talisman for travelers between different orders of being."},
+  {n:33,sign:"Aquarius",sym:"♒",ruler:"moon",name:"The Binding Knot",           tarot:"7 of Swords", magic:"Durable complex patterns; warding against entrapment; works of principled holding and principled release."},
+  {n:34,sign:"Pisces",sym:"♓",ruler:"saturn",name:"The Labyrinthine Deep",      tarot:"8 of Cups",   magic:"Navigation of inner terrain; confronting the unconscious; deliberate preparation for the great dissolution."},
+  {n:35,sign:"Pisces",sym:"♓",ruler:"jupiter",name:"The Net of Grace",          tarot:"9 of Cups",   magic:"Abundance received through surrender; catching what flows of itself; manifestation through yielding and trust."},
+  {n:36,sign:"Pisces",sym:"♓",ruler:"mars",  name:"The Final Offering",         tarot:"10 of Cups",  magic:"The last complete commitment; the passionate act of surrender to the quest; the great work's consummate end."},
+];
