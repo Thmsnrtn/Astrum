@@ -8,7 +8,7 @@ import { FIXED_STARS } from "../data/fixedStars.js";
 import { computeLots } from "./lots.js";
 import { captureConditions } from "./snapshot.js";
 
-export function useEphemeris(date,location){
+export function computeEphemeris(date,location){
   const jd=dateToJD(date);
   const pos={};
   const sunLon0=planetLon("sun",jd);
@@ -80,11 +80,11 @@ export function calcNatal(bd,location){
 }
 
 // Full conditions snapshot for a casting record at an arbitrary moment.
-// useEphemeris is a pure function despite the hook-style name, so this is
+// computeEphemeris is pure (renamed from the misleading useEphemeris), so it is
 // safe to call from event handlers and migrations.
 export function conditionsFromProfile(date,profile,natalPos,election=null,approximate=false){
   const location=profile?.natal?.lat&&profile?.natal?.lon?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
-  const eph=useEphemeris(date,location);
+  const eph=computeEphemeris(date,location);
   const hour=location?getPlanetaryHourUnequal(date,location.lat,location.lon):getPlanetaryHour(date);
   return captureConditions({now:date,eph,hour,location,natalPos,election,approximate});
 }

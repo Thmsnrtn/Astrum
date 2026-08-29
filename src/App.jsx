@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo, Fragment, lazy, Suspense, Component } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Fragment, lazy, Suspense, Component, memo as React_memo } from "react";
 import { askClaude, aiConfigured, aiUnconfiguredMessage, aiProviderInfo, resolveAIConfig, AI_PROVIDERS } from "./ai/client.js";
 import { WEBLLM_MODELS } from "./ai/webllm.js";
 import { loadJSON, saveJSON } from "./lib/storage.js";
@@ -69,7 +69,8 @@ async function triggerHaptic(style="medium"){
 // Imports below; App.jsx is now leaf-only (nothing imports from it).
 // ═══════════════════════════════════════════════════════════════════════
 import { D2R, norm, dateToJD, sunLon, moonLon, EL, equationOfCenter, planetLon, dailyMotion, SIGNS, lonToZodiac, DOMICILE, EXALT, getDignity, dignityScore, getCombustion, BOUNDS, getBound, antiscionOf, contraAntiscionOf, getAntisciaAspects, getPlanetPhase, checkVoC, nextIngress, HOUR_ORDER, DAY_RULERS, DAY_NAMES, getPlanetaryHour, precessStar, starLonAt, meanNode, sunriseSetUTC, gstDeg, lstDeg, obliquity, calcASC, calcMC, calcPOF, calcPOS, getPlanetaryHourUnequal, YEAR_SEC, L_DUR, calcFractal, fmtTime, fmtWindowTime, calcWindowBounds, calcL2Forecast, OUTER_EPOCHS, J2000_MS, outerPlanetLon, JS_CONJUNCTIONS, DECADE_FORECAST, getAspectsAll, meanLilith, chironLon, trueNode, TRIPLICITIES, ELEMENT_BY_SIGN, getTriplicity, calcHouses, getHouseNum, HOUSE_NAMES, HOUSE_MEANINGS } from "./engine/astro.js";
-import { useEphemeris, calcNatal, conditionsFromProfile } from "./engine/chart.js";
+import { calcNatal, conditionsFromProfile } from "./engine/chart.js";
+import { ClockProvider, useClock, useAstroNow } from "./ui/clock.jsx";
 import { calcProgressions, calcSolarArc, TRANSIT_ASPECTS, scanTransits, FIRDARIA_DAY, FIRDARIA_NIGHT, FIRDARIA_YRS, calcFirdaria, calcSolarReturn, calcLunarReturn, scanIngresses, scanStations, scanEclipses, lonToDecl, getDeclAspects, getMidpoints, calcAllLots, checkViaCombusta, checkBesiegement, getMoonAspects, checkMaleficAffliction, getMoonSignRelation, checkTranslation, checkProhibition, getStarConj, getMoonSpeed, MOON_PHASE_NAMES, electionBandKey, electionFactors, assessElection, scanElections } from "./engine/scan.js";
 // ═══════════════════════════════════════════════════════════════════════
 // PLANETARY / DECAN / STAR DATA — moved to src/data/ (de-cycling).
@@ -229,7 +230,13 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
 // ═══════════════════════════════════════════════════════════════════════
 // ASTRAL LIVE BAR (Batch 4 — Continuity)
 // ═══════════════════════════════════════════════════════════════════════
-function AstralLiveBar({tab,eph,now,natalPos,hour}){
+// 1 Hz header clock leaf — the only chrome that re-renders every second.
+function ClockText(){
+  const t=useClock();
+  return <div style={{fontFamily:F,fontSize:9.5,color:"rgba(var(--tint-rgb,200,175,100),0.32)"}}>{t.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>;
+}
+
+function AstralLiveBarInner({tab,eph,now,natalPos,hour}){
   const nav=NAV_SECTIONS.find(s=>s.id===tab);
   const events=useMemo(()=>{
     const list=[];
@@ -268,7 +275,7 @@ function AstralLiveBar({tab,eph,now,natalPos,hour}){
 // ═══════════════════════════════════════════════════════════════════════
 // ASTRAL CONTROL CENTER (Batch 5 — Replaces Oracle float button)
 // ═══════════════════════════════════════════════════════════════════════
-function AstralControlCenter({tab,onOracle,setTab,natalPos,eph}){
+function AstralControlCenterInner({tab,onOracle,setTab,natalPos,eph}){
   const [open,setOpen]=useState(false);
   const actions=[
     {icon:"✧",label:"Oracle",    col:"var(--tint-primary)", action:()=>{onOracle();setOpen(false);}},
@@ -317,7 +324,7 @@ import { LEARN_TOPICS, FOUNDATIONS } from "./data/learn.js";
 // ═══════════════════════════════════════════════════════════════════════
 
 
-function Sidebar({tab, setTab, hour, eph, open, setOpen}) {
+function SidebarInner({tab, setTab, hour, eph, open, setOpen}) {
   const p=P[hour.planet], moonVoC=eph?.voc?.isVoC;
   return (
     <>
@@ -375,7 +382,7 @@ function Sidebar({tab, setTab, hour, eph, open, setOpen}) {
 // ═══════════════════════════════════════════════════════════════════════
 // ANIMATED ORRERY
 // ═══════════════════════════════════════════════════════════════════════
-function Orrery({eph,hour,natalPos,onPlanetClick}){
+function OrreryInner({eph,hour,natalPos,onPlanetClick}){
   const [tick,setTick]=useState(0);
   useEffect(()=>{const t=setInterval(()=>setTick(n=>n+1),80);return()=>clearInterval(t);},[]);
   const cx=130,cy=130;
@@ -2244,7 +2251,12 @@ const L_META=[
 ];
 const ROMAN=["I","II","III","IV"];
 
-function FractalScreen({fractal,natalPos,mode,setMode,now}){
+function FractalScreen({fractal:fractalProp,natalPos,mode,setMode,now:nowProp}){
+  // Fractal windows at L3/L4 turn in under a minute — this screen runs on
+  // the 1 Hz wall clock locally (pure math, no WASM) instead of the 30 s
+  // astro cadence the rest of the app breathes at.
+  const now=useClock();
+  const fractal=useMemo(()=>calcFractal(now,mode),[Math.floor(now.getTime()/1000),mode]);
   const [showForecast,setShowForecast]=useState(false);
   const {levels,cosmicCoherence,secToThreshold,l1Idx}=fractal;
   const personalDecans=useMemo(()=>natalPos?Object.entries(natalPos).filter(([pk])=>P[pk]).map(([,np])=>np.decanIdx):[]
@@ -4846,6 +4858,13 @@ function TalismanScreen({eph,natalPos,profile,now}){
 // birthday. The verified engine in engine/profections.js replaces it.)
 
 
+// ── Always-mounted chrome, memoized: with the 30 s astro cadence giving
+// stable prop identities, these four now skip re-render between buckets. ──
+const AstralLiveBar=React_memo(AstralLiveBarInner);
+const AstralControlCenter=React_memo(AstralControlCenterInner);
+const Sidebar=React_memo(SidebarInner);
+const Orrery=React_memo(OrreryInner);
+
 // ── Screen slot guard: lazy loading fallback + per-screen error boundary ──
 function ScreenLoading(){
   return <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
@@ -4870,7 +4889,6 @@ class ScreenBoundary extends Component {
 export default function App(){
   const [tab,setTab]=useState("sky");
   const [workPlanet,setWork]=useState(null);
-  const [now,setNow]=useState(new Date());
   const [fractalMode,setFractalMode]=useState("B");
   const [natalData,setNatalData]=useState(null);
   const [natalPos,setNatalPos]=useState(null);
@@ -4879,7 +4897,6 @@ export default function App(){
   const [oracleOpen,setOracleOpen]=useState(false);
   const [oracleCtx,setOracleCtx]=useState("");
   const [cmdOpen,setCmdOpen]=useState(false);
-  useEffect(()=>{const t=setInterval(()=>setNow(new Date()),200);return()=>clearInterval(t);},[]);
   // Load profile (primary) and legacy natal data
   useEffect(()=>{(async()=>{
     try{const r=await window.storage.get("astrum_profile");if(r?.value){const p=JSON.parse(r.value);setProfile(p);return;}}catch(e){}
@@ -4928,9 +4945,9 @@ export default function App(){
   },[]);
 
   const location=profile?.natal?.lat&&profile?.natal?.lon?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
-  const hour=location?getPlanetaryHourUnequal(now,location.lat,location.lon):getPlanetaryHour(now);
-  const eph=useEphemeris(now,location);
-  const fractal=calcFractal(now,fractalMode);
+  // Two-cadence time: astronomy at 30 s buckets (stable identities), wall
+  // clock at 1 Hz only in the leaves that render seconds.
+  const {now,eph,hour,fractal}=useAstroNow(location,fractalMode);
 
   // ── Ambient practice: plan + schedule notifications, refresh every 15 min
   const [notifyPrefs,setNotifyPrefs]=useState(loadNotifyPrefs);
@@ -4982,6 +4999,7 @@ export default function App(){
     setOracleOpen(true);
   },[tab,now,eph,fractal,natalPos,hour,profile]);
   return (
+    <ClockProvider>
     <div style={{minHeight:"100vh",background:`radial-gradient(ellipse at 20% 10%,var(--bg-grad1,rgba(60,40,120,0.25)) 0%,transparent 52%),radial-gradient(ellipse at 80% 90%,var(--bg-grad2,rgba(160,120,30,0.15)) 0%,transparent 52%),radial-gradient(ellipse at 50% 50%,${hourTint} 0%,transparent 65%),#04060F`,display:"flex",justifyContent:"center",fontFamily:F,color:"var(--tint-primary,#D4AF6A)",transition:"background 3s ease"}}>
       <style>{CSS}</style>
       <div style={{width:"100%",maxWidth:430,minHeight:"100vh",display:"flex",flexDirection:"column",position:"relative"}}>
@@ -5002,7 +5020,7 @@ export default function App(){
               :<div style={{fontFamily:F,fontSize:6.5,color:"rgba(var(--tint-rgb,200,175,100),0.22)",letterSpacing:1.5,marginTop:1}}>⌘K to search</div>}
           </button>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <div style={{fontFamily:F,fontSize:9.5,color:"rgba(var(--tint-rgb,200,175,100),0.32)"}}>{now.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</div>
+            <ClockText/>
             <span style={{fontSize:12,color:P[hour.planet].col,animation:"live-dot 3s ease-in-out infinite"}}>{P[hour.planet].sym}</span>
           </div>
         </div>
@@ -5061,5 +5079,6 @@ export default function App(){
         <OraclePanel open={oracleOpen} onClose={()=>setOracleOpen(false)} context={oracleCtx} profile={profile}/>
       </div>
     </div>
+    </ClockProvider>
   );
 }
