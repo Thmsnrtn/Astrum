@@ -311,6 +311,61 @@ function NotifyCard({notifyPrefs,setNotifyPrefs}){
 
 
 // ── Storage health: quota, persistence, the photo vault, orphan sweep ──
+
+// ── Sync: the record on every device ──────────────────────────────────
+function SyncCard(){
+  const [state,setState]=useState(()=>loadJSON("astrum_sync_state",null));
+  const [transportName,setTransportName]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [supported,setSupported]=useState(false);
+  useEffect(()=>{(async()=>{
+    try{
+      const {resolveTransport}=await import("../lib/sync/index.js");
+      const {fsAccessSupported}=await import("../lib/sync/transport/webFsAccess.js");
+      setSupported(fsAccessSupported());
+      const t=await resolveTransport();
+      setTransportName(t?.name||null);
+    }catch{}
+  })();},[busy]);
+  const syncNowClick=async()=>{
+    setBusy(true);
+    try{
+      const {resolveTransport,syncNow}=await import("../lib/sync/index.js");
+      const t=await resolveTransport();
+      if(t)await syncNow(t);
+      setState(loadJSON("astrum_sync_state",null));
+    }catch{}
+    setBusy(false);
+  };
+  const chooseFolder=async()=>{
+    try{
+      const {chooseSyncFolder}=await import("../lib/sync/transport/webFsAccess.js");
+      await chooseSyncFolder();
+      setBusy(b=>!b); // re-resolve
+    }catch{}
+  };
+  const r=state?.lastReport;
+  return(
+    <div className="card" style={{marginBottom:10}}>
+      <div style={L()}>Sync — The Record on Every Device</div>
+      <div style={{marginTop:8,fontFamily:F,fontSize:10.5,color:"#C4A870",lineHeight:1.85}}>
+        {transportName
+          ? <div>Channel: <span style={{color:"#7AB07A"}}>{transportName==="icloud"?"iCloud (this iPad)":transportName==="tauri-fs"?"iCloud folder (this Mac)":"shared folder"}</span></div>
+          : <div style={{color:"#8A7050",fontStyle:"italic"}}>No sync channel on this device yet.{supported?" Pick the shared Astrum folder (e.g. in iCloud Drive) below.":" On iPad/Mac builds the iCloud container is used automatically."}</div>}
+        {state?.lastSync&&<div>Last sync {new Date(state.lastSync).toLocaleString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}{r?` · ${r.peers} peer${r.peers===1?"":"s"}${r.changedStores?.length?` · ${r.changedStores.length} store${r.changedStores.length===1?"":"s"} updated`:" · nothing new"}`:""}</div>}
+        {r?.errors?.length>0&&<div style={{color:"#D2A060",fontSize:9.5}}>⚠ {r.errors[0]}</div>}
+      </div>
+      <div style={{display:"flex",gap:7,marginTop:9}}>
+        {supported&&!transportName&&<button onClick={chooseFolder} style={{flex:1,padding:"10px 0",borderRadius:10,background:"rgba(212,175,106,0.12)",border:"1px solid rgba(212,175,106,0.35)",fontFamily:F,fontSize:9,color:"#D4AF6A",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Choose Sync Folder</button>}
+        {transportName&&<button onClick={syncNowClick} disabled={busy} style={{flex:1,padding:"10px 0",borderRadius:10,background:"rgba(122,176,122,0.12)",border:"1px solid rgba(122,176,122,0.35)",fontFamily:F,fontSize:9,color:"#7AB07A",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>{busy?"Syncing…":"Sync Now"}</button>}
+      </div>
+      <div style={{fontFamily:F,fontSize:8.5,color:"#5A4020",fontStyle:"italic",lineHeight:1.6,marginTop:8}}>
+        Each device writes only its own snapshot; merges are id-union with last-writer-wins and travelling deletions. A corrupt peer file is skipped — sync can add to this record, never destroy it. Photos stay device-local for now (use Export to move them).
+      </div>
+    </div>
+  );
+}
+
 function StorageHealthCard(){
   const [est,setEst]=useState(null);
   const [persisted,setPersisted]=useState(null);
@@ -533,6 +588,7 @@ export default function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyP
       <NotifyCard notifyPrefs={notifyPrefs} setNotifyPrefs={setNotifyPrefs}/>
       <IntakeCard/>
       <BackupCard/>
+      <SyncCard/>
       <StorageHealthCard/>
       <KnowledgeBase/>
       {/* Planetary Tint — Batch 3 */}

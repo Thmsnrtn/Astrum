@@ -7,7 +7,8 @@
 // Vigil tab and the ambient plans. Scanning is injected (the election
 // engine lives in App), so this store stays pure and testable.
 
-import { loadJSON, saveJSON } from "./storage.js";
+import { loadJSON, saveJSON, touch } from "./storage.js";
+import { deleteRecord } from "./sync/tombstones.js";
 
 export function loadWatchlist() { return loadJSON("astrum_watchlist", []); }
 export function saveWatchlist(list) { saveJSON("astrum_watchlist", list); }
@@ -21,12 +22,12 @@ export function createWatch({ label, planet, minScore = 60, deadline = null }) {
 }
 
 export function updateWatch(id, patch) {
-  const next = loadWatchlist().map(w => (w.id === id ? { ...w, ...patch } : w));
+  const next = loadWatchlist().map(w => (w.id === id ? touch({ ...w, ...patch }) : w));
   saveWatchlist(next);
   return next.find(w => w.id === id) || null;
 }
 
-export function deleteWatch(id) { saveWatchlist(loadWatchlist().filter(w => w.id !== id)); }
+export function deleteWatch(id) { deleteRecord("astrum_watchlist", id); }
 
 // A cached window is stale after maxAgeHours or once its time has passed.
 export function windowStale(watch, now = new Date(), maxAgeHours = 6) {

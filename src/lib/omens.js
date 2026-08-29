@@ -7,6 +7,7 @@
 // casting windows, and the corpus makes them searchable by the Oracle.
 
 import { loadJSON, saveJSON } from "./storage.js";
+import { deleteRecord } from "./sync/tombstones.js";
 
 export const OMEN_KINDS = [
   { id: "dream",         label: "Dream",         icon: "☾" },
@@ -24,7 +25,7 @@ export function createOmen({ kind = "omen", text = "", conditions = null, at = n
   return o;
 }
 
-export function deleteOmen(id) { saveOmens(loadOmens().filter(o => o.id !== id)); }
+export function deleteOmen(id) { deleteRecord("astrum_omens", id); }
 
 // Omens within N days of a given date — Review uses this to show what the
 // world said around a casting.

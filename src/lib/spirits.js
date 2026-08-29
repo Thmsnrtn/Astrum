@@ -9,7 +9,8 @@
 // Over years this becomes what no book can give: how each ally actually
 // responds to *this* practitioner.
 
-import { loadJSON, saveJSON } from "./storage.js";
+import { loadJSON, saveJSON, touch } from "./storage.js";
+import { deleteRecord } from "./sync/tombstones.js";
 
 export const SPIRIT_KINDS = [
   { id: "ancestor",  label: "Ancestor",               icon: "🕯", note: "The beloved dead — most accessible, most motivated." },
@@ -35,16 +36,16 @@ export function createSpirit({ name, kind = "ancestor", planet = null, epithet =
 }
 
 export function updateSpirit(id, patch) {
-  const next = loadSpirits().map(s => (s.id === id ? { ...s, ...patch } : s));
+  const next = loadSpirits().map(s => (s.id === id ? touch({ ...s, ...patch }) : s));
   saveSpirits(next);
   return next.find(s => s.id === id) || null;
 }
 
-export function deleteSpirit(id) { saveSpirits(loadSpirits().filter(s => s.id !== id)); }
+export function deleteSpirit(id) { deleteRecord("astrum_spirits", id); }
 
 export function addLogEntry(id, { type = "offering", text = "", date = null }) {
   const next = loadSpirits().map(s => s.id === id
-    ? { ...s, log: [{ id: newId("sl"), date: date || new Date().toISOString(), type, text }, ...(s.log || [])] }
+    ? touch({ ...s, log: [{ id: newId("sl"), date: date || new Date().toISOString(), type, text }, ...(s.log || [])] })
     : s);
   saveSpirits(next);
   return next.find(s => s.id === id) || null;

@@ -36,9 +36,14 @@ export function lastExportedAt() {
   return isNaN(d.getTime()) ? null : d;
 }
 
-// merge mode: array stores are merged by entry id and existing local entries
-// always win — an import can add history but never destroy it.
-// replace mode: imported values overwrite local ones key by key.
+// merge mode now rides the SYNC MERGE CORE (lib/sync/merge.js): id-union
+// with per-record last-writer-wins and travelling tombstones — so even
+// manual file passing between devices honors edits and deletions instead
+// of "local always wins, deletes resurrect". replace mode overwrites key
+// by key (destructive; the UI confirms first).
+import { mergeStoreValue, mergeTombstones } from "./sync/merge.js";
+import { loadJSON, saveJSON } from "./storage.js";
+
 export function importAll(jsonText, { merge = true } = {}) {
   let envelope;
   try { envelope = JSON.parse(jsonText); }
@@ -47,34 +52,33 @@ export function importAll(jsonText, { merge = true } = {}) {
     throw new Error("Not an Astrum backup — missing the expected envelope.");
   }
   const summary = { keysRestored: 0, entriesAdded: 0 };
+  const remoteTombs = (() => { try { return JSON.parse(envelope.data.astrum_tombstones || "[]"); } catch { return []; } })();
+  const tombstones = mergeTombstones(loadJSON("astrum_tombstones", []), remoteTombs);
+  const remoteMeta = (() => { try { return JSON.parse(envelope.data.astrum_meta || "{}"); } catch { return {}; } })();
+  const localMeta = loadJSON("astrum_meta", {});
   Object.entries(envelope.data).forEach(([key, raw]) => {
     if (!key.startsWith("astrum_") || typeof raw !== "string") return;
+    if (key === "astrum_tombstones" || key === "astrum_meta" || key === "astrum_device_id") return;
     if (merge) {
       const localRaw = rawGet(key);
-      const merged = mergeArraysById(localRaw, raw);
-      if (merged) {
-        rawSet(key, merged.json);
-        summary.entriesAdded += merged.added;
+      const r = mergeStoreValue(key, localRaw, raw,
+        { localMeta, remoteMeta, tombstones, ctxL: { deviceId: "local" }, ctxR: { deviceId: envelope.deviceId || "import" } });
+      if (r.changed && r.value != null) {
+        try {
+          const before = Array.isArray(JSON.parse(localRaw || "[]")) ? JSON.parse(localRaw || "[]").length : 0;
+          const after = Array.isArray(JSON.parse(r.value)) ? JSON.parse(r.value).length : 0;
+          summary.entriesAdded += Math.max(0, after - before);
+        } catch {}
+        rawSet(key, r.value);
         summary.keysRestored++;
-        return;
       }
-      // Not two arrays — only fill in keys that are locally absent.
-      if (localRaw == null) { rawSet(key, raw); summary.keysRestored++; }
       return;
     }
     rawSet(key, raw);
     summary.keysRestored++;
   });
+  saveJSON("astrum_tombstones", tombstones);
   return summary;
-}
-
-function mergeArraysById(localRaw, importedRaw) {
-  let local, imported;
-  try { local = JSON.parse(localRaw); imported = JSON.parse(importedRaw); } catch { return null; }
-  if (!Array.isArray(local) || !Array.isArray(imported)) return null;
-  const seen = new Set(local.map(e => e?.id).filter(id => id != null));
-  const additions = imported.filter(e => e?.id != null && !seen.has(e.id));
-  return { json: JSON.stringify([...local, ...additions]), added: additions.length };
 }
 
 // ── Delivery helpers ────────────────────────────────────────────────────

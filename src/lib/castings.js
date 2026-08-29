@@ -7,7 +7,8 @@
 // growing list of outcomes. Over time this becomes the practitioner's own
 // dataset of what actually works.
 
-import { loadJSON, saveJSON, getSchemaVersion, setSchemaVersion } from "./storage.js";
+import { loadJSON, saveJSON, getSchemaVersion, setSchemaVersion, touch } from "./storage.js";
+import { deleteRecord } from "./sync/tombstones.js";
 
 export const CASTING_KINDS = ["working", "sigil", "talisman", "election", "horary", "athanor", "geomancy"];
 export const VERDICTS = ["hit", "partial", "miss", "unknown"];
@@ -37,13 +38,13 @@ export function createCasting({ kind, title, intent = "", planet = null, traditi
 
 export function updateCasting(id, patch) {
   const list = loadCastings();
-  const next = list.map(c => (c.id === id ? { ...c, ...patch } : c));
+  const next = list.map(c => (c.id === id ? touch({ ...c, ...patch }) : c));
   saveCastings(next);
   return next.find(c => c.id === id) || null;
 }
 
 export function deleteCasting(id) {
-  saveCastings(loadCastings().filter(c => c.id !== id));
+  deleteRecord("astrum_castings", id); // sync-safe: filter + tombstone
 }
 
 export function addOutcome(id, { verdict = "unknown", note = "", date = null }) {
@@ -51,7 +52,7 @@ export function addOutcome(id, { verdict = "unknown", note = "", date = null }) 
   const next = list.map(c => {
     if (c.id !== id) return c;
     const outcome = { id: newId(), date: date || new Date().toISOString(), verdict, note };
-    return { ...c, outcomes: [...(c.outcomes || []), outcome] };
+    return touch({ ...c, outcomes: [...(c.outcomes || []), outcome] });
   });
   saveCastings(next);
   return next.find(c => c.id === id) || null;

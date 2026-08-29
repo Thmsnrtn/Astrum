@@ -24,6 +24,8 @@ export const STORAGE_KEYS = [
   "astrum_omens",       // omen & dream log
   "astrum_watchlist",   // standing electional intentions (the Vigil)
   "astrum_srs",         // spaced-repetition state over the canon
+  "astrum_tombstones",  // sync: deletions that travel (see lib/sync)
+  "astrum_meta",        // sync: per-store last-write timestamps
   "astrum_schema",      // data schema version (gates migrations)
   "astrum_last_export", // ISO timestamp of last backup export
 ];
@@ -46,11 +48,31 @@ export function rawSet(key, val) {
   let ok = false;
   try { localStorage.setItem(key, val); ok = true; } catch {}
   if (key.startsWith("astrum_")) {
+    stampWrite(key);
     idbSet(key, val);                 // durable bucket (survives eviction)
     requestSnapshot(collectAll);      // app-owned file (survives WebView clearing) — native-only, debounced
   }
   return ok;
 }
+
+// Sync bookkeeping: per-store last-write ISO (for whole-value LWW on
+// non-array stores) and the device lamport counter (deterministic ties).
+// Never stamp the bookkeeping keys themselves.
+const NO_STAMP = new Set(["astrum_meta", "astrum_tombstones", "astrum_last_export", "astrum_cmd_hist", "astrum_srs", "astrum_sync_state"]);
+function stampWrite(key) {
+  if (NO_STAMP.has(key)) return;
+  try {
+    const meta = JSON.parse(localStorage.getItem("astrum_meta") || "{}");
+    meta[key] = new Date().toISOString();
+    localStorage.setItem("astrum_meta", JSON.stringify(meta));
+    const n = (parseInt(localStorage.getItem("astrum_lamport") || "0", 10) || 0) + 1;
+    localStorage.setItem("astrum_lamport", String(n));
+  } catch {}
+}
+
+// Stamp a record for last-writer-wins sync. Use on every mutation of a
+// record inside an array store.
+export function touch(rec) { return { ...rec, updatedAt: new Date().toISOString() }; }
 
 export function removeKey(key) {
   try { localStorage.removeItem(key); } catch {}
