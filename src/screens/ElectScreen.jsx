@@ -33,7 +33,8 @@ export default function ElectScreen({now,natalPos,eph,profile}){
   const meta=INTENTS[ik]||INTENTS.money;
   const [committed,setCommitted]=useState(null);
   useEffect(()=>{setPlanet(meta.planet);setElections([]);setSelIdx(null);},[ik]);
-  const live=assessElection(now,planet,natalPos);
+  const elLoc=profile?.natal?.lat!=null&&profile?.natal?.lon!=null?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
+  const live=assessElection(now,planet,natalPos,elLoc);
   // Elective memory: how conditions like these have fared in your own record.
   const memStats=useMemo(()=>computeStats(loadCastings()),[committed]);
   const mem=useMemo(()=>electiveMemory(memStats,electionFactors(now,planet,live.score)),[memStats,planet,live.score,now]);
@@ -61,7 +62,7 @@ export default function ElectScreen({now,natalPos,eph,profile}){
   const fmtD=d=>{const diff=Math.floor((d-now)/86400000),t=d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});if(diff===0)return"Today "+t;if(diff===1)return"Tomorrow "+t;if(diff<8)return DAY_NAMES[d.getDay()]+" "+t;return d.toLocaleDateString("en-US",{month:"short",day:"numeric"})+" "+t;};
   const [rankByRecord,setRankByRecord]=useState(false);
   const runScan=()=>{setScanning(true);setElections([]);setSelIdx(null);const snap=new Date(now);setTimeout(()=>{
-    const raw=scanElections(snap,days,planet,natalPos);
+    const raw=scanElections(snap,days,planet,natalPos,elLoc);
     // Decorate each window with elective memory so your record can rank them.
     const decorated=raw.map(r=>{const m=electiveMemory(memStats,electionFactors(r.date,planet,r.assess.score));return{...r,mem:m,adjusted:m.available?Math.max(0,Math.min(100,r.assess.score+m.adjustment)):r.assess.score};});
     setElections(decorated);setScanning(false);
@@ -99,7 +100,7 @@ export default function ElectScreen({now,natalPos,eph,profile}){
   const [vigilForm,setVigilForm]=useState({label:"",planet:"jupiter",minScore:70});
   const refreshVigil=()=>{setWatches(loadWatchlist());};
   const refreshWatchWindows=()=>{
-    loadWatchlist().forEach(w=>{if(w.active&&windowStale(w,now)){refreshWatch(w,now,(pk,days)=>scanElections(new Date(now),days,pk,natalPos));}});
+    loadWatchlist().forEach(w=>{if(w.active&&windowStale(w,now)){refreshWatch(w,now,(pk,days)=>scanElections(new Date(now),days,pk,natalPos,elLoc));}});
     refreshVigil();
   };
   useEffect(()=>{if(view==="vigil")refreshWatchWindows();},[view]); // eslint-disable-line

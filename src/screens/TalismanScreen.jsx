@@ -12,6 +12,7 @@ import { loadJSON, saveJSON } from "../lib/storage.js";
 import { F, GOLD, L, T } from "../ui/theme.js";
 
 export default function TalismanScreen({eph,natalPos,profile,now}){
+  const talLoc=profile?.natal?.lat!=null&&profile?.natal?.lon!=null?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
   const [step,setStep]=useState(0);
   const [intent,setIntent]=useState("");
   const [planet,setPlanet]=useState("jupiter");
@@ -34,7 +35,7 @@ export default function TalismanScreen({eph,natalPos,profile,now}){
     if(saved)return;
     try{
       const castDate=chosen?.isNow?new Date(now):chosen?.date||new Date(now);
-      const assess=chosen?.assess||assessElection(castDate,planet,natalPos);
+      const assess=chosen?.assess||assessElection(castDate,planet,natalPos,talLoc);
       // 1. sigil record (shows up in the Sigil workshop)
       const sigilEntry={id:Date.now(),planet,intent,word:designName,method:design==="word"?"kamea":"seal",sealOf:design!=="word"?design:undefined,
         svgData:{method:"kamea",pts:designPts,word:designName,planet},status:"created",date:castDate.toISOString(),skySnap:eph?{moon:eph.pos?.moon?.lon,sun:eph.pos?.sun?.lon}:null,aiNote:""};
@@ -100,7 +101,7 @@ export default function TalismanScreen({eph,natalPos,profile,now}){
               <div style={{fontFamily:F,fontSize:22,color:gc}}>{e.assess.score}</div>
             </button>);
           })}
-          <button onClick={()=>setChosen({date:new Date(now),assess:assessElection(new Date(now),planet,natalPos),isNow:true})} style={{width:"100%",marginTop:8,padding:"9px 0",borderRadius:10,background:chosen?.isNow?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${chosen?.isNow?"rgba(var(--tint-rgb),0.4)":"rgba(var(--tint-rgb),0.12)"}`,fontFamily:F,fontSize:8.5,color:chosen?.isNow?GOLD:"rgba(var(--tint-rgb),0.45)",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Or: work this present moment</button>
+          <button onClick={()=>setChosen({date:new Date(now),assess:assessElection(new Date(now),planet,natalPos,talLoc),isNow:true})} style={{width:"100%",marginTop:8,padding:"9px 0",borderRadius:10,background:chosen?.isNow?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${chosen?.isNow?"rgba(var(--tint-rgb),0.4)":"rgba(var(--tint-rgb),0.12)"}`,fontFamily:F,fontSize:8.5,color:chosen?.isNow?GOLD:"rgba(var(--tint-rgb),0.45)",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Or: work this present moment</button>
           {chosen&&<div style={{fontFamily:F,fontSize:9.5,color:"#7AB07A",marginTop:8,textAlign:"center"}}>Chosen: {fmtD(chosen.date)} — score {chosen.assess.score}</div>}
           {NEXT(!!chosen)}
         </div>}

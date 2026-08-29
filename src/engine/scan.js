@@ -6,6 +6,7 @@ import { D2R, norm, dateToJD, sunLon, moonLon, planetLon, dailyMotion, SIGNS, lo
 import { P } from "../data/planets.js";
 import { FIXED_STARS } from "../data/fixedStars.js";
 import { getMansion } from "../data/mansions.js";
+const SIGN_RULERS_EL=["mars","venus","mercury","moon","sun","mercury","venus","mars","jupiter","saturn","saturn","jupiter"];
 import { essentialDignity, receives } from "./reception.js";
 
 export function calcProgressions(birthDate,lat,lon,targetDate){
@@ -73,30 +74,46 @@ export function scanTransits(natalPos,startDate,days=90){
 // ── 5b: Firdaria ──────────────────────────────────────────────────────
 export const FIRDARIA_DAY=["sun","venus","mercury","moon","saturn","jupiter","mars","northNode","southNode"];
 export const FIRDARIA_NIGHT=["moon","saturn","jupiter","mars","sun","venus","mercury","northNode","southNode"];
-export const FIRDARIA_YRS=[10,8,13,9,11,12,7,3,2];
+// Years belong to the PLANETS, not to sequence positions (Abu Ma'shar):
+// Sun 10, Venus 8, Mercury 13, Moon 9, Saturn 11, Jupiter 12, Mars 7,
+// nodes 3 and 2 — total 75. A positional array indexed against the
+// nocturnal sequence gave every night chart wrong period lengths (Moon 10
+// instead of 9, etc.) — caught in the roots audit. The night sequence
+// keeps the nodes LAST per Abu Ma'shar (Hand, Birchfield); Bonatti's
+// variant interleaves them after Mars — noted, not adopted.
+export const FIRDARIA_YEARS={sun:10,venus:8,mercury:13,moon:9,saturn:11,jupiter:12,mars:7,northNode:3,southNode:2};
+export const FIRDARIA_YRS=[10,8,13,9,11,12,7,3,2]; // day-sequence-aligned; kept for reference
 export function calcFirdaria(birthDate,isDayChart,now){
   const seq=isDayChart?FIRDARIA_DAY:FIRDARIA_NIGHT;
   const totalYrs=75;
   const ageYrs=(now-birthDate)/(365.25*86400000);
   const cycleYrs=ageYrs%totalYrs;
   let cum=0,majIdx=0;
-  for(let i=0;i<FIRDARIA_YRS.length;i++){
-    if(cycleYrs<cum+FIRDARIA_YRS[i]){majIdx=i;break;}
-    cum+=FIRDARIA_YRS[i];
+  for(let i=0;i<seq.length;i++){
+    if(cycleYrs<cum+FIRDARIA_YEARS[seq[i]]){majIdx=i;break;}
+    cum+=FIRDARIA_YEARS[seq[i]];
   }
   const majLord=seq[majIdx];
-  const majPer=FIRDARIA_YRS[majIdx];
+  const majPer=FIRDARIA_YEARS[majLord];
   const posInMaj=cycleYrs-cum;
-  const minDur=majPer/7;
-  const minIdx=Math.min(6,Math.floor(posInMaj/minDur));
-  const minLord=seq[(majIdx+minIdx)%seq.length];
-  const pct=(posInMaj/majPer)*100;
+  // Sub-periods cycle the SEVEN PLANETS only, starting from the major lord;
+  // the node periods have no subdivisions (classical doctrine).
+  const planetSeq=seq.filter(p=>p!=="northNode"&&p!=="southNode");
+  const isNodePeriod=majLord==="northNode"||majLord==="southNode";
+  let minLord=null,pct=(posInMaj/majPer)*100;
+  if(!isNodePeriod){
+    const minDur=majPer/7;
+    const minIdx=Math.min(6,Math.floor(posInMaj/minDur));
+    const startIdx=planetSeq.indexOf(majLord);
+    minLord=planetSeq[(startIdx+minIdx)%7];
+  }
   // Build full period list
   const periods=[];let c=0;
-  for(let i=0;i<FIRDARIA_YRS.length;i++){
-    const sy=c,ey=c+FIRDARIA_YRS[i];
-    periods.push({lord:seq[i],start:new Date(birthDate.getTime()+sy*365.25*86400000),end:new Date(birthDate.getTime()+ey*365.25*86400000),years:FIRDARIA_YRS[i],isCurrent:i===majIdx});
-    c+=FIRDARIA_YRS[i];
+  for(let i=0;i<seq.length;i++){
+    const yrs=FIRDARIA_YEARS[seq[i]];
+    const sy=c,ey=c+yrs;
+    periods.push({lord:seq[i],start:new Date(birthDate.getTime()+sy*365.25*86400000),end:new Date(birthDate.getTime()+ey*365.25*86400000),years:yrs,isCurrent:i===majIdx});
+    c+=yrs;
   }
   return{majLord,minLord,pct,cycleYrs,periods};
 }
@@ -266,12 +283,28 @@ export function calcAllLots(asc,sLon,mLon,maLon,vLon,jLon,saLon,day){
 // ELECTION ENGINE
 // ═══════════════════════════════════════════════════════════════════════
 export function checkViaCombusta(lon){const l=norm(lon);return l>=195&&l<=225;}
+// Bodily besiegement of the Moon between the two malefics (Bonatti/Lilly):
+// the Moon stands on the zodiacal arc FROM one malefic TO the other with
+// the enclosure tight (< 20°), and no benefic body inside the arc to break
+// the siege ("intervention" lifts it). The old version compared raw
+// longitudes with min/max and silently failed across 0° Aries; arcs are
+// now computed with norm() in both directions. (The fuller by-rays form —
+// separating from one malefic's ray, applying to the other's — remains a
+// documented future refinement; this is the strict bodily case.)
 export function checkBesiegement(jd){
   const ml=moonLon(jd),marl=planetLon("mars",jd),satl=planetLon("saturn",jd);
-  let d=Math.abs(norm(marl-satl));if(d>180)d=360-d;
-  if(d>120)return false;
-  const d1=norm(ml-Math.min(marl,satl)),d2=norm(Math.max(marl,satl)-ml);
-  return d1+d2<20;
+  const inArc=(x,from,to)=>norm(x-from)<=norm(to-from);
+  const tryArc=(from,to)=>{
+    const span=norm(to-from);
+    if(span>=20)return false;
+    if(!inArc(ml,from,to))return false;
+    // benefic intervention: Venus or Jupiter bodily inside the enclosure
+    for(const b of ["venus","jupiter"]){
+      if(inArc(planetLon(b,jd),from,to))return false;
+    }
+    return true;
+  };
+  return tryArc(marl,satl)||tryArc(satl,marl);
 }
 export function getMoonAspects(jd){
   const mL=moonLon(jd),applying=[],separating=[];
@@ -345,7 +378,11 @@ export function checkProhibition(jd,targetPk){
 export function getStarConj(lon,jd){
   return FIXED_STARS.filter(s=>{const sLon=jd?starLonAt(s,jd):s.lon;let d=Math.abs(norm(sLon-lon));if(d>180)d=360-d;return d<2.5;});
 }
-export function getMoonSpeed(jd){const dm=Math.abs(dailyMotion("moon",jd));return{speed:dm.toFixed(2),fast:dm>13.2,slow:dm<12,label:dm>13.2?"Fast":"Slow"};}
+// The classical dividing line is the mean motion, ~13°10′35″ = 13.176°/day
+// (Lilly's swift >13°11′; al-Biruni and the accidental-dignity tables put
+// slow simply below the mean). The old <12° "slow" matched no source and
+// under-reported one of Bonatti's ten impediments of the Moon.
+export function getMoonSpeed(jd){const dm=dailyMotion("moon",jd);return{speed:dm.toFixed(2),fast:dm>13.176,slow:dm<13.176,label:dm>13.176?"Swift":"Slow"};}
 
 // The 8 named moon phases, matching eph.moonPhase in calcPositions and the
 // keys computeStats groups on — so electionFactors lines up with the record.
@@ -365,7 +402,7 @@ export function electionFactors(date,pk,score){
     bandKey:electionBandKey(score)};
 }
 
-export function assessElection(date,pk,natalPos){
+export function assessElection(date,pk,natalPos,location=null){
   const jd=dateToJD(date);
   const positions={};
   ["sun","moon","mercury","venus","mars","jupiter","saturn"].forEach(p=>{
@@ -388,19 +425,43 @@ export function assessElection(date,pk,natalPos){
     {id:"direct",w:18,label:"Planet Direct",critical:true,pass:!wPos.isRetro,note:wPos.isRetro?"Retrograde":"Direct"},
     {id:"combust",w:18,label:"Free from Combustion",critical:true,pass:!wPos.combust,note:wPos.combust?wPos.combust.type+" "+wPos.combust.diff+"° from Sun":"Clear"},
     {id:"voc",w:15,label:"Moon Not Void",critical:true,pass:!voc.isVoC,note:voc.isVoC?"Void — "+fmtTime(voc.hoursToIngress*3600)+" until "+voc.nextSign?.name:"Applying"},
-    {id:"via",w:14,label:"Moon Not Via Combusta",critical:true,pass:!viaCom,note:viaCom?"Moon in Burnt Path (15° Lib–15° Sco)":"Clear"},
+    {id:"via",w:12,label:"Moon Not Via Combusta",critical:false,pass:!viaCom,note:viaCom?"Moon in Burnt Path (15° Lib–15° Sco)":"Clear"},
     {id:"bes",w:12,label:"Moon Not Besieged",critical:false,pass:!bes,note:bes?"Besieged between Mars and Saturn":"Clear"},
     {id:"mal",w:12,label:"No Malefic Affliction",critical:false,pass:aff.length===0,note:aff.length?aff.map(a=>P[a.malefic].name+" "+a.aspect).join(", "):"None"},
     {id:"mapply",w:10,label:"Moon Applies to Planet",critical:false,pass:!!mApplyGood,note:mApplyGood?"Moon "+mApplyGood.aspect+" "+P[pk].name+" in "+mApplyGood.hours+"h":"Not applying"},
     {id:"mbad",w:10,label:"Moon Next Aspect Safe",critical:false,pass:!mApplyBad,note:mApplyBad?"Moon applying "+mApplyBad.aspect+" "+P[mApplyBad.planet].name:"Safe"},
     {id:"speed",w:5,label:"Moon Fast",critical:false,pass:speed.fast,note:speed.label+" ("+speed.speed+"°/day)"},
-    {id:"phase",w:5,label:"Moon Phase",critical:false,pass:isWax,note:isWax?"Waxing":"Waning"},
+    {id:"phase",w:9,label:"Moon Waxing",critical:false,pass:isWax,note:isWax?"Waxing — increasing light":"Waning (a standard corruption for works of increase)"},
     {id:"timing",w:6,label:"Day or Hour Aligned",critical:false,pass:dayMatch||hourMatch,note:dayMatch&&hourMatch?"Day + Hour":dayMatch?"Day":hourMatch?"Hour":"Neither"},
     // Weighted minor dignities: bound/triplicity/face now count toward the election.
     (()=>{const isDay=hour.isDayHour!==false;const ed=essentialDignity(pk,wPos.lon,isDay);
       const minors=ed.parts.filter(x=>["bound","triplicity","face"].includes(x));
       return{id:"minor",w:8,label:"Minor Dignities",critical:false,pass:minors.length>0,
         note:minors.length?`+${minors.map(m2=>m2==="bound"?"bound (+2)":m2==="triplicity"?"triplicity (+3)":"face (+1)").join(", ")}`:"None (bound/triplicity/face)"};})(),
+    // ── Chart-based criteria (Dorotheus V, Sahl §9, Ramesey) — only when a
+    //    place is known to raise the Ascendant ──
+    ...(location?.lat!=null?(()=>{
+      const asc=calcASC(jd,location.lat,location.lon);
+      const ascSign=Math.floor(asc/30);
+      const ascLord=SIGN_RULERS_EL[ascSign];
+      const lordPos=positions[ascLord];
+      const lordDig=lordPos?getDignity(ascLord,lordPos.lon):null;
+      const lordOk=lordPos&&!lordPos.isRetro&&!lordPos.combust&&lordDig!=="detriment"&&lordDig!=="fall";
+      // working planet angular? (house = quadrant from asc, whole-sign)
+      const pHouse=((Math.floor(positions[pk].lon/30)-ascSign+12)%12)+1;
+      const angular=[1,4,7,10].includes(pHouse);
+      // Moon applying to the Asc lord, or Moon in the 1st
+      const mHouse=((Math.floor(mPos.lon/30)-ascSign+12)%12)+1;
+      const mToLord=moonAsp.applying.find(a2=>a2.planet===ascLord&&["Conjunction","Trine","Sextile"].includes(a2.aspect));
+      return[
+        {id:"asclord",w:15,label:"Lord of the Ascendant Fortified",critical:false,pass:!!lordOk,
+          note:lordPos?`${ascLord} ${lordOk?"direct, clear, undamaged":"afflicted ("+[lordPos.isRetro&&"retrograde",lordPos.combust&&"combust",(lordDig==="detriment"||lordDig==="fall")&&lordDig].filter(Boolean).join(", ")+")"}`:"—"},
+        {id:"angular",w:12,label:"Working Planet Angular",critical:false,pass:angular,
+          note:`House ${pHouse} (whole-sign)${angular?" — rising or culminating":""}`},
+        {id:"moonasclord",w:9,label:"Moon Joins the Ascendant's Lord",critical:false,pass:mHouse===1||!!mToLord,
+          note:mHouse===1?"Moon in the 1st — Dorotheus' best":mToLord?`Moon ${mToLord.aspect} ${ascLord}`:"No application to the lord"},
+      ];
+    })():[]),
     // Reception: the day or hour ruler receiving the working planet is an alliance.
     (()=>{const dr=DAY_RULERS[date.getDay()];const hr=hour.planet;
       const recBy=[dr!==pk&&receives(dr,wPos.lon)?dr:null,hr!==pk&&hr!==dr&&receives(hr,wPos.lon)?hr:null].filter(Boolean);
@@ -417,7 +478,7 @@ export function assessElection(date,pk,natalPos){
   return{criteria,score,grade,critFail,passCount:criteria.filter(c=>c.pass).length,moonAsp,positions,isWax,trans,prohib,stars,speed,voc};
 }
 
-export function scanElections(fromDate,days,pk,natalPos){
+export function scanElections(fromDate,days,pk,natalPos,location=null){
   const results=[];const step=2/24;const snap=new Date(fromDate);
   for(let d=0;d<days;d+=step){
     const date=new Date(snap.getTime()+d*86400000);const jd=dateToJD(date);
@@ -428,7 +489,7 @@ export function scanElections(fromDate,days,pk,natalPos){
     const ml=moonLon(jd);if(checkViaCombusta(ml))continue;
     const voc=checkVoC(jd);if(voc.isVoC)continue;
     if(checkBesiegement(jd))continue;
-    const assess=assessElection(date,pk,natalPos);
+    const assess=assessElection(date,pk,natalPos,location);
     if(assess.critFail.length===0&&assess.score>=55){
       const wk=Math.floor(d*6);
       const ex=results.find(r=>Math.floor((r.date-snap)/(86400000)*6)===wk);

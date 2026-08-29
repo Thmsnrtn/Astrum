@@ -1,6 +1,7 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
 import { useState } from "react";
 import { DECAN_IMAGES } from "../data/decanImages.js";
+import { PICATRIX_DECANS } from "../data/picatrixDecans.js";
 import { DECANS } from "../data/decans.js";
 import { P } from "../data/planets.js";
 import { fmtTime } from "../engine/astro.js";
@@ -37,7 +38,15 @@ export default function DecansScreen({eph,fractal,natalPos,mode,setMode}){
           <div style={{marginTop:10,padding:"10px 12px",borderRadius:10,background:"rgba(0,0,0,0.3)",border:`1px solid ${col}20`}}>
             <div style={{fontFamily:F,fontSize:8,color:`${col}90`,letterSpacing:2,textTransform:"uppercase",marginBottom:5}}>The Image of the Face</div>
             <div style={{fontFamily:F,fontSize:10.5,color:"#C4A870",fontStyle:"italic",lineHeight:1.8}}>{DECAN_IMAGES[sel].p}</div>
-            <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.35)",marginTop:3}}>— Picatrix II.11 (Latin tradition)</div>
+            <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.35)",marginTop:3}}>— Picatrix II.11 (Attrell &amp; Porreca trans.)</div>
+            {PICATRIX_DECANS[sel]&&(<>
+              <div style={{fontFamily:F,fontSize:10,color:"#B09468",fontStyle:"italic",lineHeight:1.7,marginTop:7}}>{PICATRIX_DECANS[sel].picatrixImage}</div>
+              <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.35)",marginTop:3}}>— Picatrix II.11 (Greer &amp; Warnock trans., second witness)</div>
+              <div style={{marginTop:6,padding:"6px 8px",borderRadius:8,background:`${col}0C`,border:`1px solid ${col}22`}}>
+                <span style={{fontFamily:F,fontSize:8,color:`${col}90`,letterSpacing:2,textTransform:"uppercase"}}>Signification: </span>
+                <span style={{fontFamily:F,fontSize:10,color:"#C4A870",fontStyle:"italic"}}>{PICATRIX_DECANS[sel].picatrixSignification}</span>
+              </div>
+            </>)}
             <div style={{fontFamily:F,fontSize:10,color:"#9A8060",fontStyle:"italic",lineHeight:1.7,marginTop:7}}>{DECAN_IMAGES[sel].a}</div>
             <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.35)",marginTop:3}}>— Agrippa II.37</div>
             {DECAN_IMAGES[sel].v&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.6)",fontStyle:"italic",marginTop:5,lineHeight:1.5}}>Variant: {DECAN_IMAGES[sel].v}</div>}

@@ -142,7 +142,7 @@ export const DECAN_IMAGES = [
   { p: "A man with two bodies, as if greeting with his hands — the face of peace and humility, of long journeys, misery, the search for riches, and the taking of pity.",
     a: "A man carrying burdens on his shoulder, well clothed — journeys, change of place, carefulness of getting wealth.",
     t: "8 of Cups — Lord of Abandoned Success" },
-  { p: "A man with a second inverted head, his feet raised on high, a platter in his hand — the face of great value, strong will, worthiness, and contemplation of splendid matters.",
+  { p: "A man upside down, his head below and his feet raised on high, in his hand a tray from which the food has been eaten — the face of great reward, and strong will in things high, serious, and thoughtful. (Corrected against Pingree's Latin: one inverted man, not a second head.)",
     a: "A woman of good countenance, well adorned — to desire and set oneself about high and great matters.",
     t: "9 of Cups — Lord of Material Happiness" },
   { p: "A gloomy man of evil thoughts, deceits and betrayals before him; a woman with an ass and a bird — the face of yearning, or of seeking quietude and rest.",

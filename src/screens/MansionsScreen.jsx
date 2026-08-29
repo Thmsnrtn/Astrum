@@ -11,6 +11,7 @@ import { F, L, T, GOLD } from "../ui/theme.js";
 import { dateToJD, planetLon } from "../engine/astro.js";
 import { conditionsFromProfile } from "../engine/chart.js";
 import { MANSIONS, MANSION_WIDTH, getMansion } from "../data/mansions.js";
+import { talismanForMansion } from "../data/mansionTalismans.js";
 import { createCasting } from "../lib/castings.js";
 
 const NATURE_COL = { favorable: "#5CA85C", unfavorable: "#B05050", mixed: GOLD };
@@ -125,6 +126,24 @@ export default function MansionsScreen({ eph, now, profile, natalPos }) {
             <span style={{ fontFamily: F, fontSize: 8, color: "#B05050", letterSpacing: 2 }}>AVOID: </span>
             <span style={{ fontFamily: F, fontSize: 10, color: "#C4A870", fontStyle: "italic" }}>{shown.avoid}</span>
           </div>
+          {(() => {
+            const tal = talismanForMansion(shown.index ?? shown.n);
+            if (!tal) return null;
+            return (
+              <div style={{ marginTop: 9, padding: "10px 12px", borderRadius: 10, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(160,140,220,0.18)" }}>
+                <div style={{ fontFamily: F, fontSize: 8, color: "rgba(160,140,220,0.75)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 5 }}>The Talisman of the Mansion · Picatrix IV.9</div>
+                <div style={{ fontFamily: F, fontSize: 9.5, color: "#C8DDED", marginBottom: 5 }}>
+                  Lord: <span style={{ color: GOLD }}>{tal.lord}</span>
+                  <span style={{ color: "rgba(var(--tint-rgb),0.45)", fontStyle: "italic" }}> · Agrippa III.24: {tal.agrippaLord}</span>
+                </div>
+                <div style={{ fontFamily: F, fontSize: 10.5, color: "#C4A870", fontStyle: "italic", lineHeight: 1.8 }}>{tal.image}</div>
+                <div style={{ fontFamily: F, fontSize: 9.5, color: "#9A8060", marginTop: 6, lineHeight: 1.6 }}>
+                  <span style={{ fontSize: 8, letterSpacing: 2, color: "rgba(160,140,220,0.65)" }}>FOR: </span>{tal.use}
+                </div>
+                <div style={{ fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.45)", fontStyle: "italic", marginTop: 5, lineHeight: 1.6 }}>Agrippa II.33: {tal.agrippa}</div>
+              </div>
+            );
+          })()}
           {(shown.index ?? shown.n) === current.index && (
             <button onClick={recordUnderMansion} style={{ width: "100%", marginTop: 8, padding: "10px 0", borderRadius: 10, background: committed ? "rgba(92,168,92,0.15)" : "rgba(200,221,237,0.08)", border: `1px solid ${committed ? "rgba(92,168,92,0.4)" : "rgba(200,221,237,0.25)"}`, fontFamily: F, fontSize: 9, color: committed ? "#7AB07A" : "#C8DDED", letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
               {committed ? "✓ Recorded — judge it in Review" : "⚑ Record a Working Under This Mansion"}

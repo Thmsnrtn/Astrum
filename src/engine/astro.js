@@ -3,7 +3,7 @@
 // Pure math + tables: positions, dignities, hours, VoC, angles, houses.
 // ═══════════════════════════════════════════════════════════════════════
 import { GOLD } from "../ui/theme.js";
-import { swPlanetLon, swDailyMotion, swTrueNode, swChiron, swLilith, swFixstar } from "./sweph.js";
+import { swPlanetLon, swDailyMotion, swTrueNode, swChiron, swLilith, swFixstar, swHouses } from "./sweph.js";
 import { DECANS } from "../data/decans.js";
 import { computeLots } from "./lots.js";
 
@@ -19,6 +19,11 @@ export function dateToJD(d) {
 }
 export function sunLon(jd){
   const sw=swPlanetLon("sun",jd);if(sw!=null)return sw;
+  return meeusSunLon(jd);
+}
+// Pure Meeus solar longitude (Astronomical Algorithms Ch.25) — the offline
+// fallback, exported separately so its error envelope is testable.
+export function meeusSunLon(jd){
   const T=(jd-2451545)/36525,L0=norm(280.46646+36000.76983*T);
   const M=norm(357.52911+35999.05029*T),Mr=M*D2R;
   const C=(1.914602-0.004817*T)*Math.sin(Mr)+(0.019993-0.000101*T)*Math.sin(2*Mr)+0.000289*Math.sin(3*Mr);
@@ -26,6 +31,9 @@ export function sunLon(jd){
 }
 export function moonLon(jd){
   const sw=swPlanetLon("moon",jd);if(sw!=null)return sw;
+  return meeusMoonLon(jd);
+}
+export function meeusMoonLon(jd){
   // Meeus "Astronomical Algorithms" Ch 47 — 30-term truncation (accuracy ±0.04°)
   const T=(jd-2451545)/36525;
   const Lp=norm(218.3164477+481267.88123421*T-0.0015786*T*T+T*T*T/538841-T*T*T*T/65194000);
@@ -69,7 +77,14 @@ export function equationOfCenter(e,M){
 }
 export function planetLon(name,jd){
   const sw=swPlanetLon(name,jd);if(sw!=null)return sw;
-  if(name==="sun")return sunLon(jd);if(name==="moon")return moonLon(jd);
+  return meeusPlanetLon(name,jd);
+}
+// The Meeus fallback as its own function so its error envelope against the
+// Swiss Ephemeris is testable (see ephemeris.test.js "Meeus fallback
+// envelope") — this is what serves until the WASM loads, and offline
+// forever if the 12.6 MB data never arrives.
+export function meeusPlanetLon(name,jd){
+  if(name==="sun")return meeusSunLon(jd);if(name==="moon")return meeusMoonLon(jd);
   const T=(jd-2451545)/36525,el=EL[name];if(!el)return 0;
   const e=el.e0+el.de*T;
   const L=norm(el.L0+el.Lr*T);
@@ -89,7 +104,17 @@ export const SIGNS=[{name:"Aries",sym:"♈",el:"fire",mod:"cardinal"},{name:"Tau
 export function lonToZodiac(lon){const l=norm(lon),si=Math.floor(l/30),deg=l%30;return{...SIGNS[si],signIndex:si,degree:Math.floor(deg),minutes:Math.floor((deg%1)*60)};}
 
 export const DOMICILE={sun:[4],moon:[3],mercury:[2,5],venus:[1,6],mars:[0,7],jupiter:[8,11],saturn:[9,10]};
-export const EXALT={sun:{s:0},moon:{s:1},mercury:{s:5},venus:{s:11},mars:{s:9},jupiter:{s:3},saturn:{s:6}};
+// Exaltation signs with the traditional DEGREES (Babylonian → Dorotheus →
+// al-Biruni; Ptolemy gives signs only). ORDINAL convention: "the 19th
+// degree of Aries" spans 18°00'–18°59', so a planet stands in its
+// exaltation degree when Math.floor(lon%30) === d-1.
+export const EXALT={sun:{s:0,d:19},moon:{s:1,d:3},mercury:{s:5,d:15},venus:{s:11,d:27},mars:{s:9,d:28},jupiter:{s:3,d:15},saturn:{s:6,d:21}};
+// Is the planet in its exact exaltation degree (the seat of the throne)?
+export function inExaltationDegree(planet,lon){
+  const ex=EXALT[planet];if(!ex)return false;
+  const l=norm(lon);
+  return Math.floor(l/30)===ex.s&&Math.floor(l%30)===ex.d-1;
+}
 export function getDignity(planet,lon){
   const si=Math.floor(norm(lon)/30);
   if(DOMICILE[planet]?.includes(si))return"domicile";
@@ -103,13 +128,17 @@ export function dignityScore(d,r){return Math.max(15,Math.min(99,{domicile:92,ex
 export function getCombustion(planet,planetLon,sunL){
   if(planet==="sun")return null;
   let diff=Math.abs(norm(planetLon-sunL));if(diff>180)diff=360-diff;
-  if(diff<0.2834)return{type:"cazimi",diff:diff.toFixed(2),penalty:-20}; // within 17' = maximum dignity
-  if(diff<8)return{type:"combust",diff:diff.toFixed(1),penalty:40};
+  // Lilly's scheme throughout (CA p.113): cazimi within 17′, combust to
+  // 8°30′, under the beams to 17°. (The medieval Arabic convention uses
+  // ~16′ / ~6° / 15° — a different, internally consistent scheme; we do
+  // not mix them. Roots audit corrected combust from a source-less 8°.)
+  if(diff<0.2834)return{type:"cazimi",diff:diff.toFixed(2),penalty:-20}; // within 17' = heart of the Sun
+  if(diff<8.5)return{type:"combust",diff:diff.toFixed(1),penalty:40};
   if(diff<17)return{type:"sunbeams",diff:diff.toFixed(1),penalty:15};
   return null;
 }
 
-// ── Egyptian (Ptolemaic) Bounds ──────────────────────────────────────
+// ── Egyptian Bounds (terms) — per Tetrabiblos I.20 (the Egyptian table), Dorotheus, Valens; distinct from Ptolemy's own I.21 variant ──────────────────────────────────────
 // [sign0..11] each entry: array of {planet, from, to}
 export const BOUNDS=[
   [{p:"jupiter",f:0,t:6},{p:"venus",f:6,t:12},{p:"mercury",f:12,t:20},{p:"mars",f:20,t:25},{p:"saturn",f:25,t:30}],
@@ -157,7 +186,7 @@ export function getAntisciaAspects(pos){
 export function getPlanetPhase(planet,planetLon,sunLon){
   if(planet!=="venus"&&planet!=="mercury")return null;
   const diff=norm(planetLon-sunLon); // 0-360
-  if(diff<1||diff>359)return"cazimi";
+  if(diff<0.2834||diff>359.7166)return"cazimi"; // 17′, consistent with getCombustion
   if(diff<180)return"evening-star"; // East of Sun: sets after Sun
   return"morning-star"; // West of Sun: rises before Sun
 }
@@ -167,29 +196,36 @@ export function getPlanetPhase(planet,planetLon,sunLon){
 // engine/lots.js (see computeLots). calcPOF/calcPOS below remain for the
 // natal-chart path and Fortune/Spirit callers.
 
-export function checkVoC(jd){
+// Void of course — the medieval/Lilly test: the Moon perfects no further
+// Ptolemaic aspect to the seven before leaving her sign (CA p.112). The
+// old implementation also required the aspect to lie within an 8° orb,
+// which the definition does not: a Moon at 2° whose only aspect perfects
+// at 14° was falsely declared void (roots audit, Lilly/Louis). mode
+// "hellenistic" instead asks for perfection within the next 30° ignoring
+// the sign boundary (kenodromia per Brennan's reconstruction) — far
+// stricter, and the void far rarer.
+export function checkVoC(jd,mode="lilly"){
   const moonL=moonLon(jd);
   const moonSign=Math.floor(moonL/30);
-  const moonEndOfSign=(moonSign+1)*30;
-  const degsLeft=moonEndOfSign-moonL;
+  const degsLeft=(moonSign+1)*30-moonL;
+  const horizon=mode==="hellenistic"?30:degsLeft;
   const aspectAngles=[0,60,90,120,180];
   const planets=["sun","mercury","venus","mars","jupiter","saturn"];
   let hasApplyingAspect=false;
   planets.forEach(pk=>{
     const pl=planetLon(pk,jd);
     aspectAngles.forEach(asp=>{
-      // Check both symmetric aspect positions (e.g. both trines for a given planet)
       const checks=asp===0||asp===180?[asp]:[asp,360-asp];
       checks.forEach(a=>{
         const aspPoint=norm(pl+a);
         const moonsTravel=norm(aspPoint-moonL);
-        if(moonsTravel<8&&moonsTravel<degsLeft)hasApplyingAspect=true;
+        if(moonsTravel>0.001&&moonsTravel<horizon)hasApplyingAspect=true;
       });
     });
   });
-  const moonSpeed=0.549;
+  const moonSpeed=dailyMotion("moon",jd)/24||0.549;
   const hoursToIngress=degsLeft/moonSpeed;
-  return{isVoC:!hasApplyingAspect,hoursToIngress,nextSign:SIGNS[(moonSign+1)%12]};
+  return{isVoC:!hasApplyingAspect,hoursToIngress,nextSign:SIGNS[(moonSign+1)%12],mode};
 }
 
 export function nextIngress(planet,jd){
@@ -225,16 +261,39 @@ export function meanNode(jd){const T=(jd-2451545)/36525;return norm(125.04452-19
 // ═══════════════════════════════════════════════════════════════════════
 // Sunrise/Sunset in UTC — USNO algorithm, ~5 min accuracy for 0°-60° lat
 export function sunriseSetUTC(date,lat,lon){
-  const start=new Date(Date.UTC(date.getUTCFullYear(),0,0));
-  const N=Math.ceil((date-start)/86400000);
-  const dec=-23.45*Math.cos((360/365*(N+10))*D2R);
-  const cosH=(-Math.sin(-0.833*D2R)-Math.sin(lat*D2R)*Math.sin(dec*D2R))/(Math.cos(lat*D2R)*Math.cos(dec*D2R));
-  if(cosH<-1||cosH>1)return null; // midnight sun / polar night
-  const H=Math.acos(cosH)*R2D;
-  const noon=12-lon/15; // approximate solar noon in UT
-  const riseUT=noon-H/15, setUT=noon+H/15;
-  const y=date.getUTCFullYear(),mo=date.getUTCMonth(),d=date.getUTCDate();
-  return{rise:new Date(Date.UTC(y,mo,d,Math.floor(riseUT),Math.round((riseUT%1)*60))),set:new Date(Date.UTC(y,mo,d,Math.floor(setUT),Math.round((setUT%1)*60)))};
+  // Real-sun computation (roots audit): the previous cosine-toy declination
+  // and EoT-free noon left London's solstice day ~25 min short and moved
+  // planetary-hour boundaries by up to ±20 min. Now: solar noon solved from
+  // the actual Sun's hour angle (equation of time included by construction),
+  // declination from the actual solar longitude, standard −0.833° altitude
+  // (refraction + semidiameter), one refinement pass. Agrees with NOAA to
+  // about a minute; upgrades further when the Swiss Ephemeris is loaded.
+  const jd0=dateToJD(new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),date.getUTCDate(),12,0,0)));
+  const sunEq=jd=>{
+    const l=sunLon(jd)*D2R,e=obliquity(jd)*D2R;
+    return{ra:norm(Math.atan2(Math.sin(l)*Math.cos(e),Math.cos(l))*R2D),dec:Math.asin(Math.sin(e)*Math.sin(l))*R2D};
+  };
+  // Solar noon: local hour angle of the true Sun = 0 → iterate twice.
+  let noonJd=jd0;
+  for(let i=0;i<3;i++){
+    const {ra}=sunEq(noonJd);
+    let ha=norm(gstDeg(noonJd)+lon-ra);if(ha>180)ha-=360;
+    noonJd-=ha/360.98564736629;
+  }
+  const halfDay=jdRef=>{
+    const {dec}=sunEq(jdRef);
+    const cosH=(Math.sin(-0.833*D2R)-Math.sin(lat*D2R)*Math.sin(dec*D2R))/(Math.cos(lat*D2R)*Math.cos(dec*D2R));
+    if(cosH<-1||cosH>1)return null; // midnight sun / polar night
+    return Math.acos(cosH)*R2D/360.98564736629; // days from noon to rise/set
+  };
+  let h=halfDay(noonJd);
+  if(h==null)return null;
+  // one refinement: recompute declination at the actual rise/set instants
+  const h1=halfDay(noonJd-h),h2=halfDay(noonJd+h);
+  if(h1==null||h2==null)return null;
+  const riseJd=noonJd-h1,setJd=noonJd+h2;
+  const toDate=jd=>new Date((jd-2440587.5)*86400000);
+  return{rise:toDate(riseJd),set:toDate(setJd)};
 }
 // Greenwich Sidereal Time in degrees (Meeus Ch.12)
 export function gstDeg(jd){
@@ -249,7 +308,16 @@ export function obliquity(jd){const T=(jd-2451545)/36525;return 23.4392911-0.013
 // True Ascendant (Meeus Ch.24)
 export function calcASC(jd,lat,lon){
   const RAMC=lstDeg(jd,lon)*D2R,e=obliquity(jd)*D2R,phi=lat*D2R;
-  return norm(Math.atan2(-Math.cos(RAMC),Math.sin(RAMC)*Math.cos(e)+Math.tan(phi)*Math.sin(e))*R2D);
+  let asc=norm(Math.atan2(-Math.cos(RAMC),Math.sin(RAMC)*Math.cos(e)+Math.tan(phi)*Math.sin(e))*R2D);
+  // Quadrant resolution (roots audit): the atan2 alone sometimes lands on
+  // the DESCENDANT — the ecliptic rises in zodiacal order, so the true
+  // Ascendant always lies 0–180° ahead of the MC; flip when it does not.
+  // This was intermittent (moment-geometry dependent) and fed every chart:
+  // computeEphemeris, calcNatal, progressions, and solar returns all draw
+  // their Ascendant from here.
+  const mc=calcMC(jd,lon);
+  if(norm(asc-mc)>=180)asc=norm(asc+180);
+  return asc;
 }
 // Midheaven (MC)
 export function calcMC(jd,lon){
@@ -431,9 +499,6 @@ export function getTriplicity(lon,isDayChart){
 export function calcHouses(jd,lat,lon,system="whole"){
   const asc=calcASC(jd,lat,lon);
   const mc=calcMC(jd,lon);
-  const RAMC=lstDeg(jd,lon)*D2R;
-  const e=obliquity(jd)*D2R;
-  const phi=lat*D2R;
   if(system==="whole"){
     const base=Math.floor(asc/30)*30;
     return Array.from({length:12},(_,i)=>norm(base+i*30));
@@ -441,76 +506,31 @@ export function calcHouses(jd,lat,lon,system="whole"){
   if(system==="equal"){
     return Array.from({length:12},(_,i)=>norm(asc+i*30));
   }
-  if(system==="regio"){
-    // Regiomontanus: celestial equator divided into 12 equal parts via RAMC
-    // tan(λ) = sin(θ) / (cos(θ)·cos(ε) − tan(φ)·sin(ε))
-    const cusps=[];
-    for(let i=0;i<12;i++){
-      if(i===0){cusps.push(asc);continue;}
-      if(i===3){cusps.push(norm(mc+180));continue;} // IC
-      if(i===6){cusps.push(norm(asc+180));continue;} // DSC
-      if(i===9){cusps.push(mc);continue;} // MC
-      const theta=RAMC+(i+1)*30*D2R; // offset from RAMC
-      const lambda=Math.atan2(Math.sin(theta),(Math.cos(theta)*Math.cos(e)-Math.tan(phi)*Math.sin(e)))*R2D;
-      cusps.push(norm(lambda));
-    }
-    return cusps;
+  // Quadrant systems (roots audit): the old hand-rolled Regiomontanus/Koch/
+  // Placidus solvers produced garbage intermediate cusps (verified >100°
+  // off against the Swiss Ephemeris). Quadrant houses now DELEGATE to the
+  // arc-second engine; when it is unavailable (offline before the WASM
+  // arrives) the fallback is PORPHYRY — each quadrant between the true
+  // angles trisected — which is a legitimate classical system in its own
+  // right (Valens' own quadrant method), not a wrong Placidus.
+  const code={placidus:"P",koch:"K",regio:"R",regiomontanus:"R",campanus:"C",porphyry:"O"}[system];
+  if(code){
+    const sw=swHouses(jd,lat,lon,code);
+    if(sw&&sw.cusps&&sw.cusps.length===12)return sw.cusps.map(c=>norm(c));
   }
-  if(system==="koch"){
-    // Koch (Birthplace): based on diurnal semi-arc of the MC degree
-    const cusps=[];
-    for(let i=0;i<12;i++){
-      if(i===0){cusps.push(asc);continue;}
-      if(i===3){cusps.push(norm(mc+180));continue;}
-      if(i===6){cusps.push(norm(asc+180));continue;}
-      if(i===9){cusps.push(mc);continue;}
-      // Offset: houses 11,12 use MC oblique ascension shifted by DSA/3
-      const frac=((i<3?i:(i<6?i-3:(i<9?i-6:i-9)))+1)/3;
-      const mcDec=Math.asin(Math.sin(e)*Math.sin(mc*D2R))*R2D; // MC declination
-      const cosH=-Math.sin(mcDec*D2R)*Math.tan(phi)/(Math.cos(mcDec*D2R)||0.0001);
-      const H=Math.abs(cosH)<=1?Math.acos(Math.max(-1,Math.min(1,cosH)))*R2D:90;
-      const DSA=i<6?90+H:90-H;
-      const theta=RAMC+DSA*frac*D2R*(i<3||(i>=6&&i<9)?1:-1);
-      const lam=Math.atan2(Math.sin(theta),(Math.cos(theta)*Math.cos(e)-Math.tan(phi)*Math.sin(e)))*R2D;
-      cusps.push(norm(lam));
-    }
-    return cusps;
-  }
-  if(system==="placidus"){
-    // Placidus: iterative — each cusp has semi-arc = n×30°/6
-    const cusps=[];
-    for(let i=0;i<12;i++){
-      if(i===0){cusps.push(asc);continue;}
-      if(i===3){cusps.push(norm(mc+180));continue;}
-      if(i===6){cusps.push(norm(asc+180));continue;}
-      if(i===9){cusps.push(mc);continue;}
-      // House offsets: 11→2/3 SA above horizon, 12→1/3 SA above, 2→1/3 SA below, 3→2/3 SA below
-      const fracMap={1:2/3,2:1/3,4:1/3,5:2/3}; // index within quadrant
-      const qi=i<3?i:(i<6?i-3:(i<9?i-6:i-9));
-      const frac=fracMap[qi<3?qi:qi]||0.5;
-      const upperHem=i<6; // houses 11,12,1,2,3 are above horizon
-      // Newton-Raphson iteration
-      let lon0=mc+i*30; // initial guess
-      for(let iter=0;iter<8;iter++){
-        const dec=Math.asin(Math.sin(e)*Math.sin(norm(lon0)*D2R));
-        const cosHA=-Math.sin(dec)*Math.tan(phi)/(Math.cos(dec)||0.0001);
-        if(Math.abs(cosHA)>1){lon0+=0.1;continue;}
-        const HA=Math.acos(cosHA);
-        const SA=upperHem?HA:Math.PI-HA;
-        const target=SA*(upperHem?frac:1-frac);
-        // RA of this degree minus RAMC should equal target
-        const RA=Math.atan2(Math.sin(norm(lon0)*D2R)*Math.cos(e),Math.cos(norm(lon0)*D2R))+Math.PI;
-        const diff=(RA-RAMC-target+Math.PI*3)%(Math.PI*2)-Math.PI;
-        lon0-=diff*R2D*0.5;
-      }
-      cusps.push(norm(lon0));
-    }
-    return cusps;
-  }
-  return Array.from({length:12},(_,i)=>norm(asc+i*30));
+  // Porphyry fallback: exact angles, quadrants trisected.
+  const ic=norm(mc+180),dsc=norm(asc+180);
+  const arc=(from,to)=>norm(to-from);
+  const cusps=new Array(12);
+  cusps[0]=asc;cusps[3]=ic;cusps[6]=dsc;cusps[9]=mc;
+  const q1=arc(asc,ic),q2=arc(ic,dsc),q3=arc(dsc,mc),q4=arc(mc,asc);
+  cusps[1]=norm(asc+q1/3);cusps[2]=norm(asc+2*q1/3);
+  cusps[4]=norm(ic+q2/3);cusps[5]=norm(ic+2*q2/3);
+  cusps[7]=norm(dsc+q3/3);cusps[8]=norm(dsc+2*q3/3);
+  cusps[10]=norm(mc+q4/3);cusps[11]=norm(mc+2*q4/3);
+  return cusps;
 }
 
-// House number (1-12) for a given longitude and cusp array
 export function getHouseNum(lon,cusps){
   for(let i=0;i<12;i++){
     const c1=cusps[i],c2=cusps[(i+1)%12];
