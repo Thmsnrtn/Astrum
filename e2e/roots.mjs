@@ -37,6 +37,20 @@ const dec = await p.evaluate(() => { const t = document.body.innerText; return {
   first: /Attrell\s*&\s*Porreca/i.test(t) }; });
 console.log('decan enrichment:', JSON.stringify(dec));
 
+// 2b) Almanac: click today → the day's mansion talisman line renders
+await goRoom('Liturgical month');
+await p.evaluate(() => {
+  const today = String(new Date().getDate());
+  const cell = [...document.querySelectorAll('button')].find(b => {
+    const first = b.querySelector('span');
+    return first && first.textContent.trim() === today && b.style.aspectRatio;
+  });
+  cell && cell.click();
+});
+await p.waitForTimeout(700);
+const alm = await p.evaluate(() => /Could be made today/i.test(document.body.innerText));
+console.log('almanac talisman line:', alm);
+
 // 3) Learn: the daily card runs over the grown deck without error
 await goRoom('AI magical education');
 const learn = await p.evaluate(() => /Daily Card|canon rests/i.test(document.body.innerText));
@@ -52,7 +66,7 @@ await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(2400);
 const mode2 = await p.evaluate(() => JSON.parse(localStorage.getItem('astrum_practice_prefs') || '{}').vocMode);
 console.log('doctrine card:', doct, '· after click:', mode1, '· after reload:', mode2);
 
-const ok = Object.values(mans).every(Boolean) && Object.values(dec).every(Boolean) && learn
+const ok = Object.values(mans).every(Boolean) && Object.values(dec).every(Boolean) && learn && alm
   && doct && mode1 === 'hellenistic' && mode2 === 'hellenistic' && errs.length === 0;
 console.log(ok ? '✓ ROOTS E2E PASS' : '✗ ROOTS E2E FAIL');
 console.log('errors:', errs.length ? JSON.stringify([...new Set(errs)]) : 'none');

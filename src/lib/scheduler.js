@@ -79,8 +79,11 @@ export function planUpcoming({ now, location, prefs, castings = [], athanor = []
       if (isNaN(start.getTime()) || start <= now) return;
       [[24 * 3600000, "opens in 24 hours"], [3600000, "opens in one hour — prepare"]].forEach(([lead, phrase], i) => {
         const at = new Date(start.getTime() - lead);
-        if (at > now && at < end) plans.push({ id: `elect_${c.id}_${i}`, at, kind: "election", priority: 1,
-          title: `◈ ${c.title}`, body: `Your elected window ${phrase}. Score ${c.links.electionWindow.score}.` });
+        if (at > now && at < end) {
+          const ew = c.links.electionWindow;
+          plans.push({ id: `elect_${c.id}_${i}`, at, kind: "election", priority: 1,
+            title: `◈ ${c.title}`, body: `Your elected window ${phrase}. ${ew.grade === "mansion" ? `Mansion window (${ew.score}).` : `Score ${ew.score}.`}` });
+        }
       });
     });
   }

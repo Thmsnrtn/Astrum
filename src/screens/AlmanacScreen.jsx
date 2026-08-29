@@ -14,6 +14,7 @@ import { P } from "../data/planets.js";
 import { buildMonthModel, dayHours, EVENT_GLYPH } from "../lib/almanac.js";
 import { loadFeed, FEED_KIND_META } from "../lib/intake.js";
 import { loadCastings } from "../lib/castings.js";
+import { talismanForMansion } from "../data/mansionTalismans.js";
 import { downloadText, shareOnNative } from "../lib/backup.js";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -180,6 +181,18 @@ function DayDetail({ dm, year, month, location, feed, elect }) {
         <div style={{ fontFamily: F, fontSize: 10.5, color: "#C8DDED" }}>{dm.moon.phaseGlyph} {dm.moon.phaseName} Moon in {dm.moon.sign} {dm.moon.signSym}{dm.voc ? " — Void of Course" : ""}</div>
         <div style={{ fontFamily: F, fontSize: 9.5, color: "rgba(var(--tint-rgb),0.6)", marginTop: 3 }}>Mansion {dm.mansion.n} · {dm.mansion.name} ({dm.mansion.nature})</div>
         <div style={{ fontFamily: F, fontSize: 9.5, color: "rgba(var(--tint-rgb),0.6)", marginTop: 2 }}>Sun in decan {dm.sunDecan.idx + 1} — {dm.sunDecan.name} ({dm.sunDecan.ruler ? P[dm.sunDecan.ruler]?.name : ""})</div>
+        {(() => {
+          // What could be made today — the mansion's Picatrix IV.9 talisman
+          const tal = talismanForMansion(dm.mansion.n);
+          if (!tal) return null;
+          return (
+            <div style={{ marginTop: 7, paddingTop: 7, borderTop: "1px solid rgba(var(--tint-rgb),0.08)" }}>
+              <div style={{ fontFamily: F, fontSize: 8, color: "rgba(160,140,220,0.7)", letterSpacing: 1.8, textTransform: "uppercase" }}>Could be made today · Picatrix IV.9</div>
+              <div style={{ fontFamily: F, fontSize: 9.5, color: "#9A8060", fontStyle: "italic", marginTop: 3, lineHeight: 1.6 }}>{tal.image}</div>
+              <div style={{ fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.55)", marginTop: 3 }}>For: {tal.use} · Lord {tal.lord}</div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Events */}
