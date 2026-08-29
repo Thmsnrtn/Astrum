@@ -9,6 +9,7 @@
 
 import { dateToJD, planetLon, dailyMotion, checkVoC, lonToZodiac, getDignity } from "./astro.js";
 import { swHouses } from "./sweph.js";
+import { mutualReception, almuten } from "./reception.js";
 
 const norm = a => ((a % 360) + 360) % 360;
 export const SIGN_RULERS = ["mars", "venus", "mercury", "moon", "sun", "mercury", "venus", "mars", "jupiter", "saturn", "saturn", "jupiter"];
@@ -125,11 +126,16 @@ export function castHorary({ date, lat, lon, quesitedHouse }) {
     });
   }
 
+  // ── Reception between the significators, and the almuten of the cusp ──
+  const reception = sameRuler ? null : mutualReception(querentRuler, pos[querentRuler].lon, quesitedRuler, pos[quesitedRuler].lon);
+  const isDay = pos.sun.lon != null ? (houseOf(pos.sun.lon, cusps) <= 6 ? false : true) : true; // sun below horizon (houses 1–6) = night
+  const cuspAlmuten = almuten(quesitedCusp, isDay);
+
   return {
     jd, date: date.toISOString(), asc, mc, cusps, pos, considerations, radical, voc,
     querent: { ruler: querentRuler, coSignificator: "moon", ascSign },
     quesited: { house: quesitedHouse, ruler: quesitedRuler, sign: quesitedSign, sameRuler },
-    aspects: pairs, translation, collection,
+    aspects: pairs, translation, collection, reception, cuspAlmuten, isDay,
   };
 }
 
@@ -174,6 +180,10 @@ export function horaryToText(chart, question) {
     `Significator aspects: ${chart.aspects.length ? chart.aspects.map(a => `${a.p1} ${a.aspect} ${a.p2} (orb ${a.orb}°, ${a.applying ? `applying — perfects in ~${a.daysToPerfect}d` : "separating"})`).join("; ") : "none within orb"}`,
     chart.translation ? `Translation of light: ${chart.translation.planet} carries light from ${chart.translation.from} to ${chart.translation.to}` : `No translation of light`,
     chart.collection ? `Collection of light: ${chart.collection.planet} (heavier) receives the application of both significators (${chart.collection.aspects.join(", ")}) — a third party joins the matter` : `No collection of light`,
+    chart.reception ? (chart.reception.kind === "mutual"
+      ? `MUTUAL RECEPTION between the significators (${chart.reception.a} / ${chart.reception.b}) — the strongest alliance; a received malefic becomes a helper`
+      : `Reception: ${chart.reception.receiver} receives ${chart.reception.of} by ${chart.reception.by}`) : `No reception between significators`,
+    chart.cuspAlmuten ? `Almuten of the quesited cusp: ${chart.cuspAlmuten.planet} (${chart.cuspAlmuten.points} pts)` : "",
     chart.voc.isVoC ? "Moon is VOID OF COURSE" : "",
   ];
   return lines.filter(Boolean).join("\n");

@@ -6,6 +6,7 @@ import { D2R, norm, dateToJD, sunLon, moonLon, planetLon, dailyMotion, SIGNS, lo
 import { P } from "../data/planets.js";
 import { FIXED_STARS } from "../data/fixedStars.js";
 import { getMansion } from "../data/mansions.js";
+import { essentialDignity, receives } from "./reception.js";
 
 export function calcProgressions(birthDate,lat,lon,targetDate){
   const ageYears=(targetDate-birthDate)/(365.25*86400000);
@@ -395,6 +396,16 @@ export function assessElection(date,pk,natalPos){
     {id:"speed",w:5,label:"Moon Fast",critical:false,pass:speed.fast,note:speed.label+" ("+speed.speed+"°/day)"},
     {id:"phase",w:5,label:"Moon Phase",critical:false,pass:isWax,note:isWax?"Waxing":"Waning"},
     {id:"timing",w:6,label:"Day or Hour Aligned",critical:false,pass:dayMatch||hourMatch,note:dayMatch&&hourMatch?"Day + Hour":dayMatch?"Day":hourMatch?"Hour":"Neither"},
+    // Weighted minor dignities: bound/triplicity/face now count toward the election.
+    (()=>{const isDay=hour.isDayHour!==false;const ed=essentialDignity(pk,wPos.lon,isDay);
+      const minors=ed.parts.filter(x=>["bound","triplicity","face"].includes(x));
+      return{id:"minor",w:8,label:"Minor Dignities",critical:false,pass:minors.length>0,
+        note:minors.length?`+${minors.map(m2=>m2==="bound"?"bound (+2)":m2==="triplicity"?"triplicity (+3)":"face (+1)").join(", ")}`:"None (bound/triplicity/face)"};})(),
+    // Reception: the day or hour ruler receiving the working planet is an alliance.
+    (()=>{const dr=DAY_RULERS[date.getDay()];const hr=hour.planet;
+      const recBy=[dr!==pk&&receives(dr,wPos.lon)?dr:null,hr!==pk&&hr!==dr&&receives(hr,wPos.lon)?hr:null].filter(Boolean);
+      return{id:"reception",w:8,label:"Received by the Time-Lords",critical:false,pass:recBy.length>0,
+        note:recBy.length?`Received by ${recBy.join(" & ")} (${recBy.map(r=>receives(r,wPos.lon)).join(", ")})`:"No reception from day/hour ruler"};})(),
     {id:"moonrel",w:4,label:"Moon in Sympathetic Sign",critical:false,pass:moonRel.rel==="sympathetic",note:moonRel.rel},
     (()=>{const mans=getMansion(mPos.lon);return{id:"mansion",w:6,label:"Lunar Mansion Favorable",critical:false,pass:mans.nature!=="unfavorable",note:`${mans.index}. ${mans.arabic} (${mans.nature})`};})(),
     {id:"stars",w:4,label:"Fixed Stars",critical:false,pass:stars.length>0,note:stars.length?stars.map(s=>s.name).join(", "):"None conjunct"},

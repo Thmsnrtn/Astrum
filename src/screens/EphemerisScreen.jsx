@@ -1,6 +1,6 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
 import { SIGN_SYMS } from "../data/uiTables.jsx";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { P } from "../data/planets.js";
 import { dateToJD, norm, planetLon } from "../engine/astro.js";
 import { scanEclipses, scanIngresses, scanStations } from "../engine/scan.js";
@@ -26,6 +26,9 @@ export default function EphemerisScreen({now}){
       setRunning(false);
     },50);
   },[now,months]);
+  // Auto-run on first mount — a blank screen greeted every visit before.
+  useEffect(()=>{if(!data&&!running)run();},[]); // eslint-disable-line
+
 
   const GRAPH_PLANETS=["sun","moon","mercury","venus","mars","jupiter","saturn"];
   const GRAPH_COLORS={sun:"#E8C060",moon:"#B0B8D0",mercury:"#88AA88",venus:"#C09870",mars:"#C05050",jupiter:"#A080C0",saturn:"#6080A0"};

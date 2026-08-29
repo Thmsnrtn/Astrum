@@ -137,6 +137,18 @@ export default function HoraryScreen({ profile, natalPos }) {
                   Translation of light: {P[chart.translation.planet].name} carries the light of {P[chart.translation.from].name} to {P[chart.translation.to].name} — a third party joins the matter.
                 </div>
               )}
+              {chart.reception && (
+                <div style={{ marginTop: 6, padding: "7px 10px", borderRadius: 9, background: "rgba(122,176,122,0.08)", border: "1px solid rgba(122,176,122,0.3)", fontFamily: F, fontSize: 10, color: "#7AB07A" }}>
+                  {chart.reception.kind === "mutual"
+                    ? <>Mutual reception between the significators — the chymical wedding; even a hard aspect cooperates.</>
+                    : <>Reception: {P[chart.reception.receiver]?.name} receives {P[chart.reception.of]?.name} by {chart.reception.by} — the received is a guest, not an enemy.</>}
+                </div>
+              )}
+              {chart.cuspAlmuten && (
+                <div style={{ marginTop: 6, fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.5)" }}>
+                  Almuten of the quesited cusp: <span style={{ color: P[chart.cuspAlmuten.planet]?.col }}>{P[chart.cuspAlmuten.planet]?.name}</span> ({chart.cuspAlmuten.points} pts)
+                </div>
+              )}
               {chart.collection && (
                 <div style={{ marginTop: 6, padding: "7px 10px", borderRadius: 9, background: "rgba(160,140,220,0.08)", border: "1px solid rgba(160,140,220,0.25)", fontFamily: F, fontSize: 10, color: "#A08CDC" }}>
                   Collection of light: both significators apply to the weightier {P[chart.collection.planet].name} — a third party gathers and joins the matter.

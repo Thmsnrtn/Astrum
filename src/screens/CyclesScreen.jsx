@@ -25,9 +25,14 @@ export default function CyclesScreen({now,profile,eph}){
     const yearsRemainingInSign=(30-(lon%30))/degPerYear;
     outerPos[p]={lon,signIdx,sign:SIGN_NAMES[signIdx],elem:SIGN_ELEMS[signIdx],degree,yearsInSign:yearsInSign.toFixed(1),yearsRemaining:yearsRemainingInSign.toFixed(1)};
   });
-  // Jupiter-Saturn Great Mutation
-  const lastJS=JS_CONJUNCTIONS[JS_CONJUNCTIONS.length-2]; // 2020
-  const nextJS=JS_CONJUNCTIONS[JS_CONJUNCTIONS.length-1]; // 2040
+  // Jupiter-Saturn Great Mutation — bracket the PRESENT between the table's
+  // conjunctions instead of hardcoding the last two rows (which silently
+  // went wrong after Oct 2040 and broke past the table's 2060 horizon).
+  const jsNowT=now.getTime();
+  const jsIdx=Math.max(0,JS_CONJUNCTIONS.findIndex(j2=>new Date(j2.date).getTime()>jsNowT));
+  const pastEnd=jsIdx===0&&new Date(JS_CONJUNCTIONS[JS_CONJUNCTIONS.length-1].date).getTime()<=jsNowT;
+  const lastJS=pastEnd?JS_CONJUNCTIONS[JS_CONJUNCTIONS.length-1]:JS_CONJUNCTIONS[Math.max(0,jsIdx-1)];
+  const nextJS=pastEnd?{...JS_CONJUNCTIONS[JS_CONJUNCTIONS.length-1],date:new Date(jsNowT+20*365.25*86400000).toISOString(),sign:"beyond the table",label:"beyond the ephemeris table — extend JS_CONJUNCTIONS"}:JS_CONJUNCTIONS[jsIdx===0?1:jsIdx];
   const jsStart=new Date(lastJS.date).getTime();
   const jsEnd=new Date(nextJS.date).getTime();
   const jsElapsed=Math.max(0,Math.min(1,(nowDate.getTime()-jsStart)/(jsEnd-jsStart)));

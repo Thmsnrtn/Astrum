@@ -14,7 +14,8 @@ import { F, L, T, GOLD } from "../ui/theme.js";
 import { P } from "../data/planets.js";
 import { lonToZodiac } from "../engine/astro.js";
 import { computeLots, chartFromPositions } from "../engine/lots.js";
-import { profection } from "../engine/profections.js";
+import { profection, DOMICILE_RULERS } from "../engine/profections.js";
+import { calcSolarReturn } from "../engine/scan.js";
 import { zrCurrent, zrSubdivide, ZR_UNITS, SIGN_NAMES } from "../engine/zr.js";
 
 const SIGN_SYMS = ["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"];
@@ -84,6 +85,36 @@ export default function ChaptersScreen({ profile, natalPos, now }) {
             </div>
           </div>
         )}
+
+        {/* Solar Return — the year's own chart, read against the profection */}
+        {ready && prof && (() => {
+          try {
+            const lat = profile?.natal?.lat, lon = profile?.natal?.lon;
+            const natalSun = natalPos?.sun?.lon;
+            if (natalSun == null) return null;
+            const yr = (now || new Date()).getFullYear();
+            const sr = calcSolarReturn(natalSun, ((now||new Date()) >= (prof?.yearStart||0) ? yr : yr - 1), lat, lon)
+                    || calcSolarReturn(natalSun, yr, lat, lon);
+            if (!sr) return null;
+            const srAscSign = sr.asc != null ? Math.floor(sr.asc / 30) : null;
+            const srRuler = srAscSign != null ? DOMICILE_RULERS[srAscSign] : null;
+            const agrees = srRuler && prof && srRuler === prof.lord;
+            return (
+              <div style={{ padding: "12px 14px", borderRadius: 13, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(var(--tint-rgb),0.12)", marginBottom: 10 }}>
+                <div style={{ fontFamily: F, fontSize: 8, color: "rgba(var(--tint-rgb),0.5)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>Solar Return · {sr.date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
+                {srAscSign != null
+                  ? <div style={{ fontFamily: F, fontSize: 11, color: "#C4A870", lineHeight: 1.8 }}>
+                      SR Ascendant {SIGN_SYMS[srAscSign]} {SIGN_NAMES[srAscSign]}, ruled by <span style={{ color: P[srRuler]?.col }}>{P[srRuler]?.name}</span>.
+                      {agrees
+                        ? <span style={{ color: "#7AB07A" }}> The SR ruler IS the Lord of the Year — the year speaks with one voice; its themes come through undiluted.</span>
+                        : prof && <span> Read {P[srRuler]?.name} (the year's rising voice) alongside {P[prof.lord]?.name}, the profection lord — two officers of the same year.</span>}
+                    </div>
+                  : <div style={{ fontFamily: F, fontSize: 10, color: "#8A7050", fontStyle: "italic" }}>Add your birth place for the SR Ascendant.</div>}
+                <div style={{ fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.45)", marginTop: 5 }}>SR Sun {sr.pos.sun.zodiac.degree}° {sr.pos.sun.zodiac.name} · SR Moon {sr.pos.moon.zodiac.degree}° {sr.pos.moon.zodiac.name}</div>
+              </div>
+            );
+          } catch { return null; }
+        })()}
 
         {ready && zr && (
           <>
