@@ -1,4 +1,5 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
+import { KAMEA, ROSE_CROSS_LETTERS, roseCrossXY } from "../data/uiTables.jsx";
 import { useState, useEffect } from "react";
 import { P } from "../data/planets.js";
 import { assessElection } from "../engine/scan.js";
@@ -126,35 +127,6 @@ export default function CalendarScreen({now,natalPos}){
 // SIGIL SCREEN
 // ═══════════════════════════════════════════════════════════════════════
 // Rose Cross positions: 22 Hebrew letters + 5 finals mapped to grid cells
-const ROSE_CROSS_LETTERS={
-  A:[2,1],B:[1,3],C:[3,2],D:[1,2],E:[2,3],F:[2,2],G:[3,3],H:[3,1],I:[2,4],J:[2,4],
-  K:[1,4],L:[3,4],M:[1,5],N:[2,5],O:[4,1],P:[4,2],Q:[4,3],R:[4,4],S:[4,5],T:[5,1],
-  U:[5,2],V:[5,2],W:[5,3],X:[5,4],Y:[5,5],Z:[1,1]
-};
 // Rose cross cell → pixel: 5 rows × 5 cols, centered in 260×260 canvas
-function roseCrossXY(row,col,w=260,h=260){
-  const cx=w/2,cy=h/2,dx=w/6,dy=h/6;
-  const ox=(col-3)*dx,oy=(row-3)*dy;
-  return[cx+ox,cy+oy];
-}
 // Kamea (magic squares) for 7 planets — row-major order, 0-indexed
-const KAMEA={
-  saturn:   {size:3,sq:[2,7,6,9,5,1,4,3,8]},
-  jupiter:  {size:4,sq:[16,3,2,13,5,10,11,8,9,6,7,12,4,15,14,1]},
-  mars:     {size:5,sq:[11,24,7,20,3,4,12,25,8,16,17,5,13,21,9,10,18,1,14,22,23,6,19,2,15]},
-  sun:      {size:6,sq:[6,32,3,34,35,1,7,11,27,28,8,30,19,14,16,15,23,24,18,20,22,21,17,13,25,29,10,9,26,12,36,5,33,4,2,31]},
-  venus:    {size:7,sq:[22,47,16,41,10,35,4,5,23,48,17,42,11,29,30,6,24,49,18,36,12,13,31,7,25,43,19,37,38,14,32,1,26,44,20,21,39,8,33,2,27,45,46,15,40,9,34,3,28]},
-  mercury:  {size:8,sq:[64,2,3,61,60,6,7,57,9,55,54,12,13,51,50,16,17,47,46,20,21,43,42,24,40,26,27,37,36,30,31,33,32,34,35,29,28,38,39,25,41,23,22,44,45,19,18,48,49,15,14,52,53,11,10,56,8,58,59,5,4,62,63,1]},
-  moon:     {size:9,sq:[37,78,29,70,21,62,13,54,5,6,38,79,30,71,22,63,14,46,47,7,39,80,31,72,23,55,15,16,48,8,40,81,32,64,24,56,57,17,49,9,41,73,33,65,25,26,58,18,50,1,42,74,34,66,67,27,59,10,51,2,43,75,35,36,68,19,60,11,52,3,44,76,77,28,69,20,61,12,53,4,45]}
-};
-function kamea_letterNum(c){const v=c.toUpperCase().charCodeAt(0)-64;return v>=1&&v<=26?v:0;}
-function kamea_xy(num,planet,w=260,h=260){
-  const km=KAMEA[planet]||KAMEA.jupiter;
-  const idx=km.sq.indexOf(num);
-  if(idx<0)return null;
-  const row=Math.floor(idx/km.size),col=idx%km.size;
-  const cell=Math.min(w,h)/km.size;
-  return[col*cell+cell/2,row*cell+cell/2];
-}
 // Reduce multi-digit number to single digit for Kamea lookup (e.g. 26 → 8)
-function kamea_reduce(n,size){while(n>size*size)n-=size*size;return n;}

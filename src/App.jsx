@@ -58,6 +58,7 @@ import { groundingForAsync } from "./lib/rag.js";
 const RecallScreen = lazy(() => import("./screens/RecallScreen.jsx"));
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
 import { reschedule, ensurePermission } from "./lib/notify.js";
+import { watchForUpdate } from "./lib/swUpdate.js";
 import { autoBackupNative } from "./lib/backup.js";
 const ReviewScreen = lazy(() => import("./screens/ReviewScreen.jsx"));
 import { swPlanetLon, swDailyMotion, swTrueNode, swChiron, swLilith, swHouses, swFixstar, onSwephReady, engineInfo } from "./engine/sweph.js";
@@ -587,6 +588,7 @@ export default function App(){
   const [oracleOpen,setOracleOpen]=useState(false);
   const [oracleCtx,setOracleCtx]=useState("");
   const [cmdOpen,setCmdOpen]=useState(false);
+  const [swReload,setSwReload]=useState(null); // fn → a new build is waiting
   // Load profile (primary) and legacy natal data
   useEffect(()=>{(async()=>{
     try{const r=await window.storage.get("astrum_profile");if(r?.value){const p=JSON.parse(r.value);setProfile(p);return;}}catch(e){}
@@ -596,6 +598,7 @@ export default function App(){
   // Recompute positions once the Swiss Ephemeris WASM finishes loading
   const [engine,setEngine]=useState(engineInfo());
   useEffect(()=>{onSwephReady(()=>setEngine(engineInfo()));},[]);
+  useEffect(()=>watchForUpdate(reload=>setSwReload(()=>reload)),[]);
 
   // Compute natal positions from profile (or legacy natal data)
   useEffect(()=>{
@@ -692,6 +695,11 @@ export default function App(){
     <ClockProvider>
     <div style={{minHeight:"100vh",background:`radial-gradient(ellipse at 20% 10%,var(--bg-grad1,rgba(60,40,120,0.25)) 0%,transparent 52%),radial-gradient(ellipse at 80% 90%,var(--bg-grad2,rgba(160,120,30,0.15)) 0%,transparent 52%),radial-gradient(ellipse at 50% 50%,${hourTint} 0%,transparent 65%),#04060F`,display:"flex",justifyContent:"center",fontFamily:F,color:"var(--tint-primary,#D4AF6A)",transition:"background 3s ease"}}>
       <style>{CSS}</style>
+      {swReload&&(
+        <div onClick={swReload} style={{position:"fixed",top:12,left:"50%",transform:"translateX(-50%)",zIndex:900,padding:"10px 20px",borderRadius:12,background:"rgba(20,15,40,0.95)",border:"1px solid rgba(212,175,106,0.4)",fontFamily:F,fontSize:10,color:"#D4AF6A",letterSpacing:1.5,cursor:"pointer",boxShadow:"0 6px 24px rgba(0,0,0,0.5)"}}>
+          ✦ A new sky is available — tap to renew
+        </div>
+      )}
       <div style={{width:"100%",maxWidth:430,minHeight:"100vh",display:"flex",flexDirection:"column",position:"relative"}}>
         <Sidebar tab={tab} setTab={setTab} hour={hour} eph={eph} open={sidebarOpen} setOpen={setSidebarOpen}/>
 

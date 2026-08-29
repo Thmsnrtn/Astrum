@@ -15,6 +15,7 @@ import { conditionsFromProfile } from "../engine/chart.js";
 import { createCasting } from "../lib/castings.js";
 import { loadSpirits } from "../lib/spirits.js";
 import { startDrum, bell, soundAvailable } from "../lib/sound.js";
+import { useWakeLock } from "../lib/wakeLock.js";
 
 const GOLD = "#D4AF6A";
 const fmtElapsed = ms => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
@@ -43,6 +44,7 @@ export default function RitualRuntimeScreen({ eph, hour, profile, natalPos, now 
   useEffect(() => { if (phase !== "running" && drumming) { drumStop.current?.(); drumStop.current = null; setDrumming(false); } }, [phase]); // eslint-disable-line
 
   const steps = TRADITION_STEPS[tradition] || TRADITION_STEPS["western-ceremonial"];
+  useWakeLock(phase === "running"); // the rite must not dim mid-working
   const hourPlanet = hour?.planet;
   const aligned = hourPlanet === planet;
   const dayRuler = hour?.dayRuler;

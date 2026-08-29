@@ -1,4 +1,5 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
+import { GRIM_CATS } from "../data/uiTables.jsx";
 import { useState, useEffect } from "react";
 import { P } from "../data/planets.js";
 import { F, L, T } from "../ui/theme.js";

@@ -35,6 +35,11 @@ for (const lbl of rows) {
   visited++;
   await p.waitForTimeout(420);
   if (errs.length > before) failed.push(lbl.slice(0, 26) + ' → ' + errs[errs.length - 1].slice(0, 60));
+  const disturbed = await p.evaluate(() => /This room is disturbed/.test(document.body.innerText));
+  if (disturbed) {
+    const why = await p.evaluate(() => document.body.innerText.match(/This room is disturbed\n([^\n]+)/)?.[1] || '?');
+    failed.push(lbl.slice(0, 26) + ' → BOUNDARY: ' + why.slice(0, 60));
+  }
 }
 console.log('nav rows:', rows.length, 'visited:', visited);
 console.log(failed.length ? 'FAILURES: ' + JSON.stringify(failed, null, 1) : 'ALL ROOMS CLEAN');

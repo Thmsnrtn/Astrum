@@ -13,24 +13,15 @@ const config: CapacitorConfig = {
     preferredContentMode: 'mobile',
   },
   plugins: {
-    SplashScreen: {
-      launchShowDuration: 800,
-      backgroundColor: '#040410',
-      androidSplashResourceName: 'splash',
-      androidScaleType: 'CENTER_CROP',
-      showSpinner: false,
-      splashFullScreen: true,
-      splashImmersive: true,
-    },
+    // StatusBar is the only plugin config we ship: @capacitor/status-bar is
+    // installed. (SplashScreen/Keyboard config was removed — those plugins
+    // were configured but never installed, so the blocks were dead. Install
+    // @capacitor/splash-screen or @capacitor/keyboard before re-adding.)
     StatusBar: {
       style: 'DARK',
       backgroundColor: '#040410',
       overlaysWebView: true,
     },
-    Keyboard: {
-      resize: 'body',
-      resizeOnFullScreen: true,
-    }
   }
 };
 

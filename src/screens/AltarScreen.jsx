@@ -12,6 +12,7 @@ import { F } from "../ui/theme.js";
 import { P } from "../data/planets.js";
 import { MoonDisc } from "./LunarCycleScreen.jsx";
 import { useClock } from "../ui/clock.jsx";
+import { useWakeLock } from "../lib/wakeLock.js";
 import { loadSpirits, upcomingObservances } from "../lib/spirits.js";
 import { loadWatchlist } from "../lib/watchlist.js";
 import { bell, soundAvailable } from "../lib/sound.js";
@@ -22,6 +23,7 @@ export default function AltarScreen({ now, hour, eph, setTab }) {
   // Wall-clock leaf: the face shows minutes/seconds, so it ticks at 1 Hz
   // while the astro props (hour/eph) hold their 30 s identities.
   const clock = useClock();
+  useWakeLock(true); // the altar does not sleep
   const drift = clock - now; // ms since the astro bucket was computed
   const [bellOn, setBellOn] = useState(false);
   const lastHourRef = useRef(hour?.planet);

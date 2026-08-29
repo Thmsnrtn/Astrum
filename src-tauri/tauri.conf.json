@@ -34,7 +34,7 @@
       "title": "Astrum"
     },
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://api.anthropic.com http://localhost:* http://127.0.0.1:*; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:"
     }
   },
   "bundle": {

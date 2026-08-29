@@ -1,4 +1,5 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
+import { SIGN_SYMS } from "../data/uiTables.jsx";
 import { useState, useCallback, useMemo } from "react";
 import { P } from "../data/planets.js";
 import { dateToJD, norm, planetLon } from "../engine/astro.js";

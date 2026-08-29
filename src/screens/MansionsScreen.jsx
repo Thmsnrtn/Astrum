@@ -5,6 +5,7 @@
 // and the Moon's next boundary crossings (computed by bisection on the
 // real lunar longitude, so times are engine-accurate).
 
+import { fmtT } from "../data/uiTables.jsx";
 import { useState, useMemo } from "react";
 import { F, L, T } from "../ui/theme.js";
 import { dateToJD, planetLon } from "../engine/astro.js";

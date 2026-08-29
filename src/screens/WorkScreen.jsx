@@ -202,6 +202,4 @@ export default function WorkScreen({eph,initPlanet,natalPos,profile,now}){
 // ═══════════════════════════════════════════════════════════════════════
 // NATAL WHEEL CHART SVG (Phase 5a)
 // ═══════════════════════════════════════════════════════════════════════
-const SIGN_COLORS=["#D04040","#7A5030","#5080C0","#40A060","#D04040","#7A5030","#5080C0","#40A060","#D04040","#7A5030","#5080C0","#40A060"];
 const SIGN_SYMS=["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"];
-const ASP_COLORS={Conjunction:"#D4AF6A",Opposition:"#D24B31",Trine:"#5CA85C",Square:"#D24B31",Sextile:"#7CB8E0"};

@@ -8,6 +8,7 @@
 // bond marked. Verified engine: 360-day years, Capricorn 27, L2 in 30-day
 // months, LB after the 211-unit circuit.
 
+import { fmtD } from "../data/uiTables.jsx";
 import { useState, useMemo } from "react";
 import { F, L, T } from "../ui/theme.js";
 import { P } from "../data/planets.js";
@@ -18,7 +19,6 @@ import { zrCurrent, zrSubdivide, ZR_UNITS, SIGN_NAMES } from "../engine/zr.js";
 
 const GOLD = "#D4AF6A";
 const SIGN_SYMS = ["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"];
-const fmtD = d => d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 const fmtDay = d => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 function PeriodRow({ p, current, onClick, sub }) {

@@ -1,4 +1,5 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
+import { SIGN_COLORS, SIGN_SYMS, VOWEL_SOUNDS, ASP_COLORS } from "../data/uiTables.jsx";
 import { useState, useMemo } from "react";
 import { DECANS } from "../data/decans.js";
 import { P } from "../data/planets.js";
@@ -707,11 +708,3 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
 // ═══════════════════════════════════════════════════════════════════════
 // FRACTAL SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-const VOWEL_SOUNDS={"moon":"AH","mercury":"EH","venus":"AY","sun":"EE","mars":"OH","jupiter":"EUW","saturn":"OHW"};
-const L_META=[
-  {w:"Atziluth",dur:"~10.1 days",use:"Electional window · Talismanic harvest"},
-  {w:"Beriah",dur:"~6.76 hours",use:"Ritual design · Working day"},
-  {w:"Yetzirah",dur:"~11.3 min",use:"Single act · Focused meditation"},
-  {w:"Assiah",dur:"~18.8 sec",use:"One vowel · One breath · One face"},
-];
-const ROMAN=["I","II","III","IV"];

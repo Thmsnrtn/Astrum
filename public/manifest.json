@@ -1,14 +1,17 @@
 {
-  "name": "Astrum — Electoral Astrology",
+  "name": "Astrum \u2014 Electoral Astrology",
   "short_name": "Astrum",
-  "description": "Electional astrology, fractal timing, and talismanic magic — powered by classical tradition.",
-  "start_url": "/Astrum/",
-  "scope": "/Astrum/",
+  "description": "Electional astrology, fractal timing, and talismanic magic \u2014 powered by classical tradition.",
+  "start_url": ".",
+  "scope": ".",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#04060F",
   "theme_color": "#04060F",
-  "categories": ["lifestyle", "utilities"],
+  "categories": [
+    "lifestyle",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "/Astrum/icon-192.png",

@@ -11,6 +11,7 @@
 //                 axioms, the Emerald Tablet, the study-only paths
 // Everything cast here flows into the Operator's Loop.
 
+import { fmtT } from "../data/uiTables.jsx";
 import { useState } from "react";
 import { F, L, T } from "../ui/theme.js";
 import { P } from "../data/planets.js";
@@ -30,7 +31,6 @@ import { createCasting, loadCastings, addOutcome } from "../lib/castings.js";
 import { loadJSON, saveJSON } from "../lib/storage.js";
 
 const GOLD = "#D4AF6A";
-const fmtT = d => `${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()]} ${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
 export default function AthanorScreen({ profile, natalPos, eph, now }) {
   const IS = { width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(200,175,100,0.18)", borderRadius: 10, color: "#C4A870", fontFamily: F, outline: "none", padding: "9px 11px", fontSize: 12, boxSizing: "border-box" };

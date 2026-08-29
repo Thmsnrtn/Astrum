@@ -1,15 +1,21 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath } from 'url'
+import { generateSW } from './scripts/generate-sw.mjs'
 
 // Tauri expects a fixed port in dev mode and correct build output
 const TAURI = process.env.TAURI_ENV_PLATFORM !== undefined
 // GitHub Pages needs /Astrum/ base path; local dev and Tauri use /
 const GH_PAGES = process.env.GITHUB_PAGES === 'true'
 
+const BASE = GH_PAGES ? '/Astrum/' : '/'
+
 export default defineConfig({
-  plugins: [react()],
-  base: GH_PAGES ? '/Astrum/' : (TAURI ? '/' : '/'),
+  plugins: [react(), {
+    name: 'astrum-sw',
+    closeBundle() { generateSW(fileURLToPath(new URL('./dist', import.meta.url)), BASE) },
+  }],
+  base: BASE,
   resolve: {
     alias: {
       // The Emscripten glue isn't in swisseph-wasm's exports map; we need it

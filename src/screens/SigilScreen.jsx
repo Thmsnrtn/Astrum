@@ -1,4 +1,5 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
+import { KAMEA, kamea_xy, ROSE_CROSS_LETTERS, roseCrossXY, kamea_letterNum, kamea_reduce } from "../data/uiTables.jsx";
 import { useState, useEffect, useRef } from "react";
 import { aiConfigured, askClaude } from "../ai/client.js";
 import { P } from "../data/planets.js";
@@ -392,4 +393,3 @@ export default function SigilScreen({eph,profile,natalPos}){
 // ═══════════════════════════════════════════════════════════════════════
 // GRIMOIRE SCREEN
 // ═══════════════════════════════════════════════════════════════════════
-const GRIM_CATS=["ritual","prayer","observation","dream","correspondence","custom"];

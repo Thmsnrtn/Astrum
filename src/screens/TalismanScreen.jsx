@@ -1,4 +1,5 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
+import { KAMEA, kamea_xy, KameaPreview, kamea_letterNum, kamea_reduce, fmtD } from "../data/uiTables.jsx";
 import { useState } from "react";
 import { memo as React_memo } from "react";
 import { P } from "../data/planets.js";

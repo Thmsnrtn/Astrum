@@ -1,4 +1,5 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
+import { OUTER_META, SIGN_ELEMS } from "../data/uiTables.jsx";
 import { useState } from "react";
 import { aiConfigured, aiUnconfiguredMessage, askClaude } from "../ai/client.js";
 import { TRADITIONS } from "../data/traditions.js";

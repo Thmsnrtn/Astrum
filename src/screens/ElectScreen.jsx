@@ -1,4 +1,5 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
+import { OUTER_META, fmtD } from "../data/uiTables.jsx";
 import { useState, useEffect, useMemo } from "react";
 import { aiConfigured, aiUnconfiguredMessage, askClaude } from "../ai/client.js";
 import { INTENTS } from "../data/intents.js";

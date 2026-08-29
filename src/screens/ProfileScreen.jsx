@@ -1,5 +1,6 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
-import { useState, useRef } from "react";
+import { KAMEA, KameaPreview } from "../data/uiTables.jsx";
+import { useState, useRef, useEffect } from "react";
 import { aiConfigured, askAI, resolveAIConfig } from "../ai/client.js";
 import { loadKnowledge, saveKnowledge } from "../ai/prompt.js";
 import { WEBLLM_MODELS, getEngine } from "../ai/webllm.js";
@@ -308,6 +309,52 @@ function NotifyCard({notifyPrefs,setNotifyPrefs}){
   );
 }
 
+
+// ── Storage health: quota, persistence, the photo vault, orphan sweep ──
+function StorageHealthCard(){
+  const [est,setEst]=useState(null);
+  const [persisted,setPersisted]=useState(null);
+  const [photoCount,setPhotoCount]=useState(null);
+  const [orphans,setOrphans]=useState(null);
+  const [swept,setSwept]=useState(false);
+  useEffect(()=>{(async()=>{
+    try{if(navigator.storage?.estimate)setEst(await navigator.storage.estimate());}catch{}
+    try{if(navigator.storage?.persisted)setPersisted(await navigator.storage.persisted());}catch{}
+    try{
+      const {listPhotoIds}=await import("../lib/photos.js");
+      const ids=await listPhotoIds();setPhotoCount(ids.length);
+      const referenced=new Set();
+      const {loadCastings}=await import("../lib/castings.js");
+      loadCastings().forEach(c=>(c.photoIds||[]).forEach(id=>referenced.add(id)));
+      const {loadAthanor}=await import("../lib/athanor.js");
+      loadAthanor().forEach(op=>(op.photoIds||[]).forEach(id=>referenced.add(id)));
+      setOrphans(ids.filter(id=>!referenced.has(id)));
+    }catch{}
+  })();},[swept]);
+  const sweep=async()=>{
+    try{
+      const {deletePhoto}=await import("../lib/photos.js");
+      for(const id of orphans||[])await deletePhoto(id);
+      setSwept(true);
+    }catch{}
+  };
+  const fmt=b=>b==null?"—":b>1048576?`${(b/1048576).toFixed(1)} MB`:`${Math.round(b/1024)} KB`;
+  const pct=est?.quota?Math.round((est.usage/est.quota)*100):null;
+  return(
+    <div className="card" style={{marginBottom:10}}>
+      <div style={L()}>Storage Health</div>
+      <div style={{marginTop:8,fontFamily:F,fontSize:10.5,color:"#C4A870",lineHeight:1.9}}>
+        {est&&<div>The record holds {fmt(est.usage)} of {fmt(est.quota)} granted{pct!=null?` (${pct}%)`:""}.</div>}
+        {pct!=null&&<div style={{height:3,background:"rgba(200,175,100,0.09)",borderRadius:2,margin:"4px 0 6px"}}><div style={{height:"100%",width:`${Math.min(100,pct)}%`,background:pct>80?"#D28060":"#7AB07A",borderRadius:2}}/></div>}
+        <div>Persistent storage: {persisted==null?"unknown":persisted?<span style={{color:"#7AB07A"}}>granted — the browser will not evict the record</span>:<span style={{color:"#D2A060"}}>not granted — keep backups current</span>}</div>
+        <div>Photo vault: {photoCount==null?"—":`${photoCount} photo${photoCount===1?"":"s"}`}{orphans?.length>0&&<> · <span style={{color:"#D2A060"}}>{orphans.length} orphaned</span></>}</div>
+      </div>
+      {orphans?.length>0&&<button onClick={sweep} style={{width:"100%",marginTop:8,padding:"9px 0",borderRadius:9,background:"rgba(180,120,60,0.1)",border:"1px solid rgba(180,120,60,0.3)",fontFamily:F,fontSize:9,color:"#D2A060",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Sweep {orphans.length} orphaned photo{orphans.length===1?"":"s"}</button>}
+      {swept&&<div style={{fontFamily:F,fontSize:9,color:"#7AB07A",marginTop:6,textAlign:"center"}}>✓ The vault is clean.</div>}
+    </div>
+  );
+}
+
 function BackupCard(){
   const [msg,setMsg]=useState("");
   const [showPaste,setShowPaste]=useState(false);
@@ -486,6 +533,7 @@ export default function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyP
       <NotifyCard notifyPrefs={notifyPrefs} setNotifyPrefs={setNotifyPrefs}/>
       <IntakeCard/>
       <BackupCard/>
+      <StorageHealthCard/>
       <KnowledgeBase/>
       {/* Planetary Tint — Batch 3 */}
       <div className="card" style={{margin:"0 14px 10px"}}>
@@ -520,20 +568,3 @@ export default function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyP
 // The full classical pipeline in one guided flow. Everything it produces is
 // linked into a single casting record (kind: talisman) so the Review screen
 // can close the loop on it.
-function KameaPreview({pts,planet,size=180}){
-  const km=KAMEA[planet]||KAMEA.jupiter;
-  const scale=size/260;
-  if(!pts||pts.length<2)return null;
-  const d=pts.map((p,i)=>`${i===0?"M":"L"}${(p[0]*scale).toFixed(1)} ${(p[1]*scale).toFixed(1)}`).join(" ");
-  return(
-    <svg width={size} height={size} style={{background:"rgba(0,0,0,0.4)",borderRadius:8,border:"1px solid rgba(200,175,100,0.15)"}}>
-      {Array.from({length:km.size}).map((_,r)=>Array.from({length:km.size}).map((_,c)=>{
-        const cell=size/(km.size+1),x=cell*(c+1),y=cell*(r+1);
-        return <circle key={`${r}-${c}`} cx={x} cy={y} r={1.2} fill="rgba(200,175,100,0.25)"/>;
-      })).flat()}
-      <path d={d} fill="none" stroke={P[planet].col} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx={pts[0][0]*scale} cy={pts[0][1]*scale} r={3.5} fill="none" stroke={P[planet].col} strokeWidth={1}/>
-      <line x1={pts[pts.length-1][0]*scale-4} y1={pts[pts.length-1][1]*scale-4} x2={pts[pts.length-1][0]*scale+4} y2={pts[pts.length-1][1]*scale+4} stroke={P[planet].col} strokeWidth={1.4}/>
-    </svg>
-  );
-}
