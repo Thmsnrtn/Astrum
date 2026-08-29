@@ -117,13 +117,50 @@ export async function shareOnNative(filename, text) {
 
 // Silent safety net: written to the app's Documents dir when iOS backgrounds
 // the app, since WKWebView may evict localStorage under storage pressure.
+// Rotating slots: seven dated files, one per weekday. A wipe followed by a
+// backgrounding can no longer destroy the only copy — six older days survive.
+export function autoBackupSlotName(now = new Date()) {
+  const day = ["sun","mon","tue","wed","thu","fri","sat"][now.getDay()];
+  return `astrum-autobackup-${day}.json`;
+}
+
 export async function autoBackupNative() {
   try {
     if (!window.Capacitor?.isNativePlatform?.()) return false;
     const { Filesystem, Directory, Encoding } = await import("@capacitor/filesystem");
-    await Filesystem.writeFile({ path: "astrum-autobackup.json", data: exportAll(), directory: Directory.Documents, encoding: Encoding.UTF8 });
+    await Filesystem.writeFile({ path: autoBackupSlotName(), data: exportAll(), directory: Directory.Documents, encoding: Encoding.UTF8 });
     return true;
   } catch { return false; }
+}
+
+// Web equivalent: a 7-slot snapshot ring in IndexedDB (PWA users previously
+// had no safety net at all). Written at most once per day per slot.
+export async function autoBackupWebRing() {
+  try {
+    const { idbSet, idbGet } = await import("./durable.js");
+    const slot = `astrum_ring_${autoBackupSlotName()}`;
+    const prev = await idbGet(slot + "_at").catch(() => null);
+    const today = new Date().toISOString().slice(0, 10);
+    if (prev === today) return false; // this slot already written today
+    await idbSet(slot, exportAll());
+    await idbSet(slot + "_at", today);
+    return true;
+  } catch { return false; }
+}
+
+export async function listWebRing() {
+  try {
+    const { idbKeys, idbGet } = await import("./durable.js");
+    const keys = (await idbKeys()).filter(k => /^astrum_ring_.*\.json$/.test(k));
+    const out = [];
+    for (const k of keys) out.push({ slot: k.replace("astrum_ring_", ""), writtenOn: await idbGet(k + "_at").catch(() => null) });
+    return out;
+  } catch { return []; }
+}
+
+export async function readWebRing(slot) {
+  try { const { idbGet } = await import("./durable.js"); return await idbGet(`astrum_ring_${slot}`); }
+  catch { return null; }
 }
 
 export async function copyToClipboard(text) {

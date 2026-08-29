@@ -432,6 +432,11 @@ function BackupCard(){
     else setMsg("✗ Clipboard unavailable");
   };
   const restore=(text)=>{
+    if(!mergeMode){
+      // REPLACE is destructive: everything on this device is overwritten.
+      const word=window.prompt("REPLACE overwrites every store on this device with the imported file. Type REPLACE to confirm:");
+      if(word!=="REPLACE"){setMsg("Replace cancelled — nothing was changed.");return;}
+    }
     try{
       const s=importAll(text,{merge:mergeMode});
       setMsg(`✓ Restored ${s.keysRestored} stores${mergeMode?` (+${s.entriesAdded} entries)`:""} — reloading…`);

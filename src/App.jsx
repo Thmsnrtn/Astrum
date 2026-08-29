@@ -59,7 +59,7 @@ const RecallScreen = lazy(() => import("./screens/RecallScreen.jsx"));
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
 import { reschedule, ensurePermission } from "./lib/notify.js";
 import { watchForUpdate } from "./lib/swUpdate.js";
-import { autoBackupNative } from "./lib/backup.js";
+import { autoBackupNative, autoBackupWebRing } from "./lib/backup.js";
 const ReviewScreen = lazy(() => import("./screens/ReviewScreen.jsx"));
 import { swPlanetLon, swDailyMotion, swTrueNode, swChiron, swLilith, swHouses, swFixstar, onSwephReady, engineInfo } from "./engine/sweph.js";
 
@@ -263,6 +263,10 @@ function AstralLiveBarInner({tab,eph,now,natalPos,hour}){
     if(eph?.pos?.moon){const z=eph.pos.moon.zodiac;list.push(`☽ ${z.degree}° ${z.name} · ${eph.moonPhase||""}`);}
     if(hour?.planet&&P[hour.planet]){const p=P[hour.planet];list.push(`${p.sym} Hour of ${p.name} · ${Math.floor((hour.msRemaining||0)/60000)}m`);}
     if(eph?.pos?.sun){const z=eph.pos.sun.zodiac;list.push(`☉ ${z.degree}° ${z.name}`);}
+    const lastExp=lastExportedAt();
+    const staleDays=lastExp?Math.floor((Date.now()-lastExp.getTime())/86400000):null;
+    if(staleDays==null)list.push("⚠ The record has never been exported — bind a backup in Profile");
+    else if(staleDays>14)list.push(`⚠ The record is ${staleDays} days unbound — export a backup in Profile`);
     return list;
   },[eph,hour]);
 
@@ -344,6 +348,8 @@ import { LEARN_TOPICS, FOUNDATIONS } from "./data/learn.js";
 
 
 function SidebarInner({tab, setTab, hour, eph, open, setOpen}) {
+  // Backup-staleness badge on the Profile row (14-day threshold).
+  const backupStale=useMemo(()=>{const d=lastExportedAt();return d==null||((Date.now()-d.getTime())/86400000)>14;},[open]);
   const p=P[hour.planet], moonVoC=eph?.voc?.isVoC;
   return (
     <>
@@ -382,7 +388,7 @@ function SidebarInner({tab, setTab, hour, eph, open, setOpen}) {
                 const active=tab===s.id;
                 return (
                   <button key={s.id} onClick={()=>{setTab(s.id);setOpen(false);}} style={{width:"100%",background:active?"rgba(200,175,100,0.1)":"none",border:"none",borderLeft:active?"2px solid #D4AF6A":"2px solid transparent",cursor:"pointer",padding:"10px 20px",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
-                    <span style={{fontSize:15,color:active?"#D4AF6A":"rgba(200,175,100,0.4)",width:20,textAlign:"center"}}>{s.icon}</span>
+                    <span style={{fontSize:15,color:active?"#D4AF6A":"rgba(200,175,100,0.4)",width:20,textAlign:"center",position:"relative"}}>{s.icon}{s.id==="profile"&&backupStale&&<span style={{position:"absolute",top:-2,right:-4,width:7,height:7,borderRadius:4,background:"#D2A060"}}/>}</span>
                     <div>
                       <div style={{fontFamily:F,fontSize:13,color:active?"#D4AF6A":"rgba(200,175,100,0.7)"}}>{s.label}</div>
                       <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)"}}>{s.desc}</div>
@@ -599,6 +605,7 @@ export default function App(){
   const [engine,setEngine]=useState(engineInfo());
   useEffect(()=>{onSwephReady(()=>setEngine(engineInfo()));},[]);
   useEffect(()=>watchForUpdate(reload=>setSwReload(()=>reload)),[]);
+  useEffect(()=>{autoBackupWebRing();},[]); // 7-slot IDB safety ring (daily, web + native)
 
   // Compute natal positions from profile (or legacy natal data)
   useEffect(()=>{
