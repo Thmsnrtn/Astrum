@@ -144,3 +144,8 @@ export const TINT_PRESETS = {
   venusian: {label:"♀ Venusian", primary:"#C87090", rgb:"192,102,132", glassBg:"16,5,11",  grad1:"rgba(110,50,70,0.20)",  grad2:"rgba(80,20,50,0.25)"},
   saturnine:{label:"♄ Saturnine",primary:"#8898A8", rgb:"122,138,158", glassBg:"5,8,16",   grad1:"rgba(50,60,82,0.20)",  grad2:"rgba(25,30,52,0.28)"},
 };
+
+// Dignity presentation + Greek vowels (shared by screens and the election engine)
+export const DIGNITY_COL={domicile:"#5CA85C",exaltation:"#D4AF6A",peregrine:"#6A5030",detriment:"#8B4040",fall:"#8B4040"};
+export const DIGNITY_LBL={domicile:"Domicile ✦",exaltation:"Exaltation ✦✦",peregrine:"Peregrine",detriment:"Detriment",fall:"Fall"};
+export const VOWELS={sun:{l:"Ι",p:"EE"},moon:{l:"Α",p:"AH"},mercury:{l:"Ε",p:"EH"},venus:{l:"Η",p:"AY"},mars:{l:"Ο",p:"OH"},jupiter:{l:"Υ",p:"EUW"},saturn:{l:"Ω",p:"OHW"}};
