@@ -12,7 +12,11 @@
 // copying values out (returns garbage), so stars go through a manual
 // ccall with copy-before-free.
 
-import SwissEph from "swisseph-wasm";
+// NOTE: swisseph-wasm is imported DYNAMICALLY inside initInstance(). A static
+// import here put the package — whose glue inlines the 4.6 MB WASM binary as
+// a base64 data URL — into the app's entry chunk, quintupling first load.
+// Dynamic import keeps the precision core out of the critical path; Meeus
+// serves until it lands (same behavior, correct chunking).
 
 let swe = null;          // initialized SwissEph instance
 let initPromise = null;
@@ -33,6 +37,7 @@ const isNode = typeof process !== "undefined" && !!process.versions?.node && typ
 // resolve wasm/ against document.baseURI — correct in dev (/wasm/), on GH
 // Pages (/Astrum/wasm/), and under Tauri/Capacitor custom schemes.
 async function initInstance() {
+  const { default: SwissEph } = await import("swisseph-wasm");
   const inst = new SwissEph();
   if (isNode) {
     await inst.initSwissEph(); // package's Node path logic is correct

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Fragment, lazy, Suspense, Component } from "react";
 import { askClaude, aiConfigured, aiUnconfiguredMessage, aiProviderInfo, resolveAIConfig, AI_PROVIDERS } from "./ai/client.js";
 import { WEBLLM_MODELS } from "./ai/webllm.js";
 import { loadJSON, saveJSON } from "./lib/storage.js";
@@ -15,19 +15,19 @@ import { FOUNDATION_PRIMERS, TOPIC_PRIMERS } from "./data/primers.js";
 import { parseFeed, addFeedEvents, loadFeed, deleteFeedSource, feedInRange, feedForDate, FEED_KIND_META, aiExtractionMessages, parseAIResponse, mergeEvents } from "./lib/intake.js";
 import { loadAthanor } from "./lib/athanor.js";
 import { OPERATION_TEMPLATES as ATHANOR_TEMPLATES } from "./data/operations.js";
-import MansionsScreen from "./screens/MansionsScreen.jsx";
-import HoraryScreen from "./screens/HoraryScreen.jsx";
-import AthanorScreen from "./screens/AthanorScreen.jsx";
-import AlmanacScreen from "./screens/AlmanacScreen.jsx";
-import GeomancyScreen from "./screens/GeomancyScreen.jsx";
-import LotsScreen from "./screens/LotsScreen.jsx";
-import LunarCycleScreen from "./screens/LunarCycleScreen.jsx";
-import RitualRuntimeScreen from "./screens/RitualRuntimeScreen.jsx";
-import SpiritCourtScreen from "./screens/SpiritCourtScreen.jsx";
-import ChaptersScreen from "./screens/ChaptersScreen.jsx";
+const MansionsScreen = lazy(() => import("./screens/MansionsScreen.jsx"));
+const HoraryScreen = lazy(() => import("./screens/HoraryScreen.jsx"));
+const AthanorScreen = lazy(() => import("./screens/AthanorScreen.jsx"));
+const AlmanacScreen = lazy(() => import("./screens/AlmanacScreen.jsx"));
+const GeomancyScreen = lazy(() => import("./screens/GeomancyScreen.jsx"));
+const LotsScreen = lazy(() => import("./screens/LotsScreen.jsx"));
+const LunarCycleScreen = lazy(() => import("./screens/LunarCycleScreen.jsx"));
+const RitualRuntimeScreen = lazy(() => import("./screens/RitualRuntimeScreen.jsx"));
+const SpiritCourtScreen = lazy(() => import("./screens/SpiritCourtScreen.jsx"));
+const ChaptersScreen = lazy(() => import("./screens/ChaptersScreen.jsx"));
 import AltarScreen from "./screens/AltarScreen.jsx";
 import { profection as calcProfection } from "./engine/profections.js";
-import OmenScreen from "./screens/OmenScreen.jsx";
+const OmenScreen = lazy(() => import("./screens/OmenScreen.jsx"));
 import { loadSpirits, upcomingObservances } from "./lib/spirits.js";
 import { computeLots, chartFromPositions } from "./engine/lots.js";
 import { electiveMemory, memoryVerdict } from "./lib/electiveMemory.js";
@@ -35,11 +35,11 @@ import { loadWatchlist, createWatch, deleteWatch, updateWatch, windowStale, refr
 import { heliacalRising, starPhase, DEFAULT_ARCUS_VISIONIS, HELIACAL_STARS } from "./engine/heliacal.js";
 import { buildDeck, loadSRS, dueCards, gradeCard } from "./lib/srs.js";
 import { groundingForAsync } from "./lib/rag.js";
-import RecallScreen from "./screens/RecallScreen.jsx";
+const RecallScreen = lazy(() => import("./screens/RecallScreen.jsx"));
 import { planUpcoming, composeBriefing, loadNotifyPrefs, saveNotifyPrefs, DEFAULT_NOTIFY_PREFS } from "./lib/scheduler.js";
 import { reschedule, ensurePermission } from "./lib/notify.js";
 import { autoBackupNative } from "./lib/backup.js";
-import ReviewScreen from "./screens/ReviewScreen.jsx";
+const ReviewScreen = lazy(() => import("./screens/ReviewScreen.jsx"));
 import { swPlanetLon, swDailyMotion, swTrueNode, swChiron, swLilith, swHouses, swFixstar, onSwephReady, engineInfo } from "./engine/sweph.js";
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -4845,6 +4845,28 @@ function TalismanScreen({eph,natalPos,profile,now}){
 // of the natal Ascendant and aged by 365.25-day division instead of the
 // birthday. The verified engine in engine/profections.js replaces it.)
 
+
+// ── Screen slot guard: lazy loading fallback + per-screen error boundary ──
+function ScreenLoading(){
+  return <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
+    <div style={{fontFamily:F,fontSize:11,color:"rgba(200,175,100,0.4)",letterSpacing:3,textTransform:"uppercase"}}>✦ opening…</div>
+  </div>;
+}
+class ScreenBoundary extends Component {
+  constructor(p){super(p);this.state={err:null};}
+  static getDerivedStateFromError(err){return {err};}
+  componentDidUpdate(prev){if(prev.tab!==this.props.tab&&this.state.err)this.setState({err:null});}
+  render(){
+    if(this.state.err)return <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"30px 24px",textAlign:"center"}}>
+      <div style={{fontSize:30,color:"#8A7050",marginBottom:12}}>⚠</div>
+      <div style={{fontFamily:F,fontSize:15,color:"#D4AF6A"}}>This room is disturbed</div>
+      <div style={{fontFamily:F,fontSize:10,color:"#8A7050",fontStyle:"italic",lineHeight:1.7,margin:"8px 0 14px",maxWidth:340}}>{String(this.state.err?.message||this.state.err).slice(0,180)}</div>
+      <button onClick={()=>this.setState({err:null})} style={{padding:"10px 22px",borderRadius:10,background:"rgba(212,175,106,0.12)",border:"1px solid rgba(212,175,106,0.35)",fontFamily:F,fontSize:10,color:"#D4AF6A",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Enter again</button>
+    </div>;
+    return this.props.children;
+  }
+}
+
 export default function App(){
   const [tab,setTab]=useState("sky");
   const [workPlanet,setWork]=useState(null);
@@ -4989,6 +5011,8 @@ export default function App(){
         <AstralLiveBar tab={tab} eph={eph} now={now} natalPos={natalPos} hour={hour}/>
 
         {/* ── Screen content — slide transition on tab change (Batch 6) ── */}
+        <ScreenBoundary tab={tab}>
+        <Suspense fallback={<ScreenLoading/>}>
         <div key={tab} style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",overflowY:"auto",animation:"slide-screen 0.2s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
           {tab==="sky"     &&<SkyScreen     now={now} hour={hour} eph={eph} fractal={fractal} natalPos={natalPos} onWork={openWork} profile={profile}/>}
           {tab==="aspects" &&<AspectsScreen eph={eph}/>}
@@ -5025,6 +5049,8 @@ export default function App(){
           {tab==="ai"      &&<AIScreen      now={now} eph={eph} fractal={fractal} natalPos={natalPos} hour={hour} profile={profile}/>}
           {tab==="profile" &&<ProfileScreen profile={profile} setProfile={setProfile} notifyPrefs={notifyPrefs} setNotifyPrefs={setNotifyPrefs}/>}
         </div>
+        </Suspense>
+        </ScreenBoundary>
 
         {/* ── Astral Control Center (Batch 5 — replaces Oracle float button) ── */}
         <AstralControlCenter tab={tab} onOracle={openOracle} setTab={setTab} natalPos={natalPos} eph={eph}/>
