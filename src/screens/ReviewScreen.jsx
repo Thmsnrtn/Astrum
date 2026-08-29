@@ -6,7 +6,10 @@
 // correlation analysis over the practitioner's own dataset.
 
 import { useState, useEffect } from "react";
-import { F, L, T, P, TRADITIONS, buildSystemPrompt } from "../App.jsx";
+import { F, L, T } from "../ui/theme.js";
+import { P } from "../data/planets.js";
+import { TRADITIONS } from "../data/traditions.js";
+import { buildSystemPrompt } from "../ai/prompt.js";
 import { loadCastings, addOutcome, closeCasting, deleteCasting, effectiveVerdict, computeStats, castingsToTSV, updateCasting, timeToResult, staleOpen } from "../lib/castings.js";
 import PhotoStrip from "./PhotoStrip.jsx";
 import { composeBook } from "../lib/bookOfResults.js";

@@ -7,7 +7,9 @@
 // Full, and a New-Moon intention becomes a casting like any other working.
 
 import { useState, useMemo } from "react";
-import { F, L, T, planetLon, dateToJD, conditionsFromProfile } from "../App.jsx";
+import { F, L, T } from "../ui/theme.js";
+import { planetLon, dateToJD } from "../engine/astro.js";
+import { conditionsFromProfile } from "../engine/chart.js";
 import { lunationTimeline, PHASES } from "../lib/lunation.js";
 import { createCasting, loadCastings, effectiveVerdict } from "../lib/castings.js";
 

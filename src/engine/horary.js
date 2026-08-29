@@ -7,7 +7,7 @@
 // and prohibition detection. Pure computation — the screen renders it and
 // the AI may draft a judgment from it.
 
-import { dateToJD, planetLon, dailyMotion, checkVoC, lonToZodiac, getDignity } from "../App.jsx";
+import { dateToJD, planetLon, dailyMotion, checkVoC, lonToZodiac, getDignity } from "./astro.js";
 import { swHouses } from "./sweph.js";
 
 const norm = a => ((a % 360) + 360) % 360;

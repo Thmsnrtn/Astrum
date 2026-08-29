@@ -6,7 +6,7 @@
 // kept simple (✕ deletes). Owners store only photoIds.
 
 import { useState, useEffect } from "react";
-import { F } from "../App.jsx";
+import { F } from "../ui/theme.js";
 import { savePhoto, loadPhoto, deletePhoto } from "../lib/photos.js";
 
 export default function PhotoStrip({ photoIds = [], onChange, label = "Photos" }) {

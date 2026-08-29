@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { initSweph } from "../engine/sweph.js";
 import { resolveDueRule } from "./athanor.js";
-import { getPlanetaryHourUnequal, planetLon, dateToJD } from "../App.jsx";
+import { getPlanetaryHourUnequal, planetLon, dateToJD } from "../engine/astro.js";
 
 const LONDON = { lat: 51.5, lon: -0.12 };
 const NOW = new Date("2026-07-15T10:00:00Z");

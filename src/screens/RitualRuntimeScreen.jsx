@@ -8,7 +8,10 @@
 // enters the Operator's Loop and can be judged later in Review.
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { F, L, T, P, TRADITIONS, TRADITION_STEPS, conditionsFromProfile } from "../App.jsx";
+import { F, L, T } from "../ui/theme.js";
+import { P } from "../data/planets.js";
+import { TRADITIONS, TRADITION_STEPS } from "../data/traditions.js";
+import { conditionsFromProfile } from "../engine/chart.js";
 import { createCasting } from "../lib/castings.js";
 import { loadSpirits } from "../lib/spirits.js";
 import { startDrum, bell, soundAvailable } from "../lib/sound.js";

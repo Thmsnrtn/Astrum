@@ -9,7 +9,9 @@
 // months, LB after the 211-unit circuit.
 
 import { useState, useMemo } from "react";
-import { F, L, T, P, lonToZodiac } from "../App.jsx";
+import { F, L, T } from "../ui/theme.js";
+import { P } from "../data/planets.js";
+import { lonToZodiac } from "../engine/astro.js";
 import { computeLots, chartFromPositions } from "../engine/lots.js";
 import { profection } from "../engine/profections.js";
 import { zrCurrent, zrSubdivide, ZR_UNITS, SIGN_NAMES } from "../engine/zr.js";

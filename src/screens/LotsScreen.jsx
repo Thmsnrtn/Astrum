@@ -7,7 +7,10 @@
 // optional reading interprets the lots in the practitioner's tradition.
 
 import { useState, useMemo } from "react";
-import { F, L, T, TRADITIONS, buildSystemPrompt, lonToZodiac } from "../App.jsx";
+import { F, L, T } from "../ui/theme.js";
+import { TRADITIONS } from "../data/traditions.js";
+import { buildSystemPrompt } from "../ai/prompt.js";
+import { lonToZodiac } from "../engine/astro.js";
 import { computeLots, chartFromPositions, wholeSignHouse, LOTS } from "../engine/lots.js";
 import { askAI, aiConfigured, aiUnconfiguredMessage } from "../ai/client.js";
 

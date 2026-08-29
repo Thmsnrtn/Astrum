@@ -9,7 +9,8 @@
 // Exports a clean printable HTML almanac (print → PDF on any iPad).
 
 import { useState, useMemo } from "react";
-import { F, L, T, P } from "../App.jsx";
+import { F, L, T } from "../ui/theme.js";
+import { P } from "../data/planets.js";
 import { buildMonthModel, dayHours, EVENT_GLYPH } from "../lib/almanac.js";
 import { loadFeed, FEED_KIND_META } from "../lib/intake.js";
 import { loadCastings } from "../lib/castings.js";

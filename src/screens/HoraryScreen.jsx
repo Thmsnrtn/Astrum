@@ -8,7 +8,11 @@
 // be judged true or false in Review once life delivers the verdict.
 
 import { useState } from "react";
-import { F, L, T, P, TRADITIONS, buildSystemPrompt, conditionsFromProfile } from "../App.jsx";
+import { F, L, T } from "../ui/theme.js";
+import { P } from "../data/planets.js";
+import { TRADITIONS } from "../data/traditions.js";
+import { buildSystemPrompt } from "../ai/prompt.js";
+import { conditionsFromProfile } from "../engine/chart.js";
 import { castHorary, horaryToText, QUESTION_HOUSES } from "../engine/horary.js";
 import { createCasting } from "../lib/castings.js";
 import { askClaude } from "../ai/client.js";

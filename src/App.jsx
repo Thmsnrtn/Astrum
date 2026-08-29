@@ -66,21 +66,19 @@ async function triggerHaptic(style="medium"){
 // ═══════════════════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════════
 // ENGINE — moved to src/engine/{astro,chart,scan}.js (de-cycling).
-// Imports injected below; public symbols re-exported via the shim.
+// Imports below; App.jsx is now leaf-only (nothing imports from it).
 // ═══════════════════════════════════════════════════════════════════════
 import { D2R, norm, dateToJD, sunLon, moonLon, EL, equationOfCenter, planetLon, dailyMotion, SIGNS, lonToZodiac, DOMICILE, EXALT, getDignity, dignityScore, getCombustion, BOUNDS, getBound, antiscionOf, contraAntiscionOf, getAntisciaAspects, getPlanetPhase, checkVoC, nextIngress, HOUR_ORDER, DAY_RULERS, DAY_NAMES, getPlanetaryHour, precessStar, starLonAt, meanNode, sunriseSetUTC, gstDeg, lstDeg, obliquity, calcASC, calcMC, calcPOF, calcPOS, getPlanetaryHourUnequal, YEAR_SEC, L_DUR, calcFractal, fmtTime, fmtWindowTime, calcWindowBounds, calcL2Forecast, OUTER_EPOCHS, J2000_MS, outerPlanetLon, JS_CONJUNCTIONS, DECADE_FORECAST, getAspectsAll, meanLilith, chironLon, trueNode, TRIPLICITIES, ELEMENT_BY_SIGN, getTriplicity, calcHouses, getHouseNum, HOUSE_NAMES, HOUSE_MEANINGS } from "./engine/astro.js";
 import { useEphemeris, calcNatal, conditionsFromProfile } from "./engine/chart.js";
 import { calcProgressions, calcSolarArc, TRANSIT_ASPECTS, scanTransits, FIRDARIA_DAY, FIRDARIA_NIGHT, FIRDARIA_YRS, calcFirdaria, calcSolarReturn, calcLunarReturn, scanIngresses, scanStations, scanEclipses, lonToDecl, getDeclAspects, getMidpoints, calcAllLots, checkViaCombusta, checkBesiegement, getMoonAspects, checkMaleficAffliction, getMoonSignRelation, checkTranslation, checkProhibition, getStarConj, getMoonSpeed, MOON_PHASE_NAMES, electionBandKey, electionFactors, assessElection, scanElections } from "./engine/scan.js";
-export { dateToJD, planetLon, dailyMotion, lonToZodiac, getDignity, checkVoC, getPlanetaryHour, getPlanetaryHourUnequal, conditionsFromProfile };
 // ═══════════════════════════════════════════════════════════════════════
 // PLANETARY / DECAN / STAR DATA — moved to src/data/ (de-cycling).
-// Re-exported here temporarily so existing "../App.jsx" imports compile;
-// the shim goes away once all importers point at src/data directly.
+// (formerly re-exported here; all importers now use the real modules)
+
 // ═══════════════════════════════════════════════════════════════════════
 import { P } from "./data/planets.js";
 import { DECANS } from "./data/decans.js";
 import { FIXED_STARS } from "./data/fixedStars.js";
-export { P, DECANS, FIXED_STARS };
 
 
 
@@ -101,7 +99,6 @@ function savePeople(p){try{localStorage.setItem("astrum_people",JSON.stringify(p
 // ═══════════════════════════════════════════════════════════════════════
 import { CSS, F, GOLD, L, T, B, TINT_PRESETS, DIGNITY_COL, DIGNITY_LBL, VOWELS } from "./ui/theme.js";
 import { NAV_SECTIONS } from "./ui/nav.js";
-export { F, L, T };
 
 // ═══════════════════════════════════════════════════════════════════════
 // TRADITION MODULES
@@ -317,7 +314,6 @@ function AstralControlCenter({tab,onOracle,setTab,natalPos,eph}){
 import { TRADITIONS, TRADITION_STEPS, RUNE_PRINCIPLES } from "./data/traditions.js";
 import { buildSystemPrompt, loadKnowledge, saveKnowledge } from "./ai/prompt.js";
 import { LEARN_TOPICS, FOUNDATIONS } from "./data/learn.js";
-export { TRADITIONS, TRADITION_STEPS, buildSystemPrompt, LEARN_TOPICS, FOUNDATIONS };
 // ═══════════════════════════════════════════════════════════════════════
 
 

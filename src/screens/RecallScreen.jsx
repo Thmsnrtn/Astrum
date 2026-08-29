@@ -7,7 +7,7 @@
 // answer surface with their source and a jump to where they live. Fully local.
 
 import { useState, useMemo } from "react";
-import { F, L, T } from "../App.jsx";
+import { F, L, T } from "../ui/theme.js";
 import { buildRAG, ragSearch } from "../lib/rag.js";
 
 const GOLD = "#D4AF6A";

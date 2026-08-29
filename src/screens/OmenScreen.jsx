@@ -8,7 +8,8 @@
 // conversation.
 
 import { useState } from "react";
-import { F, L, T, conditionsFromProfile } from "../App.jsx";
+import { F, L, T } from "../ui/theme.js";
+import { conditionsFromProfile } from "../engine/chart.js";
 import { OMEN_KINDS, loadOmens, createOmen, deleteOmen } from "../lib/omens.js";
 
 const GOLD = "#D4AF6A";

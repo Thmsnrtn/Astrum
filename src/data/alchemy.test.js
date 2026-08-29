@@ -8,7 +8,7 @@ import {
 } from "./alchemy.js";
 import { OPERATION_TEMPLATES, TEMPLATE_ORDER, OPERATION_FAMILIES, TIER_META } from "./operations.js";
 import { resolveDueRule } from "../lib/athanor.js";
-import { getPlanetaryHourUnequal, planetLon, dateToJD } from "../App.jsx";
+import { getPlanetaryHourUnequal, planetLon, dateToJD } from "../engine/astro.js";
 
 const LONDON = { lat: 51.5, lon: -0.12 };
 const NOW = new Date("2026-07-15T10:00:00Z");
@@ -80,7 +80,7 @@ describe("operation templates", () => {
 describe("decan images (Picatrix II.11 / Agrippa II.37)", () => {
   it("36 images, each aligned with the DECANS table's tarot card and carrying both traditions", async () => {
     const { DECAN_IMAGES } = await import("./decanImages.js");
-    const { DECANS } = await import("../App.jsx");
+    const { DECANS } = await import("./decans.js");
     expect(DECAN_IMAGES).toHaveLength(36);
     DECAN_IMAGES.forEach((d, i) => {
       const card = DECANS[i].tarot.replace("Pents", "Pentacles");
@@ -94,7 +94,7 @@ describe("decan images (Picatrix II.11 / Agrippa II.37)", () => {
 describe("learn primers", () => {
   it("every foundation module has a primer; every topic primer maps to a real topic", async () => {
     const { FOUNDATION_PRIMERS, TOPIC_PRIMERS } = await import("./primers.js");
-    const { FOUNDATIONS, LEARN_TOPICS } = await import("../App.jsx");
+    const { FOUNDATIONS, LEARN_TOPICS } = await import("./learn.js");
     FOUNDATIONS.forEach(f => {
       const p = FOUNDATION_PRIMERS[f.id];
       expect(p, `primer for ${f.id} (${f.title})`).toBeTruthy();

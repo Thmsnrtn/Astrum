@@ -7,7 +7,7 @@
 // times up as reminders.
 
 import { loadJSON, saveJSON } from "./storage.js";
-import { getPlanetaryHour, getPlanetaryHourUnequal, planetLon, dateToJD } from "../App.jsx";
+import { getPlanetaryHour, getPlanetaryHourUnequal, planetLon, dateToJD } from "../engine/astro.js";
 import { OPERATION_TEMPLATES } from "../data/operations.js";
 
 export function loadAthanor() { return loadJSON("astrum_athanor", []); }

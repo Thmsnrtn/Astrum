@@ -12,7 +12,9 @@
 // Everything cast here flows into the Operator's Loop.
 
 import { useState } from "react";
-import { F, L, T, P, conditionsFromProfile } from "../App.jsx";
+import { F, L, T } from "../ui/theme.js";
+import { P } from "../data/planets.js";
+import { conditionsFromProfile } from "../engine/chart.js";
 import { OPERATION_TEMPLATES, OPERATION_FAMILIES, TIER_META, TEMPLATE_ORDER } from "../data/operations.js";
 import {
   GREAT_WORK_STAGES, CAUDA_PAVONIS, STAGE_SCHEMES_NOTE, ALCHEMICAL_ZODIAC, RIPLEY_GATES,

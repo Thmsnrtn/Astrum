@@ -8,7 +8,8 @@
 // bell marks each hour boundary.
 
 import { useState, useEffect, useRef } from "react";
-import { F, P } from "../App.jsx";
+import { F } from "../ui/theme.js";
+import { P } from "../data/planets.js";
 import { MoonDisc } from "./LunarCycleScreen.jsx";
 import { loadSpirits, upcomingObservances } from "../lib/spirits.js";
 import { loadWatchlist } from "../lib/watchlist.js";

@@ -9,7 +9,8 @@
 // and offline — no storage, no network — so it runs on a wifi-less iPad and
 // is unit-testable in Node.
 
-import { dateToJD, planetLon, dailyMotion, checkVoC, getPlanetaryHour, getPlanetaryHourUnequal, DECANS } from "../App.jsx";
+import { dateToJD, planetLon, dailyMotion, checkVoC, getPlanetaryHour, getPlanetaryHourUnequal } from "../engine/astro.js";
+import { DECANS } from "../data/decans.js";
 import { getMansion } from "../data/mansions.js";
 
 const norm = a => ((a % 360) + 360) % 360;

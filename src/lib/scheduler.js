@@ -9,7 +9,8 @@
 // deliver them per platform. iOS caps ~64 pending local notifications, so
 // each plan carries a priority (lower = more important).
 
-import { getPlanetaryHour, getPlanetaryHourUnequal, checkVoC, dateToJD, P } from "../App.jsx";
+import { getPlanetaryHour, getPlanetaryHourUnequal, checkVoC, dateToJD } from "../engine/astro.js";
+import { P } from "../data/planets.js";
 import { getMansion } from "../data/mansions.js";
 import { alchemicalSeason, moonSignOperation, moonWorkGuidance } from "../data/alchemy.js";
 import { feedInRange } from "./intake.js";

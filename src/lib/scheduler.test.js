@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { initSweph } from "../engine/sweph.js";
 import { planUpcoming, DEFAULT_NOTIFY_PREFS } from "./scheduler.js";
-import { getPlanetaryHourUnequal } from "../App.jsx";
+import { getPlanetaryHourUnequal } from "../engine/astro.js";
 
 const LONDON = { lat: 51.5, lon: -0.12 };
 const NOW = new Date("2026-07-15T10:00:00Z");

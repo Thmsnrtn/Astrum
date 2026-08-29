@@ -9,7 +9,8 @@
 // ambient scheduler.
 
 import { useState } from "react";
-import { F, L, T, P } from "../App.jsx";
+import { F, L, T } from "../ui/theme.js";
+import { P } from "../data/planets.js";
 import { SPIRIT_KINDS, loadSpirits, createSpirit, updateSpirit, deleteSpirit, addLogEntry, upcomingObservances, daysSinceOffering } from "../lib/spirits.js";
 
 const GOLD = "#D4AF6A";

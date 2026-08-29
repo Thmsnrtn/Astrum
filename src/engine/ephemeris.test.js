@@ -96,7 +96,7 @@ describe("swiss ephemeris adapter", () => {
 
 describe("fixed star catalog integrity", () => {
   it("every catalog star resolves in sefstars and matches its stored J2000 lon and sign", async () => {
-    const { FIXED_STARS } = await import("../App.jsx");
+    const { FIXED_STARS } = await import("../data/fixedStars.js");
     const SIGNS = ["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"];
     FIXED_STARS.forEach(s => {
       const r = swFixstar(s.name, JD_J2000);
@@ -107,7 +107,7 @@ describe("fixed star catalog integrity", () => {
     });
   });
   it("all 15 Behenian stars are present in the catalog with materia", async () => {
-    const { FIXED_STARS } = await import("../App.jsx");
+    const { FIXED_STARS } = await import("../data/fixedStars.js");
     const { BEHENIAN } = await import("../data/behenian.js");
     const names = new Set(FIXED_STARS.map(s => s.name));
     Object.keys(BEHENIAN).forEach(b => expect(names.has(b), `${b} in catalog`).toBe(true));
