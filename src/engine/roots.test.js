@@ -251,3 +251,34 @@ describe("nextMansionWindow", () => {
     expect(w.startJd).toBe(insideJd);
   });
 });
+
+describe("nextCleanMansionWindow", () => {
+  const { nextCleanMansionWindow, nextMansionWindow } = scanApi;
+  const jd0 = 2460900.5;
+  it("the clean moment really passes every check and sits in the mansion", async () => {
+    const { moonLon: mLon, sunLon: sLon, checkVoC: voc } = await import("./astro.js");
+    const norm360 = x => ((x % 360) + 360) % 360;
+    let found = 0;
+    for (const n of [3, 10, 17, 24]) {
+      const r = nextCleanMansionWindow(n, jd0, 60, "lilly");
+      if (!r) continue; // a mansion can genuinely have no clean window in horizon
+      found++;
+      expect(r.cleanJd).toBeGreaterThanOrEqual(r.startJd);
+      expect(r.cleanJd).toBeLessThan(r.endJd);
+      expect(voc(r.cleanJd, "lilly").isVoC).toBe(false);
+      expect(norm360(mLon(r.cleanJd) - sLon(r.cleanJd))).toBeLessThan(180); // waxing
+      // The first clean moment is often the window's opening itself, where
+      // bisection places the Moon within ~1e-9° of the boundary — shift by
+      // an epsilon so "on the threshold" counts as inside.
+      const off = norm360(mLon(r.cleanJd) - (n - 1) * (360 / 28) + 0.01);
+      expect(off).toBeLessThan(360 / 28 + 0.02);
+    }
+    expect(found).toBeGreaterThan(1); // most mansions have a clean window in 60 days
+  });
+  it("respects the horizon", () => {
+    // With a 1-day horizon most mansions are simply out of reach.
+    let nulls = 0;
+    for (let n = 1; n <= 28; n++) if (!nextCleanMansionWindow(n, jd0, 1)) nulls++;
+    expect(nulls).toBeGreaterThan(20);
+  });
+});

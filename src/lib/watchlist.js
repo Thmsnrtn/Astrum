@@ -13,9 +13,9 @@ import { deleteRecord } from "./sync/tombstones.js";
 export function loadWatchlist() { return loadJSON("astrum_watchlist", []); }
 export function saveWatchlist(list) { saveJSON("astrum_watchlist", list); }
 
-export function createWatch({ label, planet, minScore = 60, deadline = null }) {
+export function createWatch({ label, planet, minScore = 60, deadline = null, mansion = null }) {
   const w = { id: `w_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    label: label || "Unnamed intention", planet, minScore, deadline,
+    label: label || "Unnamed intention", planet, minScore, deadline, mansion,
     active: true, nextWindow: null, computedAt: null, createdAt: new Date().toISOString() };
   saveWatchlist([w, ...loadWatchlist()]);
   return w;
@@ -37,16 +37,21 @@ export function windowStale(watch, now = new Date(), maxAgeHours = 6) {
   return false;
 }
 
-// Refresh a watch's cached window. scanFn(planet, days) → [{date, assess:{score,grade}}].
-// Scans up to the deadline (or 30 days), keeps the first window ≥ minScore.
+// Refresh a watch's cached window. scanFn(watch, days) → [{date, assess:{score,grade}}].
+// Scans up to the deadline (or 30 days). Planetary watches keep the first
+// window ≥ minScore; mansion watches keep the first window outright — a
+// mansion scan already returns only clean moments (not void, waxing,
+// unbesieged), so a numeric threshold does not apply.
 export function refreshWatch(watch, now, scanFn) {
   const horizon = watch.deadline
     ? Math.max(1, Math.min(60, Math.ceil((new Date(watch.deadline) - now) / 86400000)))
     : 30;
   let nextWindow = null;
   try {
-    const results = scanFn(watch.planet, horizon) || [];
-    const hit = results.find(r => r.assess?.score >= watch.minScore && new Date(r.date) > now);
+    const results = scanFn(watch, horizon) || [];
+    const hit = watch.mansion
+      ? results.find(r => new Date(r.date) > now)
+      : results.find(r => r.assess?.score >= watch.minScore && new Date(r.date) > now);
     if (hit) nextWindow = { date: new Date(hit.date).toISOString(), score: hit.assess.score, grade: hit.assess.grade };
   } catch {}
   return updateWatch(watch.id, { nextWindow, computedAt: new Date(now).toISOString() });
@@ -62,7 +67,7 @@ export function watchPlans(watchlist, now, end) {
     [[24 * 3600000, "opens in 24 hours"], [3600000, "opens in one hour — prepare"]].forEach(([lead, phrase], i) => {
       const at = new Date(start.getTime() - lead);
       if (at > now && at < end) plans.push({ id: `vigil_${w.id}_${i}`, at, kind: "vigil", priority: 1,
-        title: `👁 ${w.label}`, body: `Your watched window ${phrase}. Score ${w.nextWindow.score}.` });
+        title: `👁 ${w.label}`, body: `Your watched window ${phrase}. ${w.nextWindow.grade === "mansion" ? `Clean mansion window.` : `Score ${w.nextWindow.score}.`}` });
     });
   }
   return plans;

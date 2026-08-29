@@ -526,3 +526,24 @@ export function nextMansionWindow(n,jd){
   const endJd=nextMoonCrossing(endLon,startJd);
   return{startJd,endJd,hours:(endJd-startJd)*24,alreadyIn:inside};
 }
+
+// The next CLEAN window of mansion n: first moment inside a coming window
+// where the classical lunar checks all pass — Moon not void (under the
+// caller's doctrine), waxing, and not besieged between the malefics.
+// Samples each window at 2-hour steps; walks successive windows (one
+// sidereal month apart) up to maxDays out. Returns null if none qualifies.
+export function nextCleanMansionWindow(n,jd,maxDays=60,vocMode="lilly"){
+  let cursor=jd;
+  for(let i=0;i<Math.ceil(maxDays/27)+2;i++){
+    const w=nextMansionWindow(n,cursor);
+    if(w.startJd>jd+maxDays)return null;
+    for(let t=w.startJd;t<w.endJd;t+=2/24){
+      const clean=!checkVoC(t,vocMode).isVoC
+        &&norm(moonLon(t)-sunLon(t))<180
+        &&!checkBesiegement(t);
+      if(clean)return{...w,cleanJd:t};
+    }
+    cursor=w.endJd+0.01;
+  }
+  return null;
+}

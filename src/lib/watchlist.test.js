@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { windowStale, watchPlans } from "./watchlist.js";
+import { describe, it, expect, beforeAll } from "vitest";
+import { windowStale, watchPlans, createWatch, refreshWatch, loadWatchlist } from "./watchlist.js";
 
 const NOW = new Date("2026-07-17T12:00:00Z");
 
@@ -36,5 +36,38 @@ describe("watchPlans", () => {
     const w = { id: "w1", active: true, label: "x", nextWindow: { date: "2026-07-21T00:00:00Z", score: 70 } };
     const plans = watchPlans([w], NOW, end); // T-24h = Jul 20 00:00 (inside), T-1h = Jul 20 23:00 (outside)
     expect(plans).toHaveLength(1);
+  });
+});
+
+describe("refreshWatch (scanFn receives the whole watch)", () => {
+  beforeAll(() => {
+    if (typeof globalThis.localStorage === "undefined") {
+      const m = new Map();
+      globalThis.localStorage = {
+        getItem: k => (m.has(k) ? m.get(k) : null),
+        setItem: (k, v) => m.set(k, String(v)),
+        removeItem: k => m.delete(k),
+        clear: () => m.clear(),
+      };
+    }
+    localStorage.clear();
+  });
+  it("planetary watches filter by minScore; mansion watches take the first clean hit", () => {
+    const w1 = createWatch({ label: "planetary", planet: "jupiter", minScore: 80 });
+    const later = new Date(NOW.getTime() + 86400000).toISOString();
+    let sawWatch = null;
+    refreshWatch(w1, NOW, (watch) => { sawWatch = watch; return [
+      { date: later, assess: { score: 70, grade: "Good" } },
+      { date: later, assess: { score: 85, grade: "Excellent" } },
+    ]; });
+    expect(sawWatch.id).toBe(w1.id);                    // new contract: the watch itself
+    const r1 = loadWatchlist().find(w => w.id === w1.id);
+    expect(r1.nextWindow.score).toBe(85);               // 70 filtered out by minScore
+
+    const w2 = createWatch({ label: "mansion", planet: null, mansion: 3, minScore: 80 });
+    refreshWatch(w2, NOW, () => [{ date: later, assess: { score: "clean", grade: "mansion" } }]);
+    const r2 = loadWatchlist().find(w => w.id === w2.id);
+    expect(r2.nextWindow.grade).toBe("mansion");        // no numeric threshold applied
+    expect(r2.nextWindow.score).toBe("clean");
   });
 });
