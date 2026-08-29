@@ -17,9 +17,9 @@ export default function PlanetsScreen({eph,natalPos,now}){
         {Object.keys(P).map(pk=>{
           const pl2=P[pk],pos2=eph.pos[pk],a=sel===pk;
           return (
-            <button key={pk} onClick={()=>{setSel(pk);setTab("overview");}} style={{flex:1,padding:"8px 4px",borderRadius:11,background:a?`${pl2.col}18`:"rgba(8,5,22,0.5)",border:`1px solid ${a?pl2.col+"50":"rgba(200,175,100,0.09)"}`,cursor:"pointer"}}>
+            <button key={pk} onClick={()=>{setSel(pk);setTab("overview");}} style={{flex:1,padding:"8px 4px",borderRadius:11,background:a?`${pl2.col}18`:"rgba(8,5,22,0.5)",border:`1px solid ${a?pl2.col+"50":"rgba(var(--tint-rgb),0.09)"}`,cursor:"pointer"}}>
               <div style={{fontSize:15,textAlign:"center",color:pl2.col}}>{pl2.sym}</div>
-              <div style={{fontFamily:F,fontSize:6,color:a?pl2.col:DIGNITY_COL[pos2.dignity],letterSpacing:1,textAlign:"center",marginTop:2}}>{pos2.isRetro?"℞":DIGNITY_LBL[pos2.dignity].split(" ")[0].slice(0,3).toUpperCase()}</div>
+              <div style={{fontFamily:F,fontSize:8,color:a?pl2.col:DIGNITY_COL[pos2.dignity],letterSpacing:1,textAlign:"center",marginTop:2}}>{pos2.isRetro?"℞":DIGNITY_LBL[pos2.dignity].split(" ")[0].slice(0,3).toUpperCase()}</div>
             </button>
           );
         })}
@@ -36,7 +36,7 @@ export default function PlanetsScreen({eph,natalPos,now}){
         </div>
         <div style={{display:"flex",gap:5,marginTop:10}}>
           {["overview","materia","ritual","hymn"].map(t=>(
-            <button key={t} onClick={()=>setTab(t)} style={{padding:"5px 10px",borderRadius:7,background:tab===t?`${pl.col}18`:"rgba(0,0,0,0.3)",border:`1px solid ${tab===t?pl.col+"40":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:8,color:tab===t?pl.col:"#7A6030",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>{t}</button>
+            <button key={t} onClick={()=>setTab(t)} style={{padding:"5px 10px",borderRadius:7,background:tab===t?`${pl.col}18`:"rgba(0,0,0,0.3)",border:`1px solid ${tab===t?pl.col+"40":"rgba(var(--tint-rgb),0.1)"}`,fontFamily:F,fontSize:8,color:tab===t?pl.col:"#7A6030",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>{t}</button>
           ))}
         </div>
       </div>
@@ -46,7 +46,7 @@ export default function PlanetsScreen({eph,natalPos,now}){
             <div className="card">
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"6px 12px"}}>
                 {[["Day",pl.day],["Metal",pl.metal],["Number",pl.number],["Angel",pl.angel],["Intelligence",pl.intelligence],["Spirit",pl.spirit]].map(([k,v])=>(
-                  <div key={k}><div style={L("rgba(200,175,100,0.4)",7)}>{k}</div><div style={{fontFamily:F,fontSize:11,color:"#C4A870",marginTop:2}}>{v}</div></div>
+                  <div key={k}><div style={L("rgba(var(--tint-rgb),0.4)",7)}>{k}</div><div style={{fontFamily:F,fontSize:11,color:"#C4A870",marginTop:2}}>{v}</div></div>
                 ))}
               </div>
             </div>
@@ -68,7 +68,7 @@ export default function PlanetsScreen({eph,natalPos,now}){
                 <div style={{fontFamily:F,fontSize:12,color:"rgba(255,215,0,0.8)",marginTop:6,fontStyle:"italic"}}>
                   Born with {pl.name} in {natal.decan.name} ({natal.decan.sym} {natal.decan.sign} · {natal.dignity})
                 </div>
-                <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.5)",marginTop:4,lineHeight:1.7}}>
+                <div style={{fontFamily:F,fontSize:10,color:"rgba(var(--tint-rgb),0.5)",marginTop:4,lineHeight:1.7}}>
                   {natal.dignity==="domicile"||natal.dignity==="exaltation"?"This is a strong natal placement — working with this planet is naturally amplified for you.":"This natal position means working with this planet requires more care and precise timing."}
                 </div>
               </div>
@@ -95,7 +95,7 @@ export default function PlanetsScreen({eph,natalPos,now}){
                 <div style={{textAlign:"center"}}>
                   <div style={{fontSize:38,color:pl.col,fontFamily:"serif",lineHeight:1}}>{VOWELS[sel]?.l}</div>
                   <div style={{fontFamily:F,fontSize:11,color:pl.col,marginTop:4}}>{VOWELS[sel]?.p}</div>
-                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)"}}>{pl.vowelGreek}</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)"}}>{pl.vowelGreek}</div>
                 </div>
                 <div style={{flex:1,fontFamily:F,fontSize:10,color:"#9A8060",fontStyle:"italic",lineHeight:1.7}}>Sound sustained for pure {pl.name} attunement. Day short, hour long in the 49 Calls.</div>
               </div>

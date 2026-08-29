@@ -53,8 +53,8 @@ export default function TalismanScreen({eph,natalPos,profile,now}){
       setSaved(true);
     }catch(e){}
   };
-  const IS={width:"100%",background:"rgba(0,0,0,0.45)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"9px 11px",fontSize:12,boxSizing:"border-box"};
-  const NEXT=(en,lbl="CONTINUE")=><button onClick={()=>setStep(step+1)} disabled={!en} style={{width:"100%",marginTop:12,padding:"12px 0",borderRadius:11,background:en?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${en?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:10,color:en?GOLD:"#5A4020",letterSpacing:3,textTransform:"uppercase",cursor:en?"pointer":"default"}}>{lbl}</button>;
+  const IS={width:"100%",background:"rgba(0,0,0,0.45)",border:"1px solid rgba(var(--tint-rgb),0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"9px 11px",fontSize:12,boxSizing:"border-box"};
+  const NEXT=(en,lbl="CONTINUE")=><button onClick={()=>setStep(step+1)} disabled={!en} style={{width:"100%",marginTop:12,padding:"12px 0",borderRadius:11,background:en?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${en?"rgba(var(--tint-rgb),0.35)":"rgba(var(--tint-rgb),0.1)"}`,fontFamily:F,fontSize:10,color:en?GOLD:"#5A4020",letterSpacing:3,textTransform:"uppercase",cursor:en?"pointer":"default"}}>{lbl}</button>;
   const WIZ=["Intent","Election","Design","Consecration","Record"];
   return(
     <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:20}}>
@@ -64,21 +64,21 @@ export default function TalismanScreen({eph,natalPos,profile,now}){
       </div>
       <div style={{display:"flex",gap:4,padding:"4px 14px 10px"}}>
         {WIZ.map((w,i)=>(
-          <button key={w} onClick={()=>i<step&&setStep(i)} style={{flex:1,padding:"6px 0",borderRadius:8,background:i===step?"rgba(212,175,106,0.13)":"rgba(8,5,22,0.5)",border:"1px solid "+(i===step?"rgba(212,175,106,0.4)":i<step?"rgba(92,168,92,0.25)":"rgba(200,175,100,0.08)"),fontFamily:F,fontSize:7,color:i===step?GOLD:i<step?"#5CA85C":"#5A4020",letterSpacing:1,textTransform:"uppercase",cursor:i<step?"pointer":"default"}}>{i<step?"✓ ":""}{w}</button>
+          <button key={w} onClick={()=>i<step&&setStep(i)} style={{flex:1,padding:"6px 0",borderRadius:8,background:i===step?"rgba(var(--tint-rgb),0.13)":"rgba(8,5,22,0.5)",border:"1px solid "+(i===step?"rgba(var(--tint-rgb),0.4)":i<step?"rgba(92,168,92,0.25)":"rgba(var(--tint-rgb),0.08)"),fontFamily:F,fontSize:8,color:i===step?GOLD:i<step?"#5CA85C":"#5A4020",letterSpacing:1,textTransform:"uppercase",cursor:i<step?"pointer":"default"}}>{i<step?"✓ ":""}{w}</button>
         ))}
       </div>
       <div style={{flex:1,overflowY:"auto",padding:"0 14px"}}>
         {step===0&&<div className="card">
           <div style={L()}>What is this talisman for?</div>
           <textarea value={intent} onChange={e=>setIntent(e.target.value)} rows={2} placeholder="Steady increase of income through my own work…" style={{...IS,marginTop:8,resize:"none"}}/>
-          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase",margin:"12px 0 6px"}}>Under Which Sphere</div>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:2,textTransform:"uppercase",margin:"12px 0 6px"}}>Under Which Sphere</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
             {Object.entries(P).map(([pk,pl])=>{
               const pos=eph.pos[pk],a=planet===pk;
-              return(<button key={pk} onClick={()=>setPlanet(pk)} style={{padding:"9px 10px",borderRadius:10,background:a?pl.col+"14":"rgba(0,0,0,0.25)",border:`1px solid ${a?pl.col+"50":"rgba(200,175,100,0.08)"}`,cursor:"pointer",textAlign:"left"}}>
+              return(<button key={pk} onClick={()=>setPlanet(pk)} style={{padding:"9px 10px",borderRadius:10,background:a?pl.col+"14":"rgba(0,0,0,0.25)",border:`1px solid ${a?pl.col+"50":"rgba(var(--tint-rgb),0.08)"}`,cursor:"pointer",textAlign:"left"}}>
                 <span style={{fontSize:14,color:pl.col}}>{pl.sym}</span>
-                <span style={{fontFamily:F,fontSize:10,color:a?pl.col:"rgba(200,175,100,0.5)",marginLeft:6}}>{pl.name}</span>
-                <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.3)",marginTop:2,fontStyle:"italic"}}>{pl.domains.slice(0,3).join(" · ")}{pos?.dignity==="domicile"||pos?.dignity==="exaltation"?" · STRONG NOW":""}</div>
+                <span style={{fontFamily:F,fontSize:10,color:a?pl.col:"rgba(var(--tint-rgb),0.5)",marginLeft:6}}>{pl.name}</span>
+                <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.3)",marginTop:2,fontStyle:"italic"}}>{pl.domains.slice(0,3).join(" · ")}{pos?.dignity==="domicile"||pos?.dignity==="exaltation"?" · STRONG NOW":""}</div>
               </button>);
             })}
           </div>
@@ -91,7 +91,7 @@ export default function TalismanScreen({eph,natalPos,profile,now}){
           {elections&&elections.length===0&&<div style={{fontFamily:F,fontSize:10,color:"#9A7060",fontStyle:"italic",marginTop:10,lineHeight:1.7}}>No qualifying window in the next 30 days — {P[planet].name} may be retrograde, combust, or out of dignity. Consider another sphere, or work the moment anyway below.</div>}
           {elections&&elections.slice(0,8).map((e,i)=>{
             const isSel=chosen&&!chosen.isNow&&chosen.date.getTime()===e.date.getTime();
-            const gc=e.assess.score>=90?"#FFD700":e.assess.score>=75?"#5CA85C":"#D4AF6A";
+            const gc=e.assess.score>=90?"#FFD700":e.assess.score>=75?"#5CA85C":GOLD;
             return(<button key={i} onClick={()=>setChosen({date:e.date,assess:e.assess})} style={{width:"100%",marginTop:7,padding:"10px 12px",borderRadius:11,background:isSel?gc+"14":"rgba(8,5,22,0.6)",border:`1px solid ${isSel?gc+"60":gc+"22"}`,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div style={{textAlign:"left"}}>
                 <div style={{fontFamily:F,fontSize:11,color:"#C4A870"}}>{fmtD(e.date)}</div>
@@ -100,7 +100,7 @@ export default function TalismanScreen({eph,natalPos,profile,now}){
               <div style={{fontFamily:F,fontSize:22,color:gc}}>{e.assess.score}</div>
             </button>);
           })}
-          <button onClick={()=>setChosen({date:new Date(now),assess:assessElection(new Date(now),planet,natalPos),isNow:true})} style={{width:"100%",marginTop:8,padding:"9px 0",borderRadius:10,background:chosen?.isNow?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${chosen?.isNow?"rgba(212,175,106,0.4)":"rgba(200,175,100,0.12)"}`,fontFamily:F,fontSize:8.5,color:chosen?.isNow?GOLD:"rgba(200,175,100,0.45)",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Or: work this present moment</button>
+          <button onClick={()=>setChosen({date:new Date(now),assess:assessElection(new Date(now),planet,natalPos),isNow:true})} style={{width:"100%",marginTop:8,padding:"9px 0",borderRadius:10,background:chosen?.isNow?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${chosen?.isNow?"rgba(var(--tint-rgb),0.4)":"rgba(var(--tint-rgb),0.12)"}`,fontFamily:F,fontSize:8.5,color:chosen?.isNow?GOLD:"rgba(var(--tint-rgb),0.45)",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Or: work this present moment</button>
           {chosen&&<div style={{fontFamily:F,fontSize:9.5,color:"#7AB07A",marginTop:8,textAlign:"center"}}>Chosen: {fmtD(chosen.date)} — score {chosen.assess.score}</div>}
           {NEXT(!!chosen)}
         </div>}
@@ -108,7 +108,7 @@ export default function TalismanScreen({eph,natalPos,profile,now}){
           <div style={L()}>The Figure</div>
           <div style={{display:"flex",gap:6,marginTop:10,marginBottom:10}}>
             {[["intelligence","Intelligence Seal"],["spirit","Spirit Seal"],["word","Intent Sigil"]].map(([k,lbl])=>(
-              <button key={k} onClick={()=>setDesign(k)} style={{flex:1,padding:"8px 0",borderRadius:9,background:design===k?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.25)",border:`1px solid ${design===k?"rgba(212,175,106,0.4)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:8,color:design===k?GOLD:"rgba(200,175,100,0.4)",letterSpacing:1,textTransform:"uppercase",cursor:"pointer"}}>{lbl}</button>
+              <button key={k} onClick={()=>setDesign(k)} style={{flex:1,padding:"8px 0",borderRadius:9,background:design===k?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.25)",border:`1px solid ${design===k?"rgba(var(--tint-rgb),0.4)":"rgba(var(--tint-rgb),0.1)"}`,fontFamily:F,fontSize:8,color:design===k?GOLD:"rgba(var(--tint-rgb),0.4)",letterSpacing:1,textTransform:"uppercase",cursor:"pointer"}}>{lbl}</button>
             ))}
           </div>
           {design==="word"&&<input value={word} onChange={e=>setWord(e.target.value)} placeholder="Key word of the intent, e.g. INCREASE" style={{...IS,marginBottom:10}}/>}
@@ -124,7 +124,7 @@ export default function TalismanScreen({eph,natalPos,profile,now}){
           <div style={{fontFamily:F,fontSize:9.5,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.7}}>At the elected moment{chosen?` — ${fmtD(chosen.date)}`:""} — work the sequence. Materia of {P[planet].name}: {P[planet].incense.split("·")[0].trim()} incense, {P[planet].metal.split("·")[0].trim()}, colors of {P[planet].color.split("·")[0].trim()}.</div>
           <div style={{marginTop:10}}>
             {STEPS.map((s,i)=>(
-              <div key={i} style={{display:"flex",gap:9,padding:"7px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
+              <div key={i} style={{display:"flex",gap:9,padding:"7px 0",borderBottom:"1px solid rgba(var(--tint-rgb),0.05)"}}>
                 <span style={{fontFamily:F,fontSize:10,color:P[planet].col,width:16,flexShrink:0}}>{i+1}.</span>
                 <div>
                   <div style={{fontFamily:F,fontSize:10.5,color:GOLD}}>{s.t}</div>
@@ -141,14 +141,14 @@ export default function TalismanScreen({eph,natalPos,profile,now}){
           <div style={{fontFamily:F,fontSize:10,color:"#9A8060",fontStyle:"italic",marginTop:6,lineHeight:1.8}}>
             Saving inscribes the figure into your Sigils, writes the complete operation into the Grimoire, and opens a casting record with the elected sky — the Review screen will ask you for the outcome when the time comes.
           </div>
-          <div style={{margin:"10px 0",padding:"10px 12px",borderRadius:10,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(200,175,100,0.12)",fontFamily:F,fontSize:10,color:"#C4A870",lineHeight:1.9}}>
-            <div><span style={{color:"rgba(200,175,100,0.45)"}}>INTENT</span> {intent}</div>
-            <div><span style={{color:"rgba(200,175,100,0.45)"}}>SPHERE</span> {P[planet].name}</div>
-            <div><span style={{color:"rgba(200,175,100,0.45)"}}>FIGURE</span> {design==="word"?`Kamea sigil "${designName}"`:`Seal of ${designName}`}</div>
-            <div><span style={{color:"rgba(200,175,100,0.45)"}}>MOMENT</span> {chosen?fmtD(chosen.date):"—"} (score {chosen?.assess?.score})</div>
+          <div style={{margin:"10px 0",padding:"10px 12px",borderRadius:10,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(var(--tint-rgb),0.12)",fontFamily:F,fontSize:10,color:"#C4A870",lineHeight:1.9}}>
+            <div><span style={{color:"rgba(var(--tint-rgb),0.45)"}}>INTENT</span> {intent}</div>
+            <div><span style={{color:"rgba(var(--tint-rgb),0.45)"}}>SPHERE</span> {P[planet].name}</div>
+            <div><span style={{color:"rgba(var(--tint-rgb),0.45)"}}>FIGURE</span> {design==="word"?`Kamea sigil "${designName}"`:`Seal of ${designName}`}</div>
+            <div><span style={{color:"rgba(var(--tint-rgb),0.45)"}}>MOMENT</span> {chosen?fmtD(chosen.date):"—"} (score {chosen?.assess?.score})</div>
           </div>
-          <button onClick={saveTalisman} style={{width:"100%",padding:"13px 0",borderRadius:12,background:saved?"rgba(92,168,92,0.15)":"rgba(212,175,106,0.12)",border:`1px solid ${saved?"rgba(92,168,92,0.4)":"rgba(212,175,106,0.35)"}`,fontFamily:F,fontSize:10,color:saved?"#7AB07A":GOLD,letterSpacing:3,textTransform:"uppercase",cursor:"pointer"}}>{saved?"✓ Talisman Recorded":"⚑ Record the Talisman"}</button>
-          {saved&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",textAlign:"center",marginTop:8,fontStyle:"italic"}}>Find it in Sigils, Grimoire, and Review.</div>}
+          <button onClick={saveTalisman} style={{width:"100%",padding:"13px 0",borderRadius:12,background:saved?"rgba(92,168,92,0.15)":"rgba(var(--tint-rgb),0.12)",border:`1px solid ${saved?"rgba(92,168,92,0.4)":"rgba(var(--tint-rgb),0.35)"}`,fontFamily:F,fontSize:10,color:saved?"#7AB07A":GOLD,letterSpacing:3,textTransform:"uppercase",cursor:"pointer"}}>{saved?"✓ Talisman Recorded":"⚑ Record the Talisman"}</button>
+          {saved&&<div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.4)",textAlign:"center",marginTop:8,fontStyle:"italic"}}>Find it in Sigils, Grimoire, and Review.</div>}
         </div>}
       </div>
     </div>

@@ -8,12 +8,11 @@
 // conversation.
 
 import { useState } from "react";
-import { F, L, T } from "../ui/theme.js";
+import { F, L, T, GOLD } from "../ui/theme.js";
 import { conditionsFromProfile } from "../engine/chart.js";
 import { OMEN_KINDS, loadOmens, createOmen, deleteOmen } from "../lib/omens.js";
 
-const GOLD = "#D4AF6A";
-const KIND_COL = { dream: "#8A9FE0", omen: "#D4AF6A", synchronicity: "#A888D8" };
+const KIND_COL = { dream: "#8A9FE0", omen: GOLD, synchronicity: "#A888D8" };
 
 export default function OmenScreen({ profile, natalPos }) {
   const [omens, setOmens] = useState(loadOmens);
@@ -40,12 +39,12 @@ export default function OmenScreen({ profile, natalPos }) {
         {/* Capture */}
         <div className="card" style={{ marginBottom: 10 }}>
           <div style={{ display: "flex", gap: 5, marginBottom: 8 }}>
-            {OMEN_KINDS.map(k => <button key={k.id} onClick={() => setKind(k.id)} style={{ flex: 1, padding: "8px 0", borderRadius: 9, background: kind === k.id ? KIND_COL[k.id] + "1A" : "rgba(0,0,0,0.3)", border: `1px solid ${kind === k.id ? KIND_COL[k.id] + "50" : "rgba(200,175,100,0.1)"}`, fontFamily: F, fontSize: 9, color: kind === k.id ? KIND_COL[k.id] : "#6A5030", letterSpacing: 1.5, textTransform: "uppercase", cursor: "pointer" }}>{k.icon} {k.label}</button>)}
+            {OMEN_KINDS.map(k => <button key={k.id} onClick={() => setKind(k.id)} style={{ flex: 1, padding: "8px 0", borderRadius: 9, background: kind === k.id ? KIND_COL[k.id] + "1A" : "rgba(0,0,0,0.3)", border: `1px solid ${kind === k.id ? KIND_COL[k.id] + "50" : "rgba(var(--tint-rgb),0.1)"}`, fontFamily: F, fontSize: 9, color: kind === k.id ? KIND_COL[k.id] : "#6A5030", letterSpacing: 1.5, textTransform: "uppercase", cursor: "pointer" }}>{k.icon} {k.label}</button>)}
           </div>
           <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
             placeholder={kind === "dream" ? "The dream, while it's still warm…" : kind === "omen" ? "What appeared — the birds, the found object, the words overheard…" : "The coincidence — what lined up, and around which working…"}
-            style={{ width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(200,175,100,0.18)", borderRadius: 10, color: "#C4A870", fontFamily: F, outline: "none", padding: "10px 12px", fontSize: 12.5, boxSizing: "border-box", resize: "none", lineHeight: 1.7 }} />
-          <button onClick={capture} disabled={!text.trim()} style={{ width: "100%", marginTop: 8, padding: "11px 0", borderRadius: 10, background: text.trim() ? "rgba(212,175,106,0.12)" : "rgba(0,0,0,0.3)", border: `1px solid ${text.trim() ? "rgba(212,175,106,0.35)" : "rgba(200,175,100,0.1)"}`, fontFamily: F, fontSize: 9.5, color: text.trim() ? GOLD : "#5A4020", letterSpacing: 2.5, textTransform: "uppercase", cursor: text.trim() ? "pointer" : "default" }}>⚑ Capture — the sky stamps itself</button>
+            style={{ width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(var(--tint-rgb),0.18)", borderRadius: 10, color: "#C4A870", fontFamily: F, outline: "none", padding: "10px 12px", fontSize: 12.5, boxSizing: "border-box", resize: "none", lineHeight: 1.7 }} />
+          <button onClick={capture} disabled={!text.trim()} style={{ width: "100%", marginTop: 8, padding: "11px 0", borderRadius: 10, background: text.trim() ? "rgba(var(--tint-rgb),0.12)" : "rgba(0,0,0,0.3)", border: `1px solid ${text.trim() ? "rgba(var(--tint-rgb),0.35)" : "rgba(var(--tint-rgb),0.1)"}`, fontFamily: F, fontSize: 9.5, color: text.trim() ? GOLD : "#5A4020", letterSpacing: 2.5, textTransform: "uppercase", cursor: text.trim() ? "pointer" : "default" }}>⚑ Capture — the sky stamps itself</button>
         </div>
 
         {/* The log */}
@@ -53,11 +52,11 @@ export default function OmenScreen({ profile, natalPos }) {
           const c = KIND_COL[o.kind] || GOLD;
           const cond = o.conditions;
           return (
-            <div key={o.id} style={{ marginBottom: 8, padding: "11px 13px", borderRadius: 12, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(200,175,100,0.1)" }}>
+            <div key={o.id} style={{ marginBottom: 8, padding: "11px 13px", borderRadius: 12, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(var(--tint-rgb),0.1)" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
                 <span style={{ fontFamily: F, fontSize: 8.5, color: c, background: c + "16", border: `1px solid ${c}35`, borderRadius: 6, padding: "2px 8px", letterSpacing: 1, textTransform: "uppercase" }}>{o.kind}</span>
-                <span style={{ fontFamily: F, fontSize: 8.5, color: "rgba(200,175,100,0.4)" }}>{new Date(o.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                <button onClick={() => { deleteOmen(o.id); refresh(); }} style={{ marginLeft: "auto", background: "none", border: "none", color: "rgba(200,175,100,0.25)", fontSize: 11, cursor: "pointer", padding: 2 }}>✕</button>
+                <span style={{ fontFamily: F, fontSize: 8.5, color: "rgba(var(--tint-rgb),0.4)" }}>{new Date(o.at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                <button onClick={() => { deleteOmen(o.id); refresh(); }} style={{ marginLeft: "auto", background: "none", border: "none", color: "rgba(var(--tint-rgb),0.25)", fontSize: 11, cursor: "pointer", padding: 2 }}>✕</button>
               </div>
               <div style={{ fontFamily: F, fontSize: 11.5, color: "#B8A578", lineHeight: 1.75 }}>{o.text}</div>
               {cond && <div style={{ fontFamily: F, fontSize: 8.5, color: "#6A5028", marginTop: 6 }}>

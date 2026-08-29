@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 // SCAN — timing scanners + the election engine (extracted from App.jsx)
 // ═══════════════════════════════════════════════════════════════════════
-import { DIGNITY_LBL } from "../ui/theme.js";
+import { DIGNITY_LBL, GOLD } from "../ui/theme.js";
 import { D2R, norm, dateToJD, sunLon, moonLon, planetLon, dailyMotion, SIGNS, lonToZodiac, getDignity, getCombustion, checkVoC, DAY_RULERS, getPlanetaryHour, starLonAt, obliquity, calcASC, calcMC, fmtTime } from "./astro.js";
 import { P } from "../data/planets.js";
 import { FIXED_STARS } from "../data/fixedStars.js";
@@ -33,7 +33,7 @@ export function calcSolarArc(birthDate,targetDate,natalPos){
 
 // ── 5b: Transit scanner ───────────────────────────────────────────────
 export const TRANSIT_ASPECTS=[
-  {name:"Conjunction",angle:0,orb:1,col:"#D4AF6A"},
+  {name:"Conjunction",angle:0,orb:1,col:GOLD},
   {name:"Opposition",angle:180,orb:1,col:"#D24B31"},
   {name:"Trine",angle:120,orb:1,col:"#5CA85C"},
   {name:"Square",angle:90,orb:1,col:"#D24B31"},

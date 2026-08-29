@@ -9,6 +9,7 @@
 // so it works on an offline iPad) and extracts dated timing events for the
 // almanac; the prose itself becomes an attributed Knowledge Base node.
 
+import { GOLD } from "../ui/theme.js";
 import { loadJSON, saveJSON } from "./storage.js";
 
 export function loadFeed() { return loadJSON("astrum_feed", []); }
@@ -186,7 +187,7 @@ export const FEED_KIND_META = {
   station:  { glyph: "℞", col: "#C878A8", label: "Station" },
   lunation: { glyph: "☽", col: "#C8DDED", label: "Lunation" },
   eclipse:  { glyph: "◉", col: "#D24B31", label: "Eclipse" },
-  election: { glyph: "◈", col: "#D4AF6A", label: "Election" },
+  election: { glyph: "◈", col: GOLD, label: "Election" },
   voc:      { glyph: "⊘", col: "#E09060", label: "Void" },
   note:     { glyph: "✎", col: "#9A8060", label: "Note" },
 };

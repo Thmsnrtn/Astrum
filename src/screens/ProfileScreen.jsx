@@ -22,7 +22,7 @@ function AIEngineCard(){
   const [busy,setBusy]=useState(false);
   const [prog,setProg]=useState("");
   const save=(patch)=>{const next={...cfg,...patch};setCfg(next);saveJSON("astrum_ai",next);};
-  const IS={width:"100%",marginTop:6,background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:8,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:11,boxSizing:"border-box"};
+  const IS={width:"100%",marginTop:6,background:"rgba(0,0,0,0.4)",border:"1px solid rgba(var(--tint-rgb),0.18)",borderRadius:8,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:11,boxSizing:"border-box"};
   const test=async()=>{
     setBusy(true);setMsg("");setProg("");
     try{
@@ -43,12 +43,12 @@ function AIEngineCard(){
   };
   const webgpu=typeof navigator!=="undefined"&&!!navigator.gpu;
   const opt=(id,label,sub)=>(
-    <button key={id} onClick={()=>save({provider:id})} style={{width:"100%",textAlign:"left",padding:"9px 11px",borderRadius:10,marginBottom:5,background:cfg.provider===id?"rgba(212,175,106,0.1)":"rgba(0,0,0,0.25)",border:`1px solid ${cfg.provider===id?"rgba(212,175,106,0.4)":"rgba(200,175,100,0.08)"}`,cursor:"pointer"}}>
+    <button key={id} onClick={()=>save({provider:id})} style={{width:"100%",textAlign:"left",padding:"9px 11px",borderRadius:10,marginBottom:5,background:cfg.provider===id?"rgba(var(--tint-rgb),0.1)":"rgba(0,0,0,0.25)",border:`1px solid ${cfg.provider===id?"rgba(var(--tint-rgb),0.4)":"rgba(var(--tint-rgb),0.08)"}`,cursor:"pointer"}}>
       <div style={{display:"flex",alignItems:"center",gap:8}}>
-        <span style={{width:14,height:14,borderRadius:7,border:`1px solid ${cfg.provider===id?GOLD:"rgba(200,175,100,0.3)"}`,background:cfg.provider===id?GOLD:"transparent",flexShrink:0}}/>
-        <span style={{fontFamily:F,fontSize:11,color:cfg.provider===id?GOLD:"rgba(200,175,100,0.6)"}}>{label}</span>
+        <span style={{width:14,height:14,borderRadius:7,border:`1px solid ${cfg.provider===id?GOLD:"rgba(var(--tint-rgb),0.3)"}`,background:cfg.provider===id?GOLD:"transparent",flexShrink:0}}/>
+        <span style={{fontFamily:F,fontSize:11,color:cfg.provider===id?GOLD:"rgba(var(--tint-rgb),0.6)"}}>{label}</span>
       </div>
-      <div style={{fontFamily:F,fontSize:8.5,color:"rgba(200,175,100,0.35)",marginTop:3,marginLeft:22,lineHeight:1.5}}>{sub}</div>
+      <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.35)",marginTop:3,marginLeft:22,lineHeight:1.5}}>{sub}</div>
     </button>
   );
   return(
@@ -61,7 +61,7 @@ function AIEngineCard(){
         {opt("webllm","On-device — WebGPU","A quantized model running in the app itself. Downloads once, then works with no network — for a dedicated offline iPad.")}
       </div>
       {cfg.provider==="anthropic"&&(
-        <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",marginTop:4,fontStyle:"italic"}}>Set the key in the Anthropic API Key card below.</div>
+        <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.4)",marginTop:4,fontStyle:"italic"}}>Set the key in the Anthropic API Key card below.</div>
       )}
       {cfg.provider==="local"&&(
         <div style={{marginTop:4}}>
@@ -69,7 +69,7 @@ function AIEngineCard(){
           <input value={cfg.localModel} onChange={e=>save({localModel:e.target.value})} placeholder="model name (e.g. llama3.1)" style={IS}/>
           <input value={cfg.embedModel} onChange={e=>save({embedModel:e.target.value})} placeholder="embedding model (optional — e.g. nomic-embed-text; upgrades Recall/Oracle to semantic search)" style={IS}/>
           <input type="password" value={cfg.localKey} onChange={e=>save({localKey:e.target.value})} placeholder="API key (optional)" style={IS}/>
-          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:5,lineHeight:1.5}}>The URL should include the version path (…/v1). A dedicated iPad can reach a server on the same network.</div>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",marginTop:5,lineHeight:1.5}}>The URL should include the version path (…/v1). A dedicated iPad can reach a server on the same network.</div>
         </div>
       )}
       {cfg.provider==="webllm"&&(
@@ -78,12 +78,12 @@ function AIEngineCard(){
           <select value={cfg.webllmModel} onChange={e=>save({webllmModel:e.target.value})} style={IS}>
             {WEBLLM_MODELS.map(m=><option key={m.id} value={m.id}>{m.label} · {m.size}</option>)}
           </select>
-          <button onClick={warmWebLLM} disabled={busy||!webgpu} style={{width:"100%",marginTop:6,padding:"9px 0",borderRadius:8,background:webgpu?"rgba(100,80,160,0.15)":"rgba(0,0,0,0.3)",border:`1px solid ${webgpu?"rgba(100,80,160,0.35)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:9,color:webgpu?"rgba(160,140,220,0.85)":"#5A4020",letterSpacing:1.5,cursor:webgpu?"pointer":"default"}}>{busy?"WORKING…":"⬇ DOWNLOAD & WARM UP MODEL"}</button>
-          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:5,lineHeight:1.5}}>First download is large (see size) and needs a connection once; afterward the model is cached and runs offline.</div>
+          <button onClick={warmWebLLM} disabled={busy||!webgpu} style={{width:"100%",marginTop:6,padding:"9px 0",borderRadius:8,background:webgpu?"rgba(100,80,160,0.15)":"rgba(0,0,0,0.3)",border:`1px solid ${webgpu?"rgba(100,80,160,0.35)":"rgba(var(--tint-rgb),0.1)"}`,fontFamily:F,fontSize:9,color:webgpu?"rgba(160,140,220,0.85)":"#5A4020",letterSpacing:1.5,cursor:webgpu?"pointer":"default"}}>{busy?"WORKING…":"⬇ DOWNLOAD & WARM UP MODEL"}</button>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",marginTop:5,lineHeight:1.5}}>First download is large (see size) and needs a connection once; afterward the model is cached and runs offline.</div>
         </div>
       )}
       <div style={{display:"flex",gap:6,marginTop:8}}>
-        <button onClick={test} disabled={busy} style={{flex:1,padding:"8px 0",borderRadius:8,background:"rgba(200,175,100,0.08)",border:"1px solid rgba(200,175,100,0.2)",fontFamily:F,fontSize:9,color:GOLD,letterSpacing:1.5,cursor:"pointer"}}>{busy?"…":"TEST ENGINE"}</button>
+        <button onClick={test} disabled={busy} style={{flex:1,padding:"8px 0",borderRadius:8,background:"rgba(var(--tint-rgb),0.08)",border:"1px solid rgba(var(--tint-rgb),0.2)",fontFamily:F,fontSize:9,color:GOLD,letterSpacing:1.5,cursor:"pointer"}}>{busy?"…":"TEST ENGINE"}</button>
       </div>
       {prog&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.6)",marginTop:6,lineHeight:1.5}}>{prog}</div>}
       {msg&&<div style={{fontFamily:F,fontSize:9,color:msg.startsWith("✓")?"#7A9A7A":"#9B5050",marginTop:6,lineHeight:1.5}}>{msg}</div>}
@@ -138,11 +138,11 @@ function IntakeCard(){
     setText("");setParsed(null);refreshSources();
   };
   const clearSource=(s)=>{deleteFeedSource(s);refreshSources();setMsg(`Removed all "${s}" events from the feed.`);};
-  const IS={width:"100%",padding:"7px 10px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:6,color:GOLD,fontFamily:F,fontSize:11,boxSizing:"border-box"};
+  const IS={width:"100%",padding:"7px 10px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(var(--tint-rgb),0.15)",borderRadius:6,color:GOLD,fontFamily:F,fontSize:11,boxSizing:"border-box"};
   return(
     <div className="card" style={{margin:"0 14px 10px"}}>
       <div style={L()}>Intake — Timing Letters & Material</div>
-      <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.35)",marginTop:4,lineHeight:1.6}}>
+      <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.35)",marginTop:4,lineHeight:1.6}}>
         Paste a timing letter or a post you subscribe to. Dated lines become source-tagged events on your Almanac; the full text can be filed as an attributed knowledge node the Oracle can draw on. Runs entirely on-device.
       </div>
       <div style={{display:"flex",gap:6,marginTop:10}}>
@@ -151,33 +151,33 @@ function IntakeCard(){
       </div>
       <textarea value={text} onChange={e=>setText(e.target.value)} rows={6} placeholder="Paste the newsletter or post text here…" style={{...IS,marginTop:6,resize:"vertical"}}/>
       <div style={{display:"flex",gap:6,marginTop:6}}>
-        <button onClick={doParse} disabled={!text.trim()} style={{flex:1,padding:"8px 0",borderRadius:8,background:text.trim()?"rgba(200,175,100,0.1)":"rgba(0,0,0,0.3)",border:`1px solid ${text.trim()?"rgba(200,175,100,0.28)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:9,color:text.trim()?GOLD:"#5A4020",letterSpacing:1.5,cursor:"pointer"}}>DETECT TIMING</button>
-        {aiConfigured()&&<button onClick={doAIParse} disabled={!text.trim()||aiBusy} style={{flex:1,padding:"8px 0",borderRadius:8,background:text.trim()?"rgba(100,80,160,0.14)":"rgba(0,0,0,0.3)",border:`1px solid ${text.trim()?"rgba(100,80,160,0.35)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:9,color:text.trim()?"rgba(160,140,220,0.85)":"#5A4020",letterSpacing:1.5,cursor:"pointer"}}>{aiBusy?"READING…":"✧ AI DETECT"}</button>}
+        <button onClick={doParse} disabled={!text.trim()} style={{flex:1,padding:"8px 0",borderRadius:8,background:text.trim()?"rgba(var(--tint-rgb),0.1)":"rgba(0,0,0,0.3)",border:`1px solid ${text.trim()?"rgba(var(--tint-rgb),0.28)":"rgba(var(--tint-rgb),0.1)"}`,fontFamily:F,fontSize:9,color:text.trim()?GOLD:"#5A4020",letterSpacing:1.5,cursor:"pointer"}}>DETECT TIMING</button>
+        {aiConfigured()&&<button onClick={doAIParse} disabled={!text.trim()||aiBusy} style={{flex:1,padding:"8px 0",borderRadius:8,background:text.trim()?"rgba(100,80,160,0.14)":"rgba(0,0,0,0.3)",border:`1px solid ${text.trim()?"rgba(100,80,160,0.35)":"rgba(var(--tint-rgb),0.1)"}`,fontFamily:F,fontSize:9,color:text.trim()?"rgba(160,140,220,0.85)":"#5A4020",letterSpacing:1.5,cursor:"pointer"}}>{aiBusy?"READING…":"✧ AI DETECT"}</button>}
         {(parsed!==null)&&<button onClick={save} style={{flex:1,padding:"8px 0",borderRadius:8,background:"rgba(92,168,92,0.12)",border:"1px solid rgba(92,168,92,0.35)",fontFamily:F,fontSize:9,color:"#7AB07A",letterSpacing:1.5,cursor:"pointer"}}>SAVE</button>}
       </div>
-      <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:5,lineHeight:1.5}}>Pattern detection runs on-device always. AI detect handles messier formats — and runs offline too when your engine is local or on-device.</div>
+      <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",marginTop:5,lineHeight:1.5}}>Pattern detection runs on-device always. AI detect handles messier formats — and runs offline too when your engine is local or on-device.</div>
       <button onClick={()=>setAsNode(a=>!a)} style={{marginTop:7,display:"flex",alignItems:"center",gap:7,background:"none",border:"none",cursor:"pointer",padding:0}}>
-        <span style={{width:16,height:16,borderRadius:4,border:`1px solid ${asNode?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.2)"}`,background:asNode?"rgba(200,175,100,0.15)":"transparent",color:GOLD,fontSize:9,lineHeight:"16px",textAlign:"center",flexShrink:0}}>{asNode?"✓":""}</span>
-        <span style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)"}}>Also file the full text as a knowledge node</span>
+        <span style={{width:16,height:16,borderRadius:4,border:`1px solid ${asNode?"rgba(var(--tint-rgb),0.5)":"rgba(var(--tint-rgb),0.2)"}`,background:asNode?"rgba(var(--tint-rgb),0.15)":"transparent",color:GOLD,fontSize:9,lineHeight:"16px",textAlign:"center",flexShrink:0}}>{asNode?"✓":""}</span>
+        <span style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.5)"}}>Also file the full text as a knowledge node</span>
       </button>
       {parsed!==null&&parsed.length>0&&(
-        <div style={{marginTop:9,borderTop:"1px solid rgba(200,175,100,0.08)",paddingTop:8}}>
+        <div style={{marginTop:9,borderTop:"1px solid rgba(var(--tint-rgb),0.08)",paddingTop:8}}>
           {parsed.map(e=>{const k=FEED_KIND_META[e.kind];return(
             <div key={e.id} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"4px 0"}}>
               <span style={{color:k.col,fontSize:11,width:14,flexShrink:0}}>{k.glyph}</span>
               <div style={{flex:1}}>
                 <div style={{fontFamily:F,fontSize:9.5,color:"#C4A870",lineHeight:1.5}}>{e.title}</div>
-                <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)"}}>{e.date}{e.time?` · ${e.time}`:""} · {k.label}</div>
+                <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)"}}>{e.date}{e.time?` · ${e.time}`:""} · {k.label}</div>
               </div>
               <button onClick={()=>removeCandidate(e.id)} style={{background:"none",border:"none",color:"rgba(200,100,100,0.5)",cursor:"pointer",fontSize:11,flexShrink:0}}>✕</button>
             </div>
           );})}
         </div>
       )}
-      {msg&&<div style={{fontFamily:F,fontSize:9,color:msg.startsWith("✓")?"#7A9A7A":"rgba(200,175,100,0.5)",marginTop:8,lineHeight:1.5}}>{msg}</div>}
+      {msg&&<div style={{fontFamily:F,fontSize:9,color:msg.startsWith("✓")?"#7A9A7A":"rgba(var(--tint-rgb),0.5)",marginTop:8,lineHeight:1.5}}>{msg}</div>}
       {Object.keys(sources).length>0&&(
-        <div style={{marginTop:9,borderTop:"1px solid rgba(200,175,100,0.08)",paddingTop:8}}>
-          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)",letterSpacing:2,textTransform:"uppercase",marginBottom:5}}>Feed Sources</div>
+        <div style={{marginTop:9,borderTop:"1px solid rgba(var(--tint-rgb),0.08)",paddingTop:8}}>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.35)",letterSpacing:2,textTransform:"uppercase",marginBottom:5}}>Feed Sources</div>
           {Object.entries(sources).map(([s,n])=>(
             <div key={s} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"2px 0"}}>
               <span style={{fontFamily:F,fontSize:9.5,color:"#C4A870"}}>{s} · {n} event{n>1?"s":""}</span>
@@ -215,40 +215,40 @@ function KnowledgeBase(){
     <div className="card" style={{margin:"0 14px 10px"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={L()}>Knowledge Base</div>
-        <button onClick={()=>setAdding(!adding)} style={{padding:"3px 10px",border:"1px solid rgba(200,175,100,0.2)",borderRadius:6,background:"transparent",color:GOLD,fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer"}}>{adding?"CANCEL":"+ ADD"}</button>
+        <button onClick={()=>setAdding(!adding)} style={{padding:"3px 10px",border:"1px solid rgba(var(--tint-rgb),0.2)",borderRadius:6,background:"transparent",color:GOLD,fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer"}}>{adding?"CANCEL":"+ ADD"}</button>
       </div>
-      <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",marginTop:4,lineHeight:1.5}}>
+      <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.3)",marginTop:4,lineHeight:1.5}}>
         Knowledge nodes are injected into the AI system prompt. Mark as "Always Include" to inject on every AI call.
       </div>
       {adding&&(
         <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:8}}>
-          <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Node title (e.g. 'Agrippa — Herb Correspondences')" style={{width:"100%",padding:"7px 10px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:6,color:GOLD,fontFamily:F,fontSize:11,boxSizing:"border-box"}}/>
-          <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="Paste knowledge content here — text from a PDF, a URL summary, your own notes…" rows={6} style={{width:"100%",padding:"7px 10px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:6,color:GOLD,fontFamily:F,fontSize:11,resize:"vertical",boxSizing:"border-box"}}/>
-          <input value={source} onChange={e=>setSource(e.target.value)} placeholder="Source (optional — book, URL, author)" style={{width:"100%",padding:"7px 10px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:6,color:GOLD,fontFamily:F,fontSize:11,boxSizing:"border-box"}}/>
+          <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Node title (e.g. 'Agrippa — Herb Correspondences')" style={{width:"100%",padding:"7px 10px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(var(--tint-rgb),0.15)",borderRadius:6,color:GOLD,fontFamily:F,fontSize:11,boxSizing:"border-box"}}/>
+          <textarea value={content} onChange={e=>setContent(e.target.value)} placeholder="Paste knowledge content here — text from a PDF, a URL summary, your own notes…" rows={6} style={{width:"100%",padding:"7px 10px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(var(--tint-rgb),0.15)",borderRadius:6,color:GOLD,fontFamily:F,fontSize:11,resize:"vertical",boxSizing:"border-box"}}/>
+          <input value={source} onChange={e=>setSource(e.target.value)} placeholder="Source (optional — book, URL, author)" style={{width:"100%",padding:"7px 10px",background:"rgba(0,0,0,0.4)",border:"1px solid rgba(var(--tint-rgb),0.15)",borderRadius:6,color:GOLD,fontFamily:F,fontSize:11,boxSizing:"border-box"}}/>
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            <button onClick={()=>setAlways(!always)} style={{width:18,height:18,borderRadius:4,border:`1px solid ${always?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.2)"}`,background:always?"rgba(200,175,100,0.15)":"transparent",cursor:"pointer",flexShrink:0}}>
+            <button onClick={()=>setAlways(!always)} style={{width:18,height:18,borderRadius:4,border:`1px solid ${always?"rgba(var(--tint-rgb),0.5)":"rgba(var(--tint-rgb),0.2)"}`,background:always?"rgba(var(--tint-rgb),0.15)":"transparent",cursor:"pointer",flexShrink:0}}>
               {always&&<span style={{color:GOLD,fontSize:10,lineHeight:"18px",display:"block",textAlign:"center"}}>✓</span>}
             </button>
-            <span style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)"}}>Always include in AI prompt</span>
+            <span style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.5)"}}>Always include in AI prompt</span>
           </div>
-          <button onClick={addNode} disabled={!title.trim()||!content.trim()} style={{padding:"7px 0",border:"1px solid rgba(200,175,100,0.25)",borderRadius:6,background:"transparent",color:GOLD,fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>ADD NODE</button>
+          <button onClick={addNode} disabled={!title.trim()||!content.trim()} style={{padding:"7px 0",border:"1px solid rgba(var(--tint-rgb),0.25)",borderRadius:6,background:"transparent",color:GOLD,fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>ADD NODE</button>
         </div>
       )}
       {nodes.length===0&&!adding&&(
-        <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.2)",marginTop:12,textAlign:"center",padding:"16px 0"}}>No knowledge nodes yet.</div>
+        <div style={{fontFamily:F,fontSize:10,color:"rgba(var(--tint-rgb),0.2)",marginTop:12,textAlign:"center",padding:"16px 0"}}>No knowledge nodes yet.</div>
       )}
       {nodes.map(n=>(
-        <div key={n.id} style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(200,175,100,0.07)"}}>
+        <div key={n.id} style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(var(--tint-rgb),0.07)"}}>
           <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
             <button onClick={()=>setExpanded(expanded===n.id?null:n.id)} style={{flex:1,background:"none",border:"none",textAlign:"left",cursor:"pointer",padding:0}}>
               <div style={{fontFamily:F,fontSize:11,color:GOLD}}>{n.title}</div>
-              {n.source&&<div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)",marginTop:2}}>{n.source}</div>}
+              {n.source&&<div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.35)",marginTop:2}}>{n.source}</div>}
             </button>
-            <button onClick={()=>toggleAlways(n.id)} title="Toggle always-include" style={{width:20,height:20,borderRadius:4,border:`1px solid ${n.always?"rgba(200,175,100,0.4)":"rgba(200,175,100,0.1)"}`,background:n.always?"rgba(200,175,100,0.1)":"transparent",color:GOLD,fontSize:9,cursor:"pointer",flexShrink:0}}>{n.always?"⊕":"○"}</button>
+            <button onClick={()=>toggleAlways(n.id)} title="Toggle always-include" style={{width:20,height:20,borderRadius:4,border:`1px solid ${n.always?"rgba(var(--tint-rgb),0.4)":"rgba(var(--tint-rgb),0.1)"}`,background:n.always?"rgba(var(--tint-rgb),0.1)":"transparent",color:GOLD,fontSize:9,cursor:"pointer",flexShrink:0}}>{n.always?"⊕":"○"}</button>
             <button onClick={()=>deleteNode(n.id)} style={{width:20,height:20,borderRadius:4,border:"1px solid rgba(200,100,100,0.2)",background:"transparent",color:"rgba(200,100,100,0.5)",fontSize:9,cursor:"pointer",flexShrink:0}}>✕</button>
           </div>
           {expanded===n.id&&(
-            <div style={{marginTop:8,maxHeight:120,overflowY:"auto",fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.5)",lineHeight:1.6,background:"rgba(0,0,0,0.3)",padding:"6px 8px",borderRadius:4}}>
+            <div style={{marginTop:8,maxHeight:120,overflowY:"auto",fontFamily:F,fontSize:10,color:"rgba(var(--tint-rgb),0.5)",lineHeight:1.6,background:"rgba(0,0,0,0.3)",padding:"6px 8px",borderRadius:4}}>
               {n.content.slice(0,500)}{n.content.length>500?"…":""}
             </div>
           )}
@@ -275,34 +275,34 @@ function NotifyCard({notifyPrefs,setNotifyPrefs}){
     <div className="card" style={{margin:"0 14px 10px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={L()}>Ambient Practice</div>
-        <button onClick={toggleEnabled} style={{padding:"6px 14px",borderRadius:9,background:prefs.enabled?"rgba(92,168,92,0.15)":"rgba(0,0,0,0.3)",border:`1px solid ${prefs.enabled?"rgba(92,168,92,0.4)":"rgba(200,175,100,0.15)"}`,fontFamily:F,fontSize:9,color:prefs.enabled?"#7AB07A":"rgba(200,175,100,0.5)",letterSpacing:1.5,cursor:"pointer"}}>{prefs.enabled?"ON":"OFF"}</button>
+        <button onClick={toggleEnabled} style={{padding:"6px 14px",borderRadius:9,background:prefs.enabled?"rgba(92,168,92,0.15)":"rgba(0,0,0,0.3)",border:`1px solid ${prefs.enabled?"rgba(92,168,92,0.4)":"rgba(var(--tint-rgb),0.15)"}`,fontFamily:F,fontSize:9,color:prefs.enabled?"#7AB07A":"rgba(var(--tint-rgb),0.5)",letterSpacing:1.5,cursor:"pointer"}}>{prefs.enabled?"ON":"OFF"}</button>
       </div>
       <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>The sky comes to you — hour changes, void Moon, election windows, the morning briefing.{isWeb?" On the web these fire only while a tab is open; the desktop and iOS apps deliver on schedule.":""}</div>
       {msg&&<div style={{fontFamily:F,fontSize:9,color:"#9B5050",marginTop:6}}>{msg}</div>}
       {prefs.enabled&&<>
         <div style={{marginTop:10}}>
           {KINDS.map(([k,lbl,sub])=>(
-            <button key={k} onClick={()=>update({kinds:{[k]:!prefs.kinds[k]}})} style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"7px 9px",borderRadius:9,background:prefs.kinds[k]?"rgba(212,175,106,0.07)":"rgba(0,0,0,0.2)",border:`1px solid ${prefs.kinds[k]?"rgba(212,175,106,0.25)":"rgba(200,175,100,0.07)"}`,cursor:"pointer",textAlign:"left",marginBottom:4}}>
-              <span style={{fontFamily:F,fontSize:11,color:prefs.kinds[k]?"#7AB07A":"rgba(200,175,100,0.3)",width:14}}>{prefs.kinds[k]?"✓":"○"}</span>
+            <button key={k} onClick={()=>update({kinds:{[k]:!prefs.kinds[k]}})} style={{display:"flex",alignItems:"center",gap:9,width:"100%",padding:"7px 9px",borderRadius:9,background:prefs.kinds[k]?"rgba(var(--tint-rgb),0.07)":"rgba(0,0,0,0.2)",border:`1px solid ${prefs.kinds[k]?"rgba(var(--tint-rgb),0.25)":"rgba(var(--tint-rgb),0.07)"}`,cursor:"pointer",textAlign:"left",marginBottom:4}}>
+              <span style={{fontFamily:F,fontSize:11,color:prefs.kinds[k]?"#7AB07A":"rgba(var(--tint-rgb),0.3)",width:14}}>{prefs.kinds[k]?"✓":"○"}</span>
               <div style={{flex:1}}>
-                <div style={{fontFamily:F,fontSize:10.5,color:prefs.kinds[k]?"#D4AF6A":"rgba(200,175,100,0.45)"}}>{lbl}</div>
-                <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:1}}>{sub}</div>
+                <div style={{fontFamily:F,fontSize:10.5,color:prefs.kinds[k]?GOLD:"rgba(var(--tint-rgb),0.45)"}}>{lbl}</div>
+                <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",marginTop:1}}>{sub}</div>
               </div>
             </button>
           ))}
         </div>
         {prefs.kinds.hourChange&&<div style={{marginTop:8}}>
-          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase",marginBottom:5}}>Hour Alerts For</div>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:2,textTransform:"uppercase",marginBottom:5}}>Hour Alerts For</div>
           <div style={{display:"flex",gap:4}}>
             {Object.keys(P).map(pk=>{const on=prefs.hourPlanets?.includes(pk);return(
-              <button key={pk} onClick={()=>update({hourPlanets:on?prefs.hourPlanets.filter(x=>x!==pk):[...(prefs.hourPlanets||[]),pk]})} style={{flex:1,padding:"7px 2px",borderRadius:8,background:on?P[pk].col+"18":"rgba(0,0,0,0.25)",border:`1px solid ${on?P[pk].col+"55":"rgba(200,175,100,0.08)"}`,cursor:"pointer"}}>
-                <div style={{fontSize:13,textAlign:"center",color:on?P[pk].col:"rgba(200,175,100,0.25)"}}>{P[pk].sym}</div>
+              <button key={pk} onClick={()=>update({hourPlanets:on?prefs.hourPlanets.filter(x=>x!==pk):[...(prefs.hourPlanets||[]),pk]})} style={{flex:1,padding:"7px 2px",borderRadius:8,background:on?P[pk].col+"18":"rgba(0,0,0,0.25)",border:`1px solid ${on?P[pk].col+"55":"rgba(var(--tint-rgb),0.08)"}`,cursor:"pointer"}}>
+                <div style={{fontSize:13,textAlign:"center",color:on?P[pk].col:"rgba(var(--tint-rgb),0.25)"}}>{P[pk].sym}</div>
               </button>);})}
           </div>
         </div>}
         {prefs.kinds.briefing&&<div style={{marginTop:10,display:"flex",alignItems:"center",gap:10}}>
-          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase"}}>Briefing at</div>
-          <input type="time" value={prefs.briefingTime} onChange={e=>update({briefingTime:e.target.value})} style={{background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:9,color:"#C4A870",fontFamily:F,outline:"none",padding:"6px 9px",fontSize:11}}/>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:2,textTransform:"uppercase"}}>Briefing at</div>
+          <input type="time" value={prefs.briefingTime} onChange={e=>update({briefingTime:e.target.value})} style={{background:"rgba(0,0,0,0.4)",border:"1px solid rgba(var(--tint-rgb),0.18)",borderRadius:9,color:"#C4A870",fontFamily:F,outline:"none",padding:"6px 9px",fontSize:11}}/>
         </div>}
       </>}
     </div>
@@ -356,7 +356,7 @@ function SyncCard(){
         {r?.errors?.length>0&&<div style={{color:"#D2A060",fontSize:9.5}}>⚠ {r.errors[0]}</div>}
       </div>
       <div style={{display:"flex",gap:7,marginTop:9}}>
-        {supported&&!transportName&&<button onClick={chooseFolder} style={{flex:1,padding:"10px 0",borderRadius:10,background:"rgba(212,175,106,0.12)",border:"1px solid rgba(212,175,106,0.35)",fontFamily:F,fontSize:9,color:"#D4AF6A",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Choose Sync Folder</button>}
+        {supported&&!transportName&&<button onClick={chooseFolder} style={{flex:1,padding:"10px 0",borderRadius:10,background:"rgba(var(--tint-rgb),0.12)",border:"1px solid rgba(var(--tint-rgb),0.35)",fontFamily:F,fontSize:9,color:GOLD,letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Choose Sync Folder</button>}
         {transportName&&<button onClick={syncNowClick} disabled={busy} style={{flex:1,padding:"10px 0",borderRadius:10,background:"rgba(122,176,122,0.12)",border:"1px solid rgba(122,176,122,0.35)",fontFamily:F,fontSize:9,color:"#7AB07A",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>{busy?"Syncing…":"Sync Now"}</button>}
       </div>
       <div style={{fontFamily:F,fontSize:8.5,color:"#5A4020",fontStyle:"italic",lineHeight:1.6,marginTop:8}}>
@@ -400,7 +400,7 @@ function StorageHealthCard(){
       <div style={L()}>Storage Health</div>
       <div style={{marginTop:8,fontFamily:F,fontSize:10.5,color:"#C4A870",lineHeight:1.9}}>
         {est&&<div>The record holds {fmt(est.usage)} of {fmt(est.quota)} granted{pct!=null?` (${pct}%)`:""}.</div>}
-        {pct!=null&&<div style={{height:3,background:"rgba(200,175,100,0.09)",borderRadius:2,margin:"4px 0 6px"}}><div style={{height:"100%",width:`${Math.min(100,pct)}%`,background:pct>80?"#D28060":"#7AB07A",borderRadius:2}}/></div>}
+        {pct!=null&&<div style={{height:3,background:"rgba(var(--tint-rgb),0.09)",borderRadius:2,margin:"4px 0 6px"}}><div style={{height:"100%",width:`${Math.min(100,pct)}%`,background:pct>80?"#D28060":"#7AB07A",borderRadius:2}}/></div>}
         <div>Persistent storage: {persisted==null?"unknown":persisted?<span style={{color:"#7AB07A"}}>granted — the browser will not evict the record</span>:<span style={{color:"#D2A060"}}>not granted — keep backups current</span>}</div>
         <div>Photo vault: {photoCount==null?"—":`${photoCount} photo${photoCount===1?"":"s"}`}{orphans?.length>0&&<> · <span style={{color:"#D2A060"}}>{orphans.length} orphaned</span></>}</div>
       </div>
@@ -448,13 +448,13 @@ function BackupCard(){
     restore(await f.text());
     e.target.value="";
   };
-  const BTN=(active=true)=>({padding:"9px 12px",borderRadius:10,background:active?"rgba(212,175,106,0.1)":"rgba(0,0,0,0.3)",border:"1px solid "+(active?"rgba(212,175,106,0.28)":"rgba(200,175,100,0.1)"),fontFamily:F,fontSize:9,color:active?"#D4AF6A":"#5A4020",letterSpacing:1.5,textTransform:"uppercase",cursor:"pointer",flex:1});
+  const BTN=(active=true)=>({padding:"9px 12px",borderRadius:10,background:active?"rgba(var(--tint-rgb),0.1)":"rgba(0,0,0,0.3)",border:"1px solid "+(active?"rgba(var(--tint-rgb),0.28)":"rgba(var(--tint-rgb),0.1)"),fontFamily:F,fontSize:9,color:active?GOLD:"#5A4020",letterSpacing:1.5,textTransform:"uppercase",cursor:"pointer",flex:1});
   return(
     <div className="card" style={{margin:"0 14px 10px"}}>
       <div style={L()}>Backup & Restore</div>
       <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Your journal, grimoire, sigils, and castings live only on this device. Export regularly — the practice record is irreplaceable.</div>
       {stale&&<div style={{fontFamily:F,fontSize:9,color:"#9B5050",marginTop:6,lineHeight:1.5}}>{last?`⚠ Last backup ${daysSince} days ago`:"⚠ No backup has ever been exported"}</div>}
-      {last&&!stale&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.35)",marginTop:6}}>Last export: {last.toLocaleDateString()}</div>}
+      {last&&!stale&&<div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.35)",marginTop:6}}>Last export: {last.toLocaleDateString()}</div>}
       <div style={{display:"flex",gap:6,marginTop:10}}>
         <button onClick={doExport} style={BTN()}>Export All</button>
         <button onClick={doCopy} style={BTN()}>Copy</button>
@@ -464,11 +464,11 @@ function BackupCard(){
         <button onClick={()=>setShowPaste(s=>!s)} style={BTN()}>{showPaste?"Hide Paste":"Paste Backup"}</button>
       </div>
       <input ref={fileRef} type="file" accept=".json,application/json" onChange={onFile} style={{display:"none"}}/>
-      <button onClick={()=>setMergeMode(m=>!m)} style={{marginTop:8,background:"none",border:"none",cursor:"pointer",fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.45)",letterSpacing:1,padding:0}}>
+      <button onClick={()=>setMergeMode(m=>!m)} style={{marginTop:8,background:"none",border:"none",cursor:"pointer",fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.45)",letterSpacing:1,padding:0}}>
         MODE: {mergeMode?"MERGE (existing entries kept, new ones added)":"REPLACE (imported data overwrites this device)"} — tap to switch
       </button>
       {showPaste&&<div style={{marginTop:8}}>
-        <textarea value={pasteText} onChange={e=>setPasteText(e.target.value)} rows={4} placeholder="Paste an Astrum backup JSON here…" style={{background:"rgba(0,0,0,0.45)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",width:"100%",fontSize:10,resize:"vertical",boxSizing:"border-box"}}/>
+        <textarea value={pasteText} onChange={e=>setPasteText(e.target.value)} rows={4} placeholder="Paste an Astrum backup JSON here…" style={{background:"rgba(0,0,0,0.45)",border:"1px solid rgba(var(--tint-rgb),0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",width:"100%",fontSize:10,resize:"vertical",boxSizing:"border-box"}}/>
         <button onClick={()=>pasteText.trim()&&restore(pasteText)} disabled={!pasteText.trim()} style={{...BTN(!!pasteText.trim()),width:"100%",marginTop:5}}>Restore From Paste</button>
       </div>}
       {msg&&<div style={{fontFamily:F,fontSize:9,color:msg.startsWith("✓")?"#7A9A7A":"#9B5050",marginTop:8,lineHeight:1.5}}>{msg}</div>}
@@ -490,8 +490,8 @@ export default function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyP
   const [geocoding,setGeocoding]=useState(false);
   const [geocodeMsg,setGeocodeMsg]=useState("");
   const [saved,setSaved]=useState(false);
-  const IS={width:"100%",marginTop:4,background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:12,boxSizing:"border-box"};
-  const LS={fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase"};
+  const IS={width:"100%",marginTop:4,background:"rgba(0,0,0,0.4)",border:"1px solid rgba(var(--tint-rgb),0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:12,boxSizing:"border-box"};
+  const LS={fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:2,textTransform:"uppercase"};
   const geocode=async()=>{
     if(!city.trim())return;
     setGeocoding(true);setGeocodeMsg("");
@@ -534,10 +534,10 @@ export default function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyP
         <div style={{marginTop:8}}><div style={LS}>Birth City</div>
           <div style={{display:"flex",gap:6,marginTop:4}}>
             <input value={city} onChange={e=>setCity(e.target.value)} onKeyDown={e=>e.key==="Enter"&&geocode()} placeholder="City, Country" style={{...IS,marginTop:0,flex:1}}/>
-            <button onClick={geocode} disabled={geocoding||!city.trim()} style={{padding:"8px 12px",borderRadius:10,background:city?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${city?"rgba(212,175,106,0.3)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:8,color:city?"#D4AF6A":"#4A3020",letterSpacing:1,cursor:city?"pointer":"default",whiteSpace:"nowrap"}}>{geocoding?"…":"LOCATE"}</button>
+            <button onClick={geocode} disabled={geocoding||!city.trim()} style={{padding:"8px 12px",borderRadius:10,background:city?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${city?"rgba(var(--tint-rgb),0.3)":"rgba(var(--tint-rgb),0.1)"}`,fontFamily:F,fontSize:8,color:city?GOLD:"#4A3020",letterSpacing:1,cursor:city?"pointer":"default",whiteSpace:"nowrap"}}>{geocoding?"…":"LOCATE"}</button>
           </div>
           {geocodeMsg&&<div style={{fontFamily:F,fontSize:9,color:geocodeMsg.startsWith("✓")?"#7A9A7A":"#9B5050",marginTop:6,lineHeight:1.5}}>{geocodeMsg}</div>}
-          {lat&&lon&&!geocodeMsg&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.35)",marginTop:5}}>{lat.toFixed(3)}°, {lon.toFixed(3)}° stored</div>}
+          {lat&&lon&&!geocodeMsg&&<div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.35)",marginTop:5}}>{lat.toFixed(3)}°, {lon.toFixed(3)}° stored</div>}
         </div>
       </div>
       <div className="card" style={{margin:"0 14px 10px"}}>
@@ -547,13 +547,13 @@ export default function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyP
           {Object.entries(TRADITIONS).map(([id,tr])=>{
             const active=traditions.includes(id);
             return(
-              <button key={id} onClick={()=>toggleTradition(id)} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"9px 11px",borderRadius:10,background:active?"rgba(212,175,106,0.09)":"rgba(0,0,0,0.25)",border:`1px solid ${active?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.08)"}`,cursor:"pointer",textAlign:"left"}}>
-                <span style={{fontSize:14,marginTop:1,lineHeight:1,flexShrink:0,color:active?"#D4AF6A":"rgba(200,175,100,0.35)"}}>{tr.icon}</span>
+              <button key={id} onClick={()=>toggleTradition(id)} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"9px 11px",borderRadius:10,background:active?"rgba(var(--tint-rgb),0.09)":"rgba(0,0,0,0.25)",border:`1px solid ${active?"rgba(var(--tint-rgb),0.35)":"rgba(var(--tint-rgb),0.08)"}`,cursor:"pointer",textAlign:"left"}}>
+                <span style={{fontSize:14,marginTop:1,lineHeight:1,flexShrink:0,color:active?GOLD:"rgba(var(--tint-rgb),0.35)"}}>{tr.icon}</span>
                 <div style={{flex:1}}>
-                  <div style={{fontFamily:F,fontSize:11,color:active?"#D4AF6A":"rgba(200,175,100,0.55)"}}>{tr.label}</div>
-                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:2,lineHeight:1.4}}>{tr.desc}</div>
+                  <div style={{fontFamily:F,fontSize:11,color:active?GOLD:"rgba(var(--tint-rgb),0.55)"}}>{tr.label}</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",marginTop:2,lineHeight:1.4}}>{tr.desc}</div>
                 </div>
-                {active&&<span style={{color:"#D4AF6A",fontSize:11,flexShrink:0,marginTop:1}}>✓</span>}
+                {active&&<span style={{color:GOLD,fontSize:11,flexShrink:0,marginTop:1}}>✓</span>}
               </button>
             );
           })}
@@ -566,9 +566,9 @@ export default function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyP
           {[["beginner","Beginner","New to practice"],["intermediate","Practitioner","Active system"],["advanced","Adept","Deep fluency"]].map(([v,lbl,desc])=>{
             const active=level===v;
             return(
-              <button key={v} onClick={()=>setLevel(v)} style={{flex:1,padding:"10px 6px",borderRadius:10,background:active?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.25)",border:`1px solid ${active?"rgba(212,175,106,0.4)":"rgba(200,175,100,0.1)"}`,cursor:"pointer"}}>
-                <div style={{fontFamily:F,fontSize:10,color:active?"#D4AF6A":"rgba(200,175,100,0.45)",letterSpacing:1}}>{lbl}</div>
-                <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.25)",marginTop:3,lineHeight:1.3}}>{desc}</div>
+              <button key={v} onClick={()=>setLevel(v)} style={{flex:1,padding:"10px 6px",borderRadius:10,background:active?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.25)",border:`1px solid ${active?"rgba(var(--tint-rgb),0.4)":"rgba(var(--tint-rgb),0.1)"}`,cursor:"pointer"}}>
+                <div style={{fontFamily:F,fontSize:10,color:active?GOLD:"rgba(var(--tint-rgb),0.45)",letterSpacing:1}}>{lbl}</div>
+                <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.25)",marginTop:3,lineHeight:1.3}}>{desc}</div>
               </button>
             );
           })}
@@ -580,7 +580,7 @@ export default function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyP
         <div style={{fontFamily:F,fontSize:9,color:"#5A4020",fontStyle:"italic",marginTop:4,lineHeight:1.6}}>Used when the AI Engine is set to Anthropic. Stored only in this app, never transmitted elsewhere.</div>
         <div style={{marginTop:10}}>
           <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)} placeholder="sk-ant-…" style={IS}/>
-          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)",marginTop:5}}>Obtain at console.anthropic.com — you pay only for what you use.</div>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.25)",marginTop:5}}>Obtain at console.anthropic.com — you pay only for what you use.</div>
         </div>
       </div>
       <div className="card" style={{margin:"0 14px 10px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -604,9 +604,9 @@ export default function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyP
           {Object.entries(TINT_PRESETS).map(([key,preset])=>{
             const active=tint===key;
             return(
-              <button key={key} onClick={()=>setTint(key)} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 11px",borderRadius:10,background:active?`rgba(var(--glass-bg,8,5,22),0.7)`:"rgba(0,0,0,0.2)",border:`1px solid ${active?preset.primary+"60":"rgba(200,175,100,0.08)"}`,cursor:"pointer",textAlign:"left",transition:"border-color 0.2s,background 0.2s"}}>
+              <button key={key} onClick={()=>setTint(key)} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 11px",borderRadius:10,background:active?`rgba(var(--glass-bg,8,5,22),0.7)`:"rgba(0,0,0,0.2)",border:`1px solid ${active?preset.primary+"60":"rgba(var(--tint-rgb),0.08)"}`,cursor:"pointer",textAlign:"left",transition:"border-color 0.2s,background 0.2s"}}>
                 <div style={{width:20,height:20,borderRadius:6,background:preset.primary,boxShadow:`0 2px 8px ${preset.primary}40`,flexShrink:0}}/>
-                <div style={{fontFamily:F,fontSize:11,color:active?preset.primary:"rgba(200,175,100,0.55)"}}>{preset.label}</div>
+                <div style={{fontFamily:F,fontSize:11,color:active?preset.primary:"rgba(var(--tint-rgb),0.55)"}}>{preset.label}</div>
                 {active&&<span style={{marginLeft:"auto",fontFamily:F,fontSize:9,color:preset.primary}}>✓</span>}
               </button>
             );
@@ -614,7 +614,7 @@ export default function ProfileScreen({profile,setProfile,notifyPrefs,setNotifyP
         </div>
       </div>
       <div style={{padding:"10px 14px 0"}}>
-        <button onClick={saveProfile} style={{width:"100%",padding:"13px 0",borderRadius:12,background:"rgba(212,175,106,0.12)",border:"1px solid rgba(212,175,106,0.35)",fontFamily:F,fontSize:10,color:saved?"#7AB07A":"#D4AF6A",letterSpacing:3,textTransform:"uppercase",cursor:"pointer",transition:"color 0.4s"}}>
+        <button onClick={saveProfile} style={{width:"100%",padding:"13px 0",borderRadius:12,background:"rgba(var(--tint-rgb),0.12)",border:"1px solid rgba(var(--tint-rgb),0.35)",fontFamily:F,fontSize:10,color:saved?"#7AB07A":GOLD,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",transition:"color 0.4s"}}>
           {saved?"✓ PROFILE SAVED":"SAVE PROFILE"}
         </button>
         {!aiConfigured()&&<div style={{fontFamily:F,fontSize:9,color:"#9B5050",textAlign:"center",marginTop:8,lineHeight:1.5}}>No AI engine active — set one in AI Engine above</div>}

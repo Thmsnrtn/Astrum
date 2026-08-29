@@ -8,7 +8,7 @@
 // be judged true or false in Review once life delivers the verdict.
 
 import { useState } from "react";
-import { F, L, T } from "../ui/theme.js";
+import { F, L, T, GOLD } from "../ui/theme.js";
 import { P } from "../data/planets.js";
 import { TRADITIONS } from "../data/traditions.js";
 import { buildSystemPrompt } from "../ai/prompt.js";
@@ -17,7 +17,6 @@ import { castHorary, horaryToText, QUESTION_HOUSES } from "../engine/horary.js";
 import { createCasting } from "../lib/castings.js";
 import { askClaude } from "../ai/client.js";
 
-const GOLD = "#D4AF6A";
 const SIGN_SYMS = ["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"];
 const fmtLon = l => `${Math.floor(l % 30)}°${String(Math.round(((l % 30) % 1) * 60)).padStart(2, "0")}′ ${SIGN_SYMS[Math.floor(((l % 360) + 360) % 360 / 30)]}`;
 
@@ -65,7 +64,7 @@ export default function HoraryScreen({ profile, natalPos }) {
     } catch {}
   };
 
-  const IS = { width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(200,175,100,0.18)", borderRadius: 10, color: "#C4A870", fontFamily: F, outline: "none", padding: "9px 11px", fontSize: 12, boxSizing: "border-box" };
+  const IS = { width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(var(--tint-rgb),0.18)", borderRadius: 10, color: "#C4A870", fontFamily: F, outline: "none", padding: "9px 11px", fontSize: 12, boxSizing: "border-box" };
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", paddingBottom: 20 }}>
@@ -78,11 +77,11 @@ export default function HoraryScreen({ profile, natalPos }) {
         <div className="card" style={{ marginBottom: 9 }}>
           <div style={L()}>The Question</div>
           <textarea value={question} onChange={e => setQuestion(e.target.value)} rows={2} placeholder="Will I get the position? Where is the lost ring? Should I…" style={{ ...IS, marginTop: 8, resize: "none" }} />
-          <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.4)", letterSpacing: 2, textTransform: "uppercase", margin: "10px 0 5px" }}>The Matter Belongs To</div>
+          <div style={{ fontFamily: F, fontSize: 8, color: "rgba(var(--tint-rgb),0.4)", letterSpacing: 2, textTransform: "uppercase", margin: "10px 0 5px" }}>The Matter Belongs To</div>
           <select value={houseId} onChange={e => setHouseId(e.target.value)} style={IS}>
             {QUESTION_HOUSES.map(q => <option key={q.id} value={q.id}>House {q.house} — {q.label}</option>)}
           </select>
-          <button onClick={cast} disabled={!question.trim()} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 11, background: question.trim() ? "rgba(212,175,106,0.12)" : "rgba(0,0,0,0.3)", border: `1px solid ${question.trim() ? "rgba(212,175,106,0.35)" : "rgba(200,175,100,0.1)"}`, fontFamily: F, fontSize: 10, color: question.trim() ? GOLD : "#5A4020", letterSpacing: 3, textTransform: "uppercase", cursor: question.trim() ? "pointer" : "default" }}>Cast the Question</button>
+          <button onClick={cast} disabled={!question.trim()} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 11, background: question.trim() ? "rgba(var(--tint-rgb),0.12)" : "rgba(0,0,0,0.3)", border: `1px solid ${question.trim() ? "rgba(var(--tint-rgb),0.35)" : "rgba(var(--tint-rgb),0.1)"}`, fontFamily: F, fontSize: 10, color: question.trim() ? GOLD : "#5A4020", letterSpacing: 3, textTransform: "uppercase", cursor: question.trim() ? "pointer" : "default" }}>Cast the Question</button>
         </div>
 
         {chart?.error && <div style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(155,80,80,0.1)", border: "1px solid rgba(155,80,80,0.3)", fontFamily: F, fontSize: 11, color: "#C08080", fontStyle: "italic", lineHeight: 1.7, marginBottom: 9 }}>{chart.error}</div>}
@@ -92,7 +91,7 @@ export default function HoraryScreen({ profile, natalPos }) {
             {/* Radicality */}
             <div style={{ borderRadius: 13, background: "rgba(8,5,22,0.75)", border: `1px solid ${chart.radical ? "rgba(92,168,92,0.3)" : "rgba(176,80,80,0.35)"}`, padding: "12px 14px", marginBottom: 9 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 7 }}>
-                <div style={{ fontFamily: F, fontSize: 9, color: "rgba(200,175,100,0.5)", letterSpacing: 3, textTransform: "uppercase" }}>Considerations Before Judgment</div>
+                <div style={{ fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.5)", letterSpacing: 3, textTransform: "uppercase" }}>Considerations Before Judgment</div>
                 <span style={{ fontFamily: F, fontSize: 10, color: chart.radical ? "#5CA85C" : "#B05050", letterSpacing: 1 }}>{chart.radical ? "RADICAL" : "NOT RADICAL"}</span>
               </div>
               {chart.considerations.map(c => (
@@ -104,16 +103,16 @@ export default function HoraryScreen({ profile, natalPos }) {
             </div>
 
             {/* Significators */}
-            <div style={{ borderRadius: 13, background: "rgba(8,5,22,0.65)", border: "1px solid rgba(200,175,100,0.12)", padding: "12px 14px", marginBottom: 9 }}>
-              <div style={{ fontFamily: F, fontSize: 9, color: "rgba(200,175,100,0.5)", letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>Significators — ASC {fmtLon(chart.asc)} · MC {fmtLon(chart.mc)}</div>
+            <div style={{ borderRadius: 13, background: "rgba(8,5,22,0.65)", border: "1px solid rgba(var(--tint-rgb),0.12)", padding: "12px 14px", marginBottom: 9 }}>
+              <div style={{ fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.5)", letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>Significators — ASC {fmtLon(chart.asc)} · MC {fmtLon(chart.mc)}</div>
               {[["Querent (you)", chart.querent.ruler, "ruler of the Ascendant"], ["Co-significator", "moon", "the Moon, always"], [`Quesited (house ${chart.quesited.house})`, chart.quesited.ruler, `ruler of the ${chart.quesited.house}th cusp${chart.quesited.sameRuler ? " — same as querent; judge by the Moon" : ""}`]].map(([role, pk, why]) => {
                 const p = chart.pos[pk], pl = P[pk];
                 return (
-                  <div key={role} style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 0", borderBottom: "1px solid rgba(200,175,100,0.05)" }}>
+                  <div key={role} style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 0", borderBottom: "1px solid rgba(var(--tint-rgb),0.05)" }}>
                     <span style={{ fontSize: 15, color: pl.col, width: 20 }}>{pl.sym}</span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: F, fontSize: 10.5, color: GOLD }}>{role}: {pl.name} {fmtLon(p.lon)} <span style={{ color: "rgba(200,175,100,0.45)" }}>house {p.house}{p.retro ? " ℞" : ""} · {p.dignity}</span></div>
-                      <div style={{ fontFamily: F, fontSize: 8.5, color: "rgba(200,175,100,0.35)", fontStyle: "italic", marginTop: 1 }}>{why}</div>
+                      <div style={{ fontFamily: F, fontSize: 10.5, color: GOLD }}>{role}: {pl.name} {fmtLon(p.lon)} <span style={{ color: "rgba(var(--tint-rgb),0.45)" }}>house {p.house}{p.retro ? " ℞" : ""} · {p.dignity}</span></div>
+                      <div style={{ fontFamily: F, fontSize: 8.5, color: "rgba(var(--tint-rgb),0.35)", fontStyle: "italic", marginTop: 1 }}>{why}</div>
                     </div>
                   </div>
                 );
@@ -147,7 +146,7 @@ export default function HoraryScreen({ profile, natalPos }) {
 
             <div style={{ display: "flex", gap: 7, marginBottom: 9 }}>
               <button onClick={draftJudgment} disabled={judging} style={{ flex: 1, padding: "11px 0", borderRadius: 11, background: "rgba(100,80,160,0.15)", border: "1px solid rgba(100,80,160,0.35)", fontFamily: F, fontSize: 9, color: "rgba(160,140,220,0.85)", letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{judging ? "Judging…" : "✧ Draft Judgment"}</button>
-              <button onClick={saveCastingRecord} style={{ flex: 1, padding: "11px 0", borderRadius: 11, background: saved ? "rgba(92,168,92,0.15)" : "rgba(212,175,106,0.1)", border: `1px solid ${saved ? "rgba(92,168,92,0.4)" : "rgba(212,175,106,0.3)"}`, fontFamily: F, fontSize: 9, color: saved ? "#7AB07A" : GOLD, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{saved ? "✓ Recorded" : "⚑ Record Casting"}</button>
+              <button onClick={saveCastingRecord} style={{ flex: 1, padding: "11px 0", borderRadius: 11, background: saved ? "rgba(92,168,92,0.15)" : "rgba(var(--tint-rgb),0.1)", border: `1px solid ${saved ? "rgba(92,168,92,0.4)" : "rgba(var(--tint-rgb),0.3)"}`, fontFamily: F, fontSize: 9, color: saved ? "#7AB07A" : GOLD, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{saved ? "✓ Recorded" : "⚑ Record Casting"}</button>
             </div>
 
             {judgment && (

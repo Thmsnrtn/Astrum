@@ -10,7 +10,7 @@ import { loadCastings } from "../lib/castings.js";
 import { composeBriefing } from "../lib/scheduler.js";
 import { loadSpirits, upcomingObservances } from "../lib/spirits.js";
 import { loadJSON } from "../lib/storage.js";
-import { DIGNITY_COL, DIGNITY_LBL, F, L, T, VOWELS } from "../ui/theme.js";
+import { DIGNITY_COL, DIGNITY_LBL, F, L, T, VOWELS, GOLD } from "../ui/theme.js";
 
 const Orrery=React_memo(OrreryInner); // hoisted fn, memo const above is fine
 function OrreryInner({eph,hour,natalPos,onPlanetClick}){
@@ -25,9 +25,9 @@ function OrreryInner({eph,hour,natalPos,onPlanetClick}){
         <radialGradient id="sunhalo" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="rgba(245,197,24,0.5)"/><stop offset="100%" stopColor="rgba(245,197,24,0)"/></radialGradient>
       </defs>
       <circle cx={cx} cy={cy} r={148} fill="url(#obg)"/>
-      {Array.from({length:36}).map((_,i)=>{const a=(i*10-90)*D2R;return <line key={i} x1={cx+148*Math.cos(a)} y1={cy+148*Math.sin(a)} x2={cx+156*Math.cos(a)} y2={cy+156*Math.sin(a)} stroke="rgba(200,175,100,0.08)" strokeWidth={i%3===0?1.2:0.5}/>;}) }
-      {["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"].map((s,i)=>{const a=(i*30+15-90)*D2R;return <text key={s} x={cx+160*Math.cos(a)} y={cy+160*Math.sin(a)} textAnchor="middle" dominantBaseline="middle" fill="rgba(200,175,100,0.2)" fontSize={6} fontFamily="serif">{s}</text>;})}
-      {orbits.map(o=><circle key={o.key+"t"} cx={cx} cy={cy} r={o.r} fill="none" stroke="rgba(200,175,100,0.04)" strokeWidth={0.5}/>)}
+      {Array.from({length:36}).map((_,i)=>{const a=(i*10-90)*D2R;return <line key={i} x1={cx+148*Math.cos(a)} y1={cy+148*Math.sin(a)} x2={cx+156*Math.cos(a)} y2={cy+156*Math.sin(a)} stroke="rgba(var(--tint-rgb),0.08)" strokeWidth={i%3===0?1.2:0.5}/>;}) }
+      {["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"].map((s,i)=>{const a=(i*30+15-90)*D2R;return <text key={s} x={cx+160*Math.cos(a)} y={cy+160*Math.sin(a)} textAnchor="middle" dominantBaseline="middle" fill="rgba(var(--tint-rgb),0.2)" fontSize={6} fontFamily="serif">{s}</text>;})}
+      {orbits.map(o=><circle key={o.key+"t"} cx={cx} cy={cy} r={o.r} fill="none" stroke="rgba(var(--tint-rgb),0.04)" strokeWidth={0.5}/>)}
       {(()=>{const p=eph.pos.sun,a=(p.lon-90)*D2R;return <circle cx={cx+92*Math.cos(a)} cy={cy+92*Math.sin(a)} r={24} fill="url(#sunhalo)" opacity={0.35+0.15*Math.sin(tick*0.08)}/>;})()}
       {eph.voc?.isVoC && (()=>{const p=eph.pos.moon,a=(p.lon-90)*D2R;return <circle cx={cx+38*Math.cos(a)} cy={cy+38*Math.sin(a)} r={14} fill="none" stroke="rgba(200,100,50,0.5)" strokeWidth={1.5} strokeDasharray="3,3"/>;})()}
       <circle cx={cx} cy={cy} r={10} fill="rgba(8,5,22,0.9)" stroke="rgba(100,160,200,0.45)" strokeWidth={1.5}/>
@@ -65,29 +65,29 @@ function HourRing({hour,now}){
     <div style={{display:"flex",alignItems:"center",gap:16}}>
       <svg width={120} height={120} viewBox="0 0 120 120" style={{flexShrink:0}}>
         <defs><linearGradient id="hg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor={p.col} stopOpacity="0.6"/><stop offset="100%" stopColor={p.col}/></linearGradient></defs>
-        {Array.from({length:60}).map((_,i)=>{const a=(i*6-90)*D2R,im=i%5===0?r-10:r-6,ou=r+1;return <line key={i} x1={cx+im*Math.cos(a)} y1={cy+im*Math.sin(a)} x2={cx+ou*Math.cos(a)} y2={cy+ou*Math.sin(a)} stroke="rgba(200,175,100,0.1)" strokeWidth={i%5===0?1.2:0.4}/>;}) }
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(200,175,100,0.06)" strokeWidth={10}/>
+        {Array.from({length:60}).map((_,i)=>{const a=(i*6-90)*D2R,im=i%5===0?r-10:r-6,ou=r+1;return <line key={i} x1={cx+im*Math.cos(a)} y1={cy+im*Math.sin(a)} x2={cx+ou*Math.cos(a)} y2={cy+ou*Math.sin(a)} stroke="rgba(var(--tint-rgb),0.1)" strokeWidth={i%5===0?1.2:0.4}/>;}) }
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(var(--tint-rgb),0.06)" strokeWidth={10}/>
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="url(#hg)" strokeWidth={8} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c*(1-prog)} transform={`rotate(-90 ${cx} ${cy})`} style={{transition:"stroke-dashoffset 0.5s"}}/>
-        <line x1={cx} y1={cy} x2={cx+(r-14)*Math.cos(secAngle*D2R)} y2={cy+(r-14)*Math.sin(secAngle*D2R)} stroke="rgba(200,175,100,0.4)" strokeWidth={0.8} strokeLinecap="round"/>
+        <line x1={cx} y1={cy} x2={cx+(r-14)*Math.cos(secAngle*D2R)} y2={cy+(r-14)*Math.sin(secAngle*D2R)} stroke="rgba(var(--tint-rgb),0.4)" strokeWidth={0.8} strokeLinecap="round"/>
         <circle cx={dx} cy={dy} r={5} fill={p.col}/>
         <circle cx={dx} cy={dy} r={8} fill="none" stroke={p.col} strokeWidth={0.8} opacity={0.5}/>
-        <circle cx={cx} cy={cy} r={25} fill="rgba(4,4,16,0.9)" stroke="rgba(200,175,100,0.08)" strokeWidth={1}/>
+        <circle cx={cx} cy={cy} r={25} fill="rgba(4,4,16,0.9)" stroke="rgba(var(--tint-rgb),0.08)" strokeWidth={1}/>
         <text x={cx} y={cy-6} textAnchor="middle" fill={p.col} fontSize={16} fontFamily="serif">{p.sym}</text>
-        <text x={cx} y={cy+8} textAnchor="middle" fill="rgba(200,175,100,0.7)" fontSize={9} fontFamily={F} letterSpacing={1}>{String(mins).padStart(2,"0")}:{String(secs).padStart(2,"0")}</text>
-        <text x={cx} y={cy+18} textAnchor="middle" fill="rgba(200,175,100,0.3)" fontSize={6} fontFamily={F} letterSpacing={2}>HR {hour.hourNum+1}</text>
+        <text x={cx} y={cy+8} textAnchor="middle" fill="rgba(var(--tint-rgb),0.7)" fontSize={9} fontFamily={F} letterSpacing={1}>{String(mins).padStart(2,"0")}:{String(secs).padStart(2,"0")}</text>
+        <text x={cx} y={cy+18} textAnchor="middle" fill="rgba(var(--tint-rgb),0.3)" fontSize={6} fontFamily={F} letterSpacing={2}>HR {hour.hourNum+1}</text>
       </svg>
       <div>
         <div style={L(`${p.col}70`,8)}>Planetary Hour</div>
         <div style={T(18,p.col)}>{p.name}</div>
-        <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.5)",marginTop:2}}>Day of {dr.sym} {dr.name}</div>
-        <div style={{fontFamily:"serif",fontSize:14,color:"rgba(200,175,100,0.6)",marginTop:6,letterSpacing:6}}>
+        <div style={{fontFamily:F,fontSize:10,color:"rgba(var(--tint-rgb),0.5)",marginTop:2}}>Day of {dr.sym} {dr.name}</div>
+        <div style={{fontFamily:"serif",fontSize:14,color:"rgba(var(--tint-rgb),0.6)",marginTop:6,letterSpacing:6}}>
           {hour.dayRuler===hour.planet?VOWELS[hour.planet]?.p:`${VOWELS[hour.dayRuler]?.p}→${VOWELS[hour.planet]?.p}`}
         </div>
-        <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.35)",marginTop:2,fontStyle:"italic"}}>
+        <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.35)",marginTop:2,fontStyle:"italic"}}>
           {hour.dayRuler===hour.planet?"Pure planetary · Day and hour aligned":`${P[hour.dayRuler].name} of ${P[hour.planet].name}`}
         </div>
-        {hour.isDayHour!=null&&<div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.25)",marginTop:4,letterSpacing:1}}>{hour.isDayHour?"DAY HOUR":"NIGHT HOUR"} · TRUE UNEQUAL</div>}
-        {hour.isDayHour!=null&&hour.rise&&<div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.2)",letterSpacing:0.5,marginTop:1}}>
+        {hour.isDayHour!=null&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.25)",marginTop:4,letterSpacing:1}}>{hour.isDayHour?"DAY HOUR":"NIGHT HOUR"} · TRUE UNEQUAL</div>}
+        {hour.isDayHour!=null&&hour.rise&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.2)",letterSpacing:0.5,marginTop:1}}>
           ☀ {hour.rise.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",timeZone:"UTC"})} — {hour.set?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",timeZone:"UTC"})} UTC
         </div>}
       </div>
@@ -114,10 +114,10 @@ function BriefingCard({now,eph,hour,profile}){
   };
   if(!text)return null;
   return(
-    <div style={{margin:"0 14px 10px",borderRadius:13,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(200,175,100,0.12)"}}>
+    <div style={{margin:"0 14px 10px",borderRadius:13,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(var(--tint-rgb),0.12)"}}>
       <button onClick={()=>setOpen(o=>!o)} style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:"none",border:"none",cursor:"pointer"}}>
-        <span style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.55)",letterSpacing:3,textTransform:"uppercase"}}>☉ Today's Briefing</span>
-        <span style={{color:"rgba(200,175,100,0.35)",fontSize:11}}>{open?"▾":"▸"}</span>
+        <span style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.55)",letterSpacing:3,textTransform:"uppercase"}}>☉ Today's Briefing</span>
+        <span style={{color:"rgba(var(--tint-rgb),0.35)",fontSize:11}}>{open?"▾":"▸"}</span>
       </button>
       {open&&<div style={{padding:"0 14px 12px"}}>
         <div style={{fontFamily:F,fontSize:11,color:"#C4A870",lineHeight:1.9,whiteSpace:"pre-wrap"}}>{text}</div>
@@ -169,44 +169,49 @@ export default function SkyScreen({now,hour,eph,fractal,natalPos,onWork,profile}
                     {pos.combust&&pos.combust.type==="cazimi"&&<span style={{color:"#FFE060",marginLeft:3,fontSize:8}} title="Cazimi — In the Heart of the Sun">✦☉</span>}
                     {pos.combust&&pos.combust.type==="combust"&&<span style={{color:"#F5C518",marginLeft:3,fontSize:8}}>☌☉</span>}
                     {pos.combust&&pos.combust.type==="sunbeams"&&<span style={{color:"rgba(245,197,24,0.5)",marginLeft:3,fontSize:8}}>~☉</span>}
-                    {pos.phase&&<span style={{color:"rgba(200,175,100,0.45)",marginLeft:3,fontSize:7}}>{pos.phase==="morning-star"?"☽↑":"☽↓"}</span>}
+                    {pos.phase&&<span style={{color:"rgba(var(--tint-rgb),0.45)",marginLeft:3,fontSize:7}}>{pos.phase==="morning-star"?"☽↑":"☽↓"}</span>}
                   </div>
-                  <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.35)",letterSpacing:0.5}}>
+                  <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.35)",letterSpacing:0.5}}>
                     <span style={{color:dc}}>{DIGNITY_LBL[pos.dignity].split(" ")[0]}</span>
-                    {pos.bound&&<span style={{marginLeft:4,color:"rgba(200,175,100,0.3)"}}>· {P[pos.bound]?.sym} Bnd</span>}
+                    {pos.bound&&<span style={{marginLeft:4,color:"rgba(var(--tint-rgb),0.3)"}}>· {P[pos.bound]?.sym} Bnd</span>}
                   </div>
                 </div>
               </div>
             );
           })}
-          <div style={{gridColumn:"1/-1",borderTop:"1px solid rgba(200,175,100,0.06)",marginTop:4,paddingTop:6,display:"flex",gap:8}}>
+          <div style={{gridColumn:"1/-1",borderTop:"1px solid rgba(var(--tint-rgb),0.06)",marginTop:4,paddingTop:6,display:"flex",gap:8}}>
             {[{sym:"☊",label:"N. Node",lon:eph.northNode,col:"#90C890"},{sym:"☋",label:"S. Node",lon:eph.southNode,col:"#C08080"}].map(nd=>{
               const z=lonToZodiac(nd.lon);
               return <div key={nd.sym} style={{flex:1,padding:"5px 8px",borderRadius:10,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",gap:7}}>
                 <span style={{fontSize:13,color:nd.col}}>{nd.sym}</span>
                 <div><div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>{z.degree}°{String(z.minutes).padStart(2,"0")}' {z.sym}</div>
-                <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.45)",letterSpacing:0.5}}>{nd.label}</div></div>
+                <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.45)",letterSpacing:0.5}}>{nd.label}</div></div>
               </div>;
             })}
           </div>
+          {eph.asc==null&&(
+            <div style={{margin:"0 0 8px",padding:"9px 12px",borderRadius:10,background:"rgba(var(--tint-rgb),0.05)",border:"1px dashed rgba(var(--tint-rgb),0.25)",fontFamily:F,fontSize:9.5,color:"rgba(var(--tint-rgb),0.55)",fontStyle:"italic",lineHeight:1.6}}>
+              Add your birth place in Profile to raise the Ascendant — it unlocks the angles, the seven Lots, sect, and true planetary hours.
+            </div>
+          )}
           {(eph.asc!=null||eph.mc!=null)&&(
-            <div style={{gridColumn:"1/-1",borderTop:"1px solid rgba(200,175,100,0.06)",marginTop:4,paddingTop:6,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4}}>
+            <div style={{gridColumn:"1/-1",borderTop:"1px solid rgba(var(--tint-rgb),0.06)",marginTop:4,paddingTop:6,display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:4}}>
               {[
-                eph.asc!=null&&{sym:"AC",label:"Ascendant",lon:eph.asc,col:"#D4AF6A"},
-                eph.mc!=null&&{sym:"MC",label:"Midheaven",lon:eph.mc,col:"#D4AF6A"},
+                eph.asc!=null&&{sym:"AC",label:"Ascendant",lon:eph.asc,col:GOLD},
+                eph.mc!=null&&{sym:"MC",label:"Midheaven",lon:eph.mc,col:GOLD},
                 eph.pof!=null&&{sym:"⊕",label:"Pt Fortune",lon:eph.pof,col:"#90C890"},
               ].filter(Boolean).map(nd=>{
                 const z=lonToZodiac(nd.lon);
                 return<div key={nd.sym} style={{padding:"5px 8px",borderRadius:10,background:"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",gap:6}}>
                   <span style={{fontSize:11,color:nd.col}}>{nd.sym}</span>
                   <div><div style={{fontFamily:F,fontSize:9,color:"#C4A870"}}>{z.degree}° {z.sym}</div>
-                  <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.4)",letterSpacing:0.5}}>{nd.label}</div></div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:0.5}}>{nd.label}</div></div>
                 </div>;
               })}
             </div>
           )}
           {eph.isDayChart!=null&&(
-            <div style={{gridColumn:"1/-1",borderTop:"1px solid rgba(200,175,100,0.04)",marginTop:4,paddingTop:4,fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",letterSpacing:1}}>
+            <div style={{gridColumn:"1/-1",borderTop:"1px solid rgba(var(--tint-rgb),0.04)",marginTop:4,paddingTop:4,fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",letterSpacing:1}}>
               {eph.isDayChart?"☉ DAY CHART · Diurnal sect":"☽ NIGHT CHART · Nocturnal sect"} {hour.isDayHour!=null&&(hour.isDayHour?"· Unequal Hours":"· Unequal Hours")}
             </div>
           )}
@@ -242,15 +247,15 @@ export default function SkyScreen({now,hour,eph,fractal,natalPos,onWork,profile}
               <span style={{color:P[a.p1].col,fontSize:12}}>{P[a.p1].sym}</span>
               <span style={{fontFamily:F,fontSize:9,color:"rgba(160,175,200,0.4)"}}>{a.type}</span>
               <span style={{color:P[a.p2].col,fontSize:12}}>{P[a.p2].sym}</span>
-              <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)"}}>{a.orb}°</span>
+              <span style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.25)"}}>{a.orb}°</span>
             </div>
           ))}
-          <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.25)",marginTop:8,lineHeight:1.5}}>Antiscia are shadow conjunctions — planets mirrored across the solstice axis (0°Cancer/0°Capricorn) connect as if in conjunction.</div>
+          <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.25)",marginTop:8,lineHeight:1.5}}>Antiscia are shadow conjunctions — planets mirrored across the solstice axis (0°Cancer/0°Capricorn) connect as if in conjunction.</div>
         </div>
       )}
       {(eph.lotEros!=null||eph.lotNecessity!=null||eph.lotCourage!=null)&&(
         <div className="card" style={{margin:"0 14px 9px"}}>
-          <div style={L("rgba(200,175,100,0.45)",8)}>Arabic Lots</div>
+          <div style={L("rgba(var(--tint-rgb),0.45)",8)}>Arabic Lots</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,marginTop:8}}>
             {[
               {sym:"⊕",label:"Fortune",lon:eph.pof,col:"#90C890"},
@@ -264,7 +269,7 @@ export default function SkyScreen({now,hour,eph,fractal,natalPos,onWork,profile}
               return<div key={lot.sym} style={{padding:"5px 6px",borderRadius:8,background:"rgba(0,0,0,0.3)",textAlign:"center"}}>
                 <div style={{fontSize:12,color:lot.col}}>{lot.sym}</div>
                 <div style={{fontFamily:F,fontSize:9,color:"#C4A870",marginTop:2}}>{z.degree}° {z.sym}</div>
-                <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.35)"}}>{lot.label}</div>
+                <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.35)"}}>{lot.label}</div>
               </div>;
             })}
           </div>
@@ -274,7 +279,7 @@ export default function SkyScreen({now,hour,eph,fractal,natalPos,onWork,profile}
         <div className="card" style={{margin:"0 14px 9px",borderColor:"rgba(200,200,255,0.14)"}}>
           <div style={L("#7080B0",8)}>Fixed Star in Orb</div>
           {eph.nearStars.map(s=>(
-            <div key={s.name} style={{marginTop:8,paddingTop:8,borderTop:"1px solid rgba(200,175,100,0.06)"}}>
+            <div key={s.name} style={{marginTop:8,paddingTop:8,borderTop:"1px solid rgba(var(--tint-rgb),0.06)"}}>
               <div style={{fontFamily:F,fontSize:13,color:s.col}}>{s.name} · {s.nature}</div>
               <div style={{fontFamily:F,fontSize:9,color:"#6070A0",fontStyle:"italic",marginTop:3,lineHeight:1.6}}>{s.magic}</div>
             </div>

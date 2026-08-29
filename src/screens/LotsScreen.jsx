@@ -7,14 +7,13 @@
 // optional reading interprets the lots in the practitioner's tradition.
 
 import { useState, useMemo } from "react";
-import { F, L, T } from "../ui/theme.js";
+import { F, L, T, GOLD } from "../ui/theme.js";
 import { TRADITIONS } from "../data/traditions.js";
 import { buildSystemPrompt } from "../ai/prompt.js";
 import { lonToZodiac } from "../engine/astro.js";
 import { computeLots, chartFromPositions, wholeSignHouse, LOTS } from "../engine/lots.js";
 import { askAI, aiConfigured, aiUnconfiguredMessage } from "../ai/client.js";
 
-const GOLD = "#D4AF6A";
 const ordinal = n => n + (n >= 11 && n <= 13 ? "th" : ["th", "st", "nd", "rd"][n % 10] || "th");
 
 function Deg({ lon }) {
@@ -76,14 +75,14 @@ export default function LotsScreen({ eph, natalPos, profile, now }) {
         {/* Source toggle */}
         <div style={{ display: "flex", gap: 6, marginBottom: 7 }}>
           {[["natal", "Natal Chart"], ["now", "The Sky Now"]].map(([k, lbl]) => (
-            <button key={k} onClick={() => { setSource(k); setReading(null); }} style={{ flex: 1, padding: "9px 0", borderRadius: 10, background: source === k ? "rgba(212,175,106,0.14)" : "rgba(0,0,0,0.3)", border: `1px solid ${source === k ? "rgba(212,175,106,0.4)" : "rgba(200,175,100,0.1)"}`, fontFamily: F, fontSize: 9.5, color: source === k ? GOLD : "#7A6030", letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
+            <button key={k} onClick={() => { setSource(k); setReading(null); }} style={{ flex: 1, padding: "9px 0", borderRadius: 10, background: source === k ? "rgba(var(--tint-rgb),0.14)" : "rgba(0,0,0,0.3)", border: `1px solid ${source === k ? "rgba(var(--tint-rgb),0.4)" : "rgba(var(--tint-rgb),0.1)"}`, fontFamily: F, fontSize: 9.5, color: source === k ? GOLD : "#7A6030", letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
           ))}
         </div>
         {/* Convention toggle — Eros/Necessity differ between the two schools */}
         <div style={{ display: "flex", gap: 6, marginBottom: 10, alignItems: "center" }}>
           <span style={{ fontFamily: F, fontSize: 8, color: "#6A5028", letterSpacing: 1.5, textTransform: "uppercase", marginRight: 2 }}>Rite</span>
           {[["paulus", "Paulus"], ["valens", "Valens"]].map(([k, lbl]) => (
-            <button key={k} onClick={() => { setConvention(k); setReading(null); }} style={{ flex: 1, padding: "6px 0", borderRadius: 8, background: convention === k ? "rgba(120,100,180,0.16)" : "rgba(0,0,0,0.3)", border: `1px solid ${convention === k ? "rgba(120,100,180,0.4)" : "rgba(200,175,100,0.08)"}`, fontFamily: F, fontSize: 8.5, color: convention === k ? "#B0A0E0" : "#6A5028", letterSpacing: 1.5, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
+            <button key={k} onClick={() => { setConvention(k); setReading(null); }} style={{ flex: 1, padding: "6px 0", borderRadius: 8, background: convention === k ? "rgba(120,100,180,0.16)" : "rgba(0,0,0,0.3)", border: `1px solid ${convention === k ? "rgba(120,100,180,0.4)" : "rgba(var(--tint-rgb),0.08)"}`, fontFamily: F, fontSize: 8.5, color: convention === k ? "#B0A0E0" : "#6A5028", letterSpacing: 1.5, textTransform: "uppercase", cursor: "pointer" }}>{lbl}</button>
           ))}
         </div>
 
@@ -99,8 +98,8 @@ export default function LotsScreen({ eph, natalPos, profile, now }) {
 
         {hasChart && (
           <>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9, padding: "8px 12px", borderRadius: 10, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(200,175,100,0.1)" }}>
-              <span style={{ fontFamily: F, fontSize: 9, color: "rgba(200,175,100,0.5)", letterSpacing: 2, textTransform: "uppercase" }}>Sect</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 9, padding: "8px 12px", borderRadius: 10, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(var(--tint-rgb),0.1)" }}>
+              <span style={{ fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.5)", letterSpacing: 2, textTransform: "uppercase" }}>Sect</span>
               <span style={{ fontFamily: F, fontSize: 12, color: GOLD }}>{chart.isDayChart === false ? "☾ Nocturnal" : "☉ Diurnal"}</span>
               <span style={{ fontFamily: F, fontSize: 9.5, color: "#7A6030", marginLeft: "auto" }}>Asc <Deg lon={chart.asc} /></span>
             </div>
@@ -110,7 +109,7 @@ export default function LotsScreen({ eph, natalPos, profile, now }) {
               const house = wholeSignHouse(lon, chart.asc);
               const isOpen = open === lot.id;
               return (
-                <div key={lot.id} onClick={() => setOpen(isOpen ? null : lot.id)} style={{ marginBottom: 7, padding: "11px 13px", borderRadius: 12, background: "rgba(8,5,22,0.6)", border: `1px solid ${isOpen ? "rgba(212,175,106,0.3)" : "rgba(200,175,100,0.1)"}`, cursor: "pointer" }}>
+                <div key={lot.id} onClick={() => setOpen(isOpen ? null : lot.id)} style={{ marginBottom: 7, padding: "11px 13px", borderRadius: 12, background: "rgba(8,5,22,0.6)", border: `1px solid ${isOpen ? "rgba(var(--tint-rgb),0.3)" : "rgba(var(--tint-rgb),0.1)"}`, cursor: "pointer" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
                     <div style={{ fontSize: 19, color: GOLD, width: 24, textAlign: "center", flexShrink: 0 }}>{lot.glyph}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -119,11 +118,11 @@ export default function LotsScreen({ eph, natalPos, profile, now }) {
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <div><Deg lon={lon} /></div>
-                      {house && <div style={{ fontFamily: F, fontSize: 9, color: "rgba(200,175,100,0.5)", marginTop: 2 }}>{ordinal(house)} house</div>}
+                      {house && <div style={{ fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.5)", marginTop: 2 }}>{ordinal(house)} house</div>}
                     </div>
                   </div>
                   {isOpen && (
-                    <div style={{ marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(200,175,100,0.1)", fontFamily: F, fontSize: 10.5, color: "#9A8060", lineHeight: 1.75 }}>
+                    <div style={{ marginTop: 9, paddingTop: 9, borderTop: "1px solid rgba(var(--tint-rgb),0.1)", fontFamily: F, fontSize: 10.5, color: "#9A8060", lineHeight: 1.75 }}>
                       {lot.meaning}
                       <div style={{ marginTop: 6, fontSize: 9, color: "#6A5028" }}>Significator: {lot.significator[0].toUpperCase() + lot.significator.slice(1)} · {chart.isDayChart === false && lot.reverses ? "night formula (reversed)" : "day formula"}</div>
                     </div>

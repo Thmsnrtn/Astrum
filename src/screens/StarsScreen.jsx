@@ -5,7 +5,7 @@ import { FIXED_STARS } from "../data/fixedStars.js";
 import { P } from "../data/planets.js";
 import { norm, planetLon, starLonAt } from "../engine/astro.js";
 import { DEFAULT_ARCUS_VISIONIS, HELIACAL_STARS, heliacalRising, starPhase } from "../engine/heliacal.js";
-import { F, L, T } from "../ui/theme.js";
+import { F, L, T, GOLD } from "../ui/theme.js";
 
 export default function StarsScreen({eph,natalPos,profile}){
   const [sel,setSel]=useState(null);
@@ -41,8 +41,8 @@ export default function StarsScreen({eph,natalPos,profile}){
         <div style={{fontFamily:F,fontSize:10,color:"#6A5030",fontStyle:"italic",marginTop:3,lineHeight:1.6}}>The Royal Stars and fixed stellar powers. Stars within 3° of a transiting or natal planet confer their nature on that planet's operations.</div>
       </div>
       {(appearances.phases.length>0||appearances.risings.length>0)&&(
-        <div style={{margin:"0 14px 8px",padding:"10px 13px",borderRadius:12,background:"rgba(8,5,22,0.6)",border:"1px solid rgba(200,175,100,0.12)"}}>
-          <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.45)",letterSpacing:2,textTransform:"uppercase",marginBottom:6}}>Appearances</div>
+        <div style={{margin:"0 14px 8px",padding:"10px 13px",borderRadius:12,background:"rgba(8,5,22,0.6)",border:"1px solid rgba(var(--tint-rgb),0.12)"}}>
+          <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.45)",letterSpacing:2,textTransform:"uppercase",marginBottom:6}}>Appearances</div>
           {appearances.phases.map(([pk,ph])=>(
             <div key={pk} style={{fontFamily:F,fontSize:10,color:P[pk].col,padding:"2px 0"}}>{P[pk].sym} {P[pk].name} is the <span style={{color:"#D4C098"}}>{ph.phase}</span> ({ph.elongation>0?"+":""}{ph.elongation}° from the Sun)</div>
           ))}
@@ -55,9 +55,9 @@ export default function StarsScreen({eph,natalPos,profile}){
       <div style={{display:"flex",justifyContent:"center",marginBottom:4}}>
         <svg width={280} height={160} viewBox="0 0 280 160">
           <rect width={280} height={160} fill="rgba(4,4,16,0.9)" rx={12}/>
-          <line x1={10} y1={80} x2={270} y2={80} stroke="rgba(200,175,100,0.08)" strokeWidth={1} strokeDasharray="4,4"/>
+          <line x1={10} y1={80} x2={270} y2={80} stroke="rgba(var(--tint-rgb),0.08)" strokeWidth={1} strokeDasharray="4,4"/>
           {Array.from({length:13}).map((_,i)=>(
-            <line key={i} x1={10+i*20} y1={74} x2={10+i*20} y2={86} stroke="rgba(200,175,100,0.15)" strokeWidth={0.5}/>
+            <line key={i} x1={10+i*20} y1={74} x2={10+i*20} y2={86} stroke="rgba(var(--tint-rgb),0.15)" strokeWidth={0.5}/>
           ))}
           {FIXED_STARS.map((star,i)=>{
             const act=starActivity.find(s2=>s2.name===star.name);
@@ -87,7 +87,7 @@ export default function StarsScreen({eph,natalPos,profile}){
               <div style={T(17,s.col)}>{s.name}</div>
               <div style={{fontFamily:F,fontSize:10,color:"rgba(180,190,220,0.5)",marginTop:1}}>Nature: {s.nature} · Mag: {s.mag}</div>
             </div>
-            <button onClick={()=>setSel(null)} style={{background:"none",border:"none",color:"rgba(200,175,100,0.4)",cursor:"pointer",fontSize:14}}>✕</button>
+            <button onClick={()=>setSel(null)} style={{background:"none",border:"none",color:"rgba(var(--tint-rgb),0.4)",cursor:"pointer",fontSize:14}}>✕</button>
           </div>
           <div style={{fontFamily:F,fontSize:11,color:"#9A8060",fontStyle:"italic",lineHeight:1.8,marginBottom:8}}>{s.desc}</div>
           <div style={L("rgba(180,190,220,0.5)",7)}>Magic</div>
@@ -102,11 +102,11 @@ export default function StarsScreen({eph,natalPos,profile}){
                 <div style={{fontFamily:F,fontSize:10,color:"#C4A870",lineHeight:1.8}}>
                   <span style={{color:"rgba(200,180,255,0.6)"}}>STONE</span> {b.stone} · <span style={{color:"rgba(200,180,255,0.6)"}}>HERB</span> {b.herb}
                 </div>
-                <div style={{fontFamily:F,fontSize:9.5,color:"rgba(200,175,100,0.5)",marginTop:3}}>Nature: {b.nature}{b.ptolemy?` · Ptolemy ${b.ptolemy}`:""}</div>
+                <div style={{fontFamily:F,fontSize:9.5,color:"rgba(var(--tint-rgb),0.5)",marginTop:3}}>Nature: {b.nature}{b.ptolemy?` · Ptolemy ${b.ptolemy}`:""}</div>
                 <div style={{fontFamily:F,fontSize:10.5,color:"#9A8060",fontStyle:"italic",lineHeight:1.7,marginTop:6}}>Image: {b.image}</div>
                 <div style={{fontFamily:F,fontSize:10.5,color:"#C4A870",fontStyle:"italic",lineHeight:1.7,marginTop:4}}>{b.virtue}</div>
                 {b.variant&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.6)",fontStyle:"italic",marginTop:4,lineHeight:1.5}}>{b.variant}</div>}
-                <div style={{fontFamily:F,fontSize:8.5,color:"rgba(200,175,100,0.4)",fontStyle:"italic",marginTop:6,lineHeight:1.6}}>{BEHENIAN_DOCTRINE.thebit}</div>
+                <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.4)",fontStyle:"italic",marginTop:6,lineHeight:1.6}}>{BEHENIAN_DOCTRINE.thebit}</div>
               </div>
             );
           })()}
@@ -120,13 +120,13 @@ export default function StarsScreen({eph,natalPos,profile}){
             const all=[...act.nearTransit.map(pk=>({pk,type:"transit"})),...act.nearNatal.map(pk=>({pk,type:"natal"}))];
             if(all.length===0) return null;
             return (
-              <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(200,175,100,0.08)"}}>
+              <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(var(--tint-rgb),0.08)"}}>
                 <div style={L("rgba(255,215,0,0.5)",7)}>Currently Active</div>
                 <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
                   {all.map(({pk,type})=>(
                     <div key={pk+type} style={{display:"flex",alignItems:"center",gap:4,padding:"3px 8px",borderRadius:7,background:`${P[pk].col}12`,border:`1px solid ${P[pk].col}30`}}>
                       <span style={{color:P[pk].col,fontSize:11}}>{P[pk].sym}</span>
-                      <span style={{fontFamily:F,fontSize:7,color:P[pk].col,letterSpacing:1}}>{type.toUpperCase()}</span>
+                      <span style={{fontFamily:F,fontSize:8,color:P[pk].col,letterSpacing:1}}>{type.toUpperCase()}</span>
                     </div>
                   ))}
                 </div>
@@ -143,13 +143,13 @@ export default function StarsScreen({eph,natalPos,profile}){
               <div style={{width:8,height:8,borderRadius:4,background:star.col,flexShrink:0,opacity:star.isActive?1:0.4}}/>
               <div style={{flex:1}}>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <span style={{fontFamily:F,fontSize:12,color:star.isActive?"#D4AF6A":"#C4A870"}}>{star.name}</span>
+                  <span style={{fontFamily:F,fontSize:12,color:star.isActive?GOLD:"#C4A870"}}>{star.name}</span>
                   {star.nearTransit.length>0&&star.nearTransit.map(pk=><span key={pk} style={{color:P[pk].col,fontSize:9}}>{P[pk].sym}</span>)}
                   {star.nearNatal?.length>0&&star.nearNatal.map(pk=><span key={pk+"n"} style={{color:"rgba(255,215,0,0.6)",fontSize:8}}>✦{P[pk].sym}</span>)}
                 </div>
                 <div style={{fontFamily:F,fontSize:8,color:"#5A4020"}}>{star.sign} · {star.nature}</div>
               </div>
-              <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.3)"}}>{star.isActive?"ACTIVE":""}</div>
+              <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)"}}>{star.isActive?"ACTIVE":""}</div>
             </button>
           ))}
         </div>

@@ -130,8 +130,17 @@ input:focus,textarea:focus{border-color:rgba(var(--tint-rgb),0.45);box-shadow:0 
 `;
 
 export const F = "Georgia, 'Times New Roman', serif";
-export const GOLD = "#D4AF6A";
-export const L=(c="#7A6030",s=8)=>({fontFamily:F,fontSize:s,color:c,letterSpacing:3.5,textTransform:"uppercase"});
+// GOLD is a LIVE BINDING: applyTintJs() rewrites it when the practitioner
+// switches tint presets, so every screen that renders after a tint change
+// (App re-renders on the profile update) picks up the themed primary —
+// including SVG presentation attributes and hex+alpha concatenations,
+// which CSS var() strings cannot serve.
+export let GOLD = "#D4AF6A";
+export function applyTintJs(presetId){
+  const p = TINT_PRESETS[presetId] || TINT_PRESETS.solar;
+  GOLD = p.primary;
+}
+export const L=(c="#7A6030",s=9)=>({fontFamily:F,fontSize:s,color:c,letterSpacing:3.5,textTransform:"uppercase"});
 export const T=(s=18,c="#D4AF6A")=>({fontFamily:F,fontSize:s,color:c,lineHeight:1.2});
 export const B=(s=12,c="#8A7050")=>({fontFamily:F,fontSize:s,color:c,fontStyle:"italic",lineHeight:1.9});
 

@@ -5,7 +5,7 @@ import { P } from "../data/planets.js";
 import { TRADITIONS, TRADITION_STEPS } from "../data/traditions.js";
 import { conditionsFromProfile } from "../engine/chart.js";
 import { createCasting } from "../lib/castings.js";
-import { DIGNITY_COL, DIGNITY_LBL, F, L, T, VOWELS } from "../ui/theme.js";
+import { DIGNITY_COL, DIGNITY_LBL, F, L, T, VOWELS, GOLD } from "../ui/theme.js";
 
 export default function WorkScreen({eph,initPlanet,natalPos,profile,now}){
   const [planet,setPlanet]=useState(initPlanet);
@@ -62,10 +62,10 @@ export default function WorkScreen({eph,initPlanet,natalPos,profile,now}){
           {Object.entries(P).map(([pk,pl])=>{
             const pos=eph.pos[pk],dc=DIGNITY_COL[pos.dignity],np=natalPos?.[pk];
             return (
-              <button key={pk} onClick={()=>{setPlanet(pk);setView("op");setStep(0);}} style={{padding:"14px 12px",borderRadius:16,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(200,175,100,0.09)",cursor:"pointer",textAlign:"left",backdropFilter:"blur(16px)"}}>
+              <button key={pk} onClick={()=>{setPlanet(pk);setView("op");setStep(0);}} style={{padding:"14px 12px",borderRadius:16,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(var(--tint-rgb),0.09)",cursor:"pointer",textAlign:"left",backdropFilter:"blur(16px)"}}>
                 <div style={{display:"flex",justifyContent:"space-between"}}>
                   <span style={{fontSize:24,color:pl.col}}>{pl.sym}</span>
-                  {np&&<span style={{fontFamily:F,fontSize:7,color:DIGNITY_COL[np.dignity],letterSpacing:1}}>NATAL</span>}
+                  {np&&<span style={{fontFamily:F,fontSize:8,color:DIGNITY_COL[np.dignity],letterSpacing:1}}>NATAL</span>}
                 </div>
                 <div style={{fontFamily:F,fontSize:14,color:pl.col,marginTop:6}}>{pl.name}</div>
                 <div style={{fontFamily:F,fontSize:8,color:dc,marginTop:3,letterSpacing:1}}>{DIGNITY_LBL[pos.dignity].split(" ")[0].toUpperCase()}{pos.isRetro?" ℞":""}
@@ -89,43 +89,43 @@ export default function WorkScreen({eph,initPlanet,natalPos,profile,now}){
             <div style={L(`${pl.col}70`,8)}>Step {step+1} / {STEPS.length}</div>
           </div>
           <div style={T(17,pl.col)}>{s.t}</div>
-          <div style={{marginTop:9,display:"flex",gap:2}}>{STEPS.map((_,i)=><div key={i} onClick={()=>setStep(i)} style={{flex:1,height:2,borderRadius:1,background:i<=step?pl.col:"rgba(200,175,100,0.1)",cursor:"pointer"}}/>)}</div>
+          <div style={{marginTop:9,display:"flex",gap:2}}>{STEPS.map((_,i)=><div key={i} onClick={()=>setStep(i)} style={{flex:1,height:2,borderRadius:1,background:i<=step?pl.col:"rgba(var(--tint-rgb),0.1)",cursor:"pointer"}}/>)}</div>
         </div>
         <div style={{flex:1,padding:"30px 22px",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center"}}>
           <div style={{fontSize:38,color:pl.col,opacity:0.55,marginBottom:20,animation:"breathe 4s ease-in-out infinite",fontFamily:"serif"}}>{pl.sym}</div>
           <div style={{fontFamily:F,fontSize:15,color:"#D4C8A0",lineHeight:2,textAlign:"center",fontStyle:"italic",maxWidth:320}}>{s.d}</div>
         </div>
         <div style={{padding:"0 16px 12px",display:"flex",gap:8}}>
-          {step>0&&<button onClick={()=>setStep(s=>s-1)} style={{flex:1,padding:"12px 0",borderRadius:12,background:"rgba(200,175,100,0.06)",border:"1px solid rgba(200,175,100,0.12)",fontFamily:F,fontSize:10,color:"#7A6030",letterSpacing:2,cursor:"pointer"}}>← PREV</button>}
+          {step>0&&<button onClick={()=>setStep(s=>s-1)} style={{flex:1,padding:"12px 0",borderRadius:12,background:"rgba(var(--tint-rgb),0.06)",border:"1px solid rgba(var(--tint-rgb),0.12)",fontFamily:F,fontSize:10,color:"#7A6030",letterSpacing:2,cursor:"pointer"}}>← PREV</button>}
           {step<STEPS.length-1?<button onClick={()=>setStep(s=>s+1)} style={{flex:2,padding:"12px 0",borderRadius:12,background:`${pl.col}15`,border:`1px solid ${pl.col}40`,fontFamily:F,fontSize:10,color:pl.col,letterSpacing:2,cursor:"pointer"}}>NEXT →</button>:<button onClick={()=>setView("op")} style={{flex:2,padding:"12px 0",borderRadius:12,background:`${pl.col}25`,border:`1px solid ${pl.col}50`,fontFamily:F,fontSize:11,color:pl.col,letterSpacing:2,cursor:"pointer"}}>✦ COMPLETE</button>}
         </div>
       </div>
     );
   }
   if(view==="generator"){
-    const IS={width:"100%",marginTop:4,background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:12,boxSizing:"border-box"};
+    const IS={width:"100%",marginTop:4,background:"rgba(0,0,0,0.4)",border:"1px solid rgba(var(--tint-rgb),0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:12,boxSizing:"border-box"};
     return(
       <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:20}}>
-        <div style={{padding:"12px 16px 10px",borderBottom:"1px solid rgba(200,175,100,0.07)",display:"flex",alignItems:"center",gap:10}}>
-          <button onClick={()=>{setView("op");setGenPlan(null);}} style={{background:"none",border:"none",color:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:10,cursor:"pointer",letterSpacing:1}}>← Back</button>
-          <div style={{fontFamily:F,fontSize:13,color:"#D4AF6A"}}>AI Ritual Generator</div>
+        <div style={{padding:"12px 16px 10px",borderBottom:"1px solid rgba(var(--tint-rgb),0.07)",display:"flex",alignItems:"center",gap:10}}>
+          <button onClick={()=>{setView("op");setGenPlan(null);}} style={{background:"none",border:"none",color:"rgba(var(--tint-rgb),0.4)",fontFamily:F,fontSize:10,cursor:"pointer",letterSpacing:1}}>← Back</button>
+          <div style={{fontFamily:F,fontSize:13,color:GOLD}}>AI Ritual Generator</div>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"12px 14px"}}>
           <div className="card" style={{marginBottom:10}}>
             <div style={L("rgba(160,140,220,0.7)")}>Working Parameters</div>
             <div style={{marginTop:10}}>
-              <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase"}}>Your Goal *</div>
+              <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:2,textTransform:"uppercase"}}>Your Goal *</div>
               <textarea value={genGoal} onChange={e=>setGenGoal(e.target.value)} placeholder="What do you want to accomplish? Be specific." rows={2} style={{...IS,resize:"none"}}/>
             </div>
             <div style={{marginTop:8}}>
-              <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase"}}>Timeline</div>
+              <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:2,textTransform:"uppercase"}}>Timeline</div>
               <input value={genTimeline} onChange={e=>setGenTimeline(e.target.value)} placeholder="e.g. within 3 weeks, by June 1, flexible…" style={IS}/>
             </div>
             <div style={{marginTop:8}}>
-              <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,textTransform:"uppercase"}}>Notes / Constraints</div>
+              <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:2,textTransform:"uppercase"}}>Notes / Constraints</div>
               <textarea value={genNotes} onChange={e=>setGenNotes(e.target.value)} placeholder="Available materials, limitations, specific requests…" rows={2} style={{...IS,resize:"none"}}/>
             </div>
-            <button onClick={generatePlan} disabled={!genGoal.trim()||genLoading} style={{width:"100%",marginTop:12,padding:"13px 0",borderRadius:12,background:genGoal.trim()?"rgba(80,60,150,0.2)":"rgba(0,0,0,0.3)",border:`1px solid ${genGoal.trim()?"rgba(100,80,180,0.45)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:10,color:genGoal.trim()?"rgba(160,140,220,0.9)":"#4A3020",letterSpacing:3,textTransform:"uppercase",cursor:genGoal.trim()?"pointer":"default"}}>
+            <button onClick={generatePlan} disabled={!genGoal.trim()||genLoading} style={{width:"100%",marginTop:12,padding:"13px 0",borderRadius:12,background:genGoal.trim()?"rgba(80,60,150,0.2)":"rgba(0,0,0,0.3)",border:`1px solid ${genGoal.trim()?"rgba(100,80,180,0.45)":"rgba(var(--tint-rgb),0.1)"}`,fontFamily:F,fontSize:10,color:genGoal.trim()?"rgba(160,140,220,0.9)":"#4A3020",letterSpacing:3,textTransform:"uppercase",cursor:genGoal.trim()?"pointer":"default"}}>
               {genLoading?"Consulting the spheres…":"✧ Generate Plan"}
             </button>
           </div>
@@ -189,7 +189,7 @@ export default function WorkScreen({eph,initPlanet,natalPos,profile,now}){
         <button onClick={()=>{setStep(0);setView("ritual");}} style={{width:"100%",padding:"16px 0",borderRadius:14,background:`linear-gradient(135deg,${pl.col}22,${pl.col}10)`,border:`2px solid ${pl.col}45`,fontFamily:F,fontSize:12,color:pl.col,letterSpacing:4,textTransform:"uppercase",cursor:"pointer",marginBottom:4}}>
           ✦ Begin the Ritual
         </button>
-        <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)",letterSpacing:2,textAlign:"center",marginBottom:9}}>{TRADITIONS[primaryTrad]?.label||"Classical"} · {STEPS.length}-Step Framework</div>
+        <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.25)",letterSpacing:2,textAlign:"center",marginBottom:9}}>{TRADITIONS[primaryTrad]?.label||"Classical"} · {STEPS.length}-Step Framework</div>
         <button onClick={()=>setView("generator")} style={{width:"100%",padding:"13px 0",borderRadius:13,background:"rgba(80,60,150,0.12)",border:"1px solid rgba(100,80,180,0.3)",fontFamily:F,fontSize:11,color:"rgba(160,140,220,0.8)",letterSpacing:3,textTransform:"uppercase",cursor:"pointer",marginBottom:9}}>
           ✧ Generate AI Ritual Plan
         </button>

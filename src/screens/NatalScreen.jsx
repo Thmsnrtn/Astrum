@@ -63,7 +63,7 @@ function NatalWheelChart({natalPos,outerPos,outerLabel,cusps,houseSys,onSelectPl
   return(
     <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{display:"block",touchAction:"none"}}>
       {/* Background */}
-      <circle cx={cx} cy={cy} r={R_ZODIAC} fill="rgba(4,4,16,0.95)" stroke="rgba(200,175,100,0.15)" strokeWidth={1}/>
+      <circle cx={cx} cy={cy} r={R_ZODIAC} fill="rgba(4,4,16,0.95)" stroke="rgba(var(--tint-rgb),0.15)" strokeWidth={1}/>
 
       {/* Zodiac sign sectors */}
       {Array.from({length:12},(_,i)=>{
@@ -87,7 +87,7 @@ function NatalWheelChart({natalPos,outerPos,outerLabel,cusps,houseSys,onSelectPl
       {Array.from({length:72},(_,i)=>{
         const lon=i*5,a=lon2ang(lon),major=i%6===0;
         const r0=major?R_ZODIAC_IN:R_ZODIAC_IN+3;
-        return<line key={i} x1={px(r0,a)} y1={py(r0,a)} x2={px(R_ZODIAC_IN+7,a)} y2={py(R_ZODIAC_IN+7,a)} stroke={`rgba(200,175,100,${major?0.4:0.15})`} strokeWidth={major?1:0.5}/>;
+        return<line key={i} x1={px(r0,a)} y1={py(r0,a)} x2={px(R_ZODIAC_IN+7,a)} y2={py(R_ZODIAC_IN+7,a)} stroke={`rgba(var(--tint-rgb),${major?0.4:0.15})`} strokeWidth={major?1:0.5}/>;
       })}
 
       {/* House cusps */}
@@ -97,8 +97,8 @@ function NatalWheelChart({natalPos,outerPos,outerLabel,cusps,houseSys,onSelectPl
         const hx=px((R_HOUSE_IN+R_HOUSE_OUT)/2,a),hy=py((R_HOUSE_IN+R_HOUSE_OUT)/2,a);
         return(
           <g key={i}>
-            <line x1={px(isAngular?R_ZODIAC_IN:R_HOUSE_OUT,a)} y1={py(isAngular?R_ZODIAC_IN:R_HOUSE_OUT,a)} x2={px(R_HOUSE_IN-5,a)} y2={py(R_HOUSE_IN-5,a)} stroke={`rgba(200,175,100,${isAngular?0.6:0.2})`} strokeWidth={isAngular?1.2:0.6}/>
-            <text x={hx} y={hy} textAnchor="middle" dominantBaseline="middle" fill={`rgba(200,175,100,${isAngular?0.7:0.3})`} fontSize={isAngular?7:6} fontFamily={F}>{HOUSE_NAMES[i]}</text>
+            <line x1={px(isAngular?R_ZODIAC_IN:R_HOUSE_OUT,a)} y1={py(isAngular?R_ZODIAC_IN:R_HOUSE_OUT,a)} x2={px(R_HOUSE_IN-5,a)} y2={py(R_HOUSE_IN-5,a)} stroke={`rgba(var(--tint-rgb),${isAngular?0.6:0.2})`} strokeWidth={isAngular?1.2:0.6}/>
+            <text x={hx} y={hy} textAnchor="middle" dominantBaseline="middle" fill={`rgba(var(--tint-rgb),${isAngular?0.7:0.3})`} fontSize={isAngular?7:6} fontFamily={F}>{HOUSE_NAMES[i]}</text>
           </g>
         );
       })}
@@ -108,14 +108,14 @@ function NatalWheelChart({natalPos,outerPos,outerLabel,cusps,houseSys,onSelectPl
         const l1=natalPos[asp.pk1]?.lon,l2=natalPos[asp.pk2]?.lon;
         if(l1==null||l2==null)return null;
         const a1=lon2ang(l1),a2=lon2ang(l2),r=R_HOUSE_IN-8;
-        const col=ASP_COLORS[asp.ad.n]||"rgba(200,175,100,0.2)";
+        const col=ASP_COLORS[asp.ad.n]||"rgba(var(--tint-rgb),0.2)";
         const isDash=asp.ad.n==="Square"||asp.ad.n==="Opposition";
         return<line key={i} x1={px(r,a1)} y1={py(r,a1)} x2={px(r,a2)} y2={py(r,a2)} stroke={col} strokeWidth={0.8} opacity={0.35} strokeDasharray={isDash?"3,3":"none"}/>;
       })}
 
       {/* Inner ring */}
-      <circle cx={cx} cy={cy} r={R_HOUSE_IN} fill="rgba(4,4,16,0.4)" stroke="rgba(200,175,100,0.12)" strokeWidth={0.8}/>
-      <circle cx={cx} cy={cy} r={R_HOUSE_OUT} fill="none" stroke="rgba(200,175,100,0.1)" strokeWidth={0.5}/>
+      <circle cx={cx} cy={cy} r={R_HOUSE_IN} fill="rgba(4,4,16,0.4)" stroke="rgba(var(--tint-rgb),0.12)" strokeWidth={0.8}/>
+      <circle cx={cx} cy={cy} r={R_HOUSE_OUT} fill="none" stroke="rgba(var(--tint-rgb),0.1)" strokeWidth={0.5}/>
 
       {/* Outer planets (bi-wheel) */}
       {outerPos&&planetKeys.map(pk=>{
@@ -129,7 +129,7 @@ function NatalWheelChart({natalPos,outerPos,outerLabel,cusps,houseSys,onSelectPl
           </g>
         );
       })}
-      {outerPos&&outerLabel&&<text x={cx} y={cy+R_OUTER+16} textAnchor="middle" fill="rgba(200,175,100,0.4)" fontSize={7} fontFamily={F}>{outerLabel}</text>}
+      {outerPos&&outerLabel&&<text x={cx} y={cy+R_OUTER+16} textAnchor="middle" fill="rgba(var(--tint-rgb),0.4)" fontSize={7} fontFamily={F}>{outerLabel}</text>}
 
       {/* Inner planets */}
       {allKeys.map(pk=>{
@@ -151,13 +151,13 @@ function NatalWheelChart({natalPos,outerPos,outerLabel,cusps,houseSys,onSelectPl
       {/* ASC / DSC / MC / IC axis labels */}
       {natalPos.asc!=null&&[{l:"ASC",lon:natalPos.asc,r:R_ZODIAC+10},{l:"DSC",lon:norm(natalPos.asc+180),r:R_ZODIAC+10},{l:"MC",lon:natalPos.mc,r:R_ZODIAC+10},{l:"IC",lon:norm(natalPos.mc+180),r:R_ZODIAC+10}].map(ax=>{
         const a=lon2ang(ax.lon);
-        return<text key={ax.l} x={px(ax.r,a)} y={py(ax.r,a)} textAnchor="middle" dominantBaseline="middle" fill="rgba(200,175,100,0.55)" fontSize={6.5} fontFamily={F}>{ax.l}</text>;
+        return<text key={ax.l} x={px(ax.r,a)} y={py(ax.r,a)} textAnchor="middle" dominantBaseline="middle" fill="rgba(var(--tint-rgb),0.55)" fontSize={6.5} fontFamily={F}>{ax.l}</text>;
       })}
 
       {/* Center */}
-      <circle cx={cx} cy={cy} r={30} fill="rgba(4,4,16,0.95)" stroke="rgba(200,175,100,0.1)" strokeWidth={0.8}/>
-      <text x={cx} y={cy-8} textAnchor="middle" fill="rgba(200,175,100,0.5)" fontSize={7} fontFamily={F}>{houseSys?.toUpperCase()||"WS"}</text>
-      <text x={cx} y={cy+5} textAnchor="middle" fill="rgba(200,175,100,0.3)" fontSize={6} fontFamily={F}>HOUSES</text>
+      <circle cx={cx} cy={cy} r={30} fill="rgba(4,4,16,0.95)" stroke="rgba(var(--tint-rgb),0.1)" strokeWidth={0.8}/>
+      <text x={cx} y={cy-8} textAnchor="middle" fill="rgba(var(--tint-rgb),0.5)" fontSize={7} fontFamily={F}>{houseSys?.toUpperCase()||"WS"}</text>
+      <text x={cx} y={cy+5} textAnchor="middle" fill="rgba(var(--tint-rgb),0.3)" fontSize={6} fontFamily={F}>HOUSES</text>
     </svg>
   );
 }
@@ -208,7 +208,7 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
         {natalPos&&natalPos.asc!=null&&(
           <div style={{display:"flex",gap:4}}>
             {HOUSE_SYMS.map(([sys,abbr,full])=>(
-              <button key={sys} onClick={()=>setHouseSys(sys)} title={full} style={{padding:"3px 6px",borderRadius:5,border:`1px solid ${houseSys===sys?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.1)"}`,background:houseSys===sys?"rgba(200,175,100,0.1)":"transparent",color:houseSys===sys?GOLD:"rgba(200,175,100,0.35)",fontFamily:F,fontSize:7.5,letterSpacing:0.5,cursor:"pointer"}}>{abbr}</button>
+              <button key={sys} onClick={()=>setHouseSys(sys)} title={full} style={{padding:"3px 6px",borderRadius:5,border:`1px solid ${houseSys===sys?"rgba(var(--tint-rgb),0.5)":"rgba(var(--tint-rgb),0.1)"}`,background:houseSys===sys?"rgba(var(--tint-rgb),0.1)":"transparent",color:houseSys===sys?GOLD:"rgba(var(--tint-rgb),0.35)",fontFamily:F,fontSize:8.5,letterSpacing:0.5,cursor:"pointer"}}>{abbr}</button>
             ))}
           </div>
         )}
@@ -217,12 +217,12 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
       {/* Birth data entry */}
       <div className="card" style={{margin:"0 14px 10px"}}>
         <div style={{display:"flex",gap:10,alignItems:"flex-end"}}>
-          <div style={{flex:2}}><div style={L("rgba(200,175,100,0.4)",7)}>Birth Date</div><input type="date" value={bd} onChange={e=>setBd(e.target.value)} style={{width:"100%",marginTop:4,fontSize:12}}/></div>
-          <div style={{flex:1}}><div style={L("rgba(200,175,100,0.4)",7)}>Time</div><input type="time" value={bt} onChange={e=>setBt(e.target.value)} style={{width:"100%",marginTop:4,fontSize:12}}/></div>
-          <button onClick={save} disabled={!bd} style={{padding:"9px 14px",borderRadius:10,background:bd?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${bd?"rgba(212,175,106,0.35)":"rgba(200,175,100,0.1)"}`,fontFamily:F,fontSize:9,color:bd?"#D4AF6A":"#5A4020",cursor:bd?"pointer":"default",whiteSpace:"nowrap"}}>✦ CALC</button>
+          <div style={{flex:2}}><div style={L("rgba(var(--tint-rgb),0.4)",7)}>Birth Date</div><input type="date" value={bd} onChange={e=>setBd(e.target.value)} style={{width:"100%",marginTop:4,fontSize:12}}/></div>
+          <div style={{flex:1}}><div style={L("rgba(var(--tint-rgb),0.4)",7)}>Time</div><input type="time" value={bt} onChange={e=>setBt(e.target.value)} style={{width:"100%",marginTop:4,fontSize:12}}/></div>
+          <button onClick={save} disabled={!bd} style={{padding:"9px 14px",borderRadius:10,background:bd?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.3)",border:`1px solid ${bd?"rgba(var(--tint-rgb),0.35)":"rgba(var(--tint-rgb),0.1)"}`,fontFamily:F,fontSize:9,color:bd?GOLD:"#5A4020",cursor:bd?"pointer":"default",whiteSpace:"nowrap"}}>✦ CALC</button>
           {natalPos&&<button onClick={clear} style={{padding:"9px 10px",borderRadius:10,background:"rgba(80,20,20,0.3)",border:"1px solid rgba(150,60,60,0.3)",fontFamily:F,fontSize:9,color:"#9B5050",cursor:"pointer"}}>✕</button>}
         </div>
-        {!location&&natalPos&&<div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:7}}>✦ Add birth city in Profile for Ascendant, houses, and lots.</div>}
+        {!location&&natalPos&&<div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",marginTop:7}}>✦ Add birth city in Profile for Ascendant, houses, and lots.</div>}
       </div>
 
       {natalPos&&(
@@ -231,7 +231,7 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
           <div style={{overflowX:"auto",padding:"0 14px",marginBottom:8}}>
             <div style={{display:"flex",gap:5,minWidth:"max-content"}}>
               {[["wheel","Wheel"],["planets","Planets"],["angles","Angles"],["decans","Decans"],["prog","Prog"],["firdaria","Firdaria"],["returns","Returns"],["synastry","Synastry"],["midpoints","Midpoints"]].map(([v,lbl])=>(
-                <button key={v} onClick={()=>setView(v)} style={{padding:"5px 11px",borderRadius:8,border:`1px solid ${view===v?"rgba(200,175,100,0.4)":"rgba(200,175,100,0.1)"}`,background:view===v?"rgba(200,175,100,0.08)":"transparent",color:view===v?GOLD:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer",whiteSpace:"nowrap"}}>{lbl}</button>
+                <button key={v} onClick={()=>setView(v)} style={{padding:"5px 11px",borderRadius:8,border:`1px solid ${view===v?"rgba(var(--tint-rgb),0.4)":"rgba(var(--tint-rgb),0.1)"}`,background:view===v?"rgba(var(--tint-rgb),0.08)":"transparent",color:view===v?GOLD:"rgba(var(--tint-rgb),0.4)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer",whiteSpace:"nowrap"}}>{lbl}</button>
               ))}
             </div>
           </div>
@@ -250,19 +250,19 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                       <span style={{fontSize:22,color:selPlanetObj.col}}>{selPlanetObj.sym}</span>
                       <div>
                         <div style={{fontFamily:F,fontSize:14,color:selPlanetObj.col}}>{selPlanetObj.name||selPlanet}</div>
-                        <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.6)",marginTop:2}}>
+                        <div style={{fontFamily:F,fontSize:10,color:"rgba(var(--tint-rgb),0.6)",marginTop:2}}>
                           {selPlanetData.zodiac?.degree}°{String(selPlanetData.zodiac?.minutes||0).padStart(2,"0")}' {selPlanetData.zodiac?.name}
                           {selPlanetData.isRetro&&<span style={{color:"#9B4040",marginLeft:6}}>℞</span>}
-                          {cusps&&<span style={{marginLeft:8,color:"rgba(200,175,100,0.4)"}}>House {houseOf(selPlanetData.lon)}</span>}
+                          {cusps&&<span style={{marginLeft:8,color:"rgba(var(--tint-rgb),0.4)"}}>House {houseOf(selPlanetData.lon)}</span>}
                         </div>
                       </div>
                     </div>
-                    <button onClick={()=>setSelPlanet(null)} style={{background:"none",border:"none",color:"rgba(200,175,100,0.4)",fontSize:16,cursor:"pointer"}}>✕</button>
+                    <button onClick={()=>setSelPlanet(null)} style={{background:"none",border:"none",color:"rgba(var(--tint-rgb),0.4)",fontSize:16,cursor:"pointer"}}>✕</button>
                   </div>
                   {selPlanetData.dignity&&(
                     <div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap"}}>
                       <span style={{fontFamily:F,fontSize:8,color:DIGNITY_COL[selPlanetData.dignity],letterSpacing:1,padding:"2px 8px",border:`1px solid ${DIGNITY_COL[selPlanetData.dignity]}40`,borderRadius:4}}>{selPlanetData.dignity.toUpperCase()}</span>
-                      {selPlanetData.bound&&<span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:1,padding:"2px 8px",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4}}>{P[selPlanetData.bound]?.sym} BOUND</span>}
+                      {selPlanetData.bound&&<span style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:1,padding:"2px 8px",border:"1px solid rgba(var(--tint-rgb),0.15)",borderRadius:4}}>{P[selPlanetData.bound]?.sym} BOUND</span>}
                     </div>
                   )}
                 </div>
@@ -287,7 +287,7 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                   const transit=eph.pos[pk];
                   const tripRuler=P[pk]&&np.lon!=null&&natalPos.isDayChart!=null?getTriplicity(np.lon,natalPos.isDayChart):null;
                   return(
-                    <div key={pk} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
+                    <div key={pk} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:"1px solid rgba(var(--tint-rgb),0.05)"}}>
                       <span style={{fontSize:16,color:pl.col,width:22}}>{pl.sym}</span>
                       <div style={{flex:1}}>
                         <div style={{fontFamily:F,fontSize:11,color:"#C4A870"}}>
@@ -296,10 +296,10 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                         </div>
                         <div style={{fontFamily:F,fontSize:8,color:"#5A4020",marginTop:1}}>
                           {np.dignity&&<span style={{color:dc}}>{DIGNITY_LBL[np.dignity]?.split(" ")[0]}</span>}
-                          {tripRuler&&<span style={{marginLeft:6,color:"rgba(200,175,100,0.4)"}}>Trip: {P[tripRuler]?.sym}</span>}
-                          {house&&<span style={{marginLeft:6,color:"rgba(200,175,100,0.35)"}}>H{house}</span>}
-                          {fractalActive&&<span style={{marginLeft:6,color:"#D4AF6A"}}>✦ fractal</span>}
-                          {transit&&<span style={{marginLeft:6,color:"rgba(200,175,100,0.35)"}}>Now: {transit.zodiac?.name}</span>}
+                          {tripRuler&&<span style={{marginLeft:6,color:"rgba(var(--tint-rgb),0.4)"}}>Trip: {P[tripRuler]?.sym}</span>}
+                          {house&&<span style={{marginLeft:6,color:"rgba(var(--tint-rgb),0.35)"}}>H{house}</span>}
+                          {fractalActive&&<span style={{marginLeft:6,color:GOLD}}>✦ fractal</span>}
+                          {transit&&<span style={{marginLeft:6,color:"rgba(var(--tint-rgb),0.35)"}}>Now: {transit.zodiac?.name}</span>}
                         </div>
                       </div>
                       {np.score!=null&&<div style={{fontFamily:F,fontSize:9,color:dc}}>{np.score}</div>}
@@ -324,10 +324,10 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                   <div style={L()}>Angles & Nodes</div>
                   <div style={{marginTop:8}}>
                     {[
-                      natalPos.asc!=null&&{sym:"AC",label:"Ascendant",lon:natalPos.asc,col:"#D4AF6A",desc:HOUSE_MEANINGS[0]},
-                      natalPos.mc!=null&&{sym:"MC",label:"Midheaven",lon:natalPos.mc,col:"#D4AF6A",desc:HOUSE_MEANINGS[9]},
-                      natalPos.asc!=null&&{sym:"DC",label:"Descendant",lon:norm(natalPos.asc+180),col:"#D4AF6A",desc:HOUSE_MEANINGS[6]},
-                      natalPos.mc!=null&&{sym:"IC",label:"Imum Coeli",lon:norm(natalPos.mc+180),col:"#D4AF6A",desc:HOUSE_MEANINGS[3]},
+                      natalPos.asc!=null&&{sym:"AC",label:"Ascendant",lon:natalPos.asc,col:GOLD,desc:HOUSE_MEANINGS[0]},
+                      natalPos.mc!=null&&{sym:"MC",label:"Midheaven",lon:natalPos.mc,col:GOLD,desc:HOUSE_MEANINGS[9]},
+                      natalPos.asc!=null&&{sym:"DC",label:"Descendant",lon:norm(natalPos.asc+180),col:GOLD,desc:HOUSE_MEANINGS[6]},
+                      natalPos.mc!=null&&{sym:"IC",label:"Imum Coeli",lon:norm(natalPos.mc+180),col:GOLD,desc:HOUSE_MEANINGS[3]},
                       natalPos.northNode!=null&&{sym:"☊",label:"True North Node",lon:natalPos.northNode,col:"#90C890",desc:"Dragon's Head — increase, growth"},
                       natalPos.southNode!=null&&{sym:"☋",label:"South Node",lon:natalPos.southNode,col:"#C08080",desc:"Dragon's Tail — release, past"},
                       natalPos.lilith?.lon!=null&&{sym:"⚸",label:"Black Moon Lilith",lon:natalPos.lilith.lon,col:"#9060A0",desc:"Mean apogee — raw instinct, shadow"},
@@ -335,7 +335,7 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                     ].filter(Boolean).map(({sym,label,lon,col,desc})=>{
                       const z=lonToZodiac(lon),house=cusps?houseOf(lon):null;
                       return(
-                        <div key={sym} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
+                        <div key={sym} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:"1px solid rgba(var(--tint-rgb),0.05)"}}>
                           <div style={{width:28,height:28,borderRadius:14,background:`${col}15`,border:`1px solid ${col}35`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:col,flexShrink:0}}>{sym}</div>
                           <div style={{flex:1}}>
                             <div style={{fontFamily:F,fontSize:11,color:"#C4A870"}}>{label}</div>
@@ -344,8 +344,8 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                         </div>
                       );
                     })}
-                    {!natalPos.asc&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",padding:"8px 0"}}>Add birth city in Profile to calculate angles.</div>}
-                    <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.2)",marginTop:8}}>
+                    {!natalPos.asc&&<div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.3)",padding:"8px 0"}}>Add birth city in Profile to calculate angles.</div>}
+                    <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.2)",marginTop:8}}>
                       Sect: {natalPos.isDayChart!=null?(natalPos.isDayChart?"☉ Day chart":"☽ Night chart"):"unknown"}
                       {cusps&&` · ${HOUSE_SYMS.find(h=>h[0]===houseSys)?.[2]||houseSys} houses`}
                     </div>
@@ -358,7 +358,7 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                       {Object.entries(allLots).map(([key,lon])=>{
                         const z=lonToZodiac(lon),house=cusps?houseOf(lon):null;
                         return(
-                          <div key={key} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                          <div key={key} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0",borderBottom:"1px solid rgba(var(--tint-rgb),0.04)"}}>
                             <div style={{width:26,height:26,borderRadius:13,background:"rgba(144,200,144,0.1)",border:"1px solid rgba(144,200,144,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"#90C890",flexShrink:0}}>⊕</div>
                             <div style={{flex:1}}>
                               <div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>{LOT_LABELS[key]||key}</div>
@@ -391,10 +391,10 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                       <div style={{fontFamily:F,fontSize:9,color:"#5A4020"}}>{np.zodiac.degree}° {np.decan.sym} {np.decan.sign} · {DIGNITY_LBL[np.dignity].split(" ")[0]}</div>
                     </div>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
-                      <span style={{fontFamily:F,fontSize:7,color:dc,letterSpacing:1}}>{np.dignity.toUpperCase()}</span>
-                      {fractalActive&&<span style={{fontFamily:F,fontSize:7,color:"#D4AF6A",letterSpacing:1}}>FRACTAL ✦</span>}
-                      {transitIn&&<span style={{fontFamily:F,fontSize:7,color:"#5CA85C",letterSpacing:1}}>TRANSIT IN</span>}
-                      {np.isRetro&&<span style={{fontFamily:F,fontSize:7,color:"#9B4040"}}>RETRO</span>}
+                      <span style={{fontFamily:F,fontSize:8,color:dc,letterSpacing:1}}>{np.dignity.toUpperCase()}</span>
+                      {fractalActive&&<span style={{fontFamily:F,fontSize:8,color:GOLD,letterSpacing:1}}>FRACTAL ✦</span>}
+                      {transitIn&&<span style={{fontFamily:F,fontSize:8,color:"#5CA85C",letterSpacing:1}}>TRANSIT IN</span>}
+                      {np.isRetro&&<span style={{fontFamily:F,fontSize:8,color:"#9B4040"}}>RETRO</span>}
                     </div>
                   </button>
                 );
@@ -414,16 +414,16 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                     <div style={L()}>Secondary Progressions</div>
                     <input type="date" value={progDate} onChange={e=>setProgDate(e.target.value)} style={{fontSize:10,width:130}}/>
                   </div>
-                  <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",marginBottom:8}}>Age: {prog.ageYears}y · 1 day = 1 year</div>
+                  <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.4)",marginBottom:8}}>Age: {prog.ageYears}y · 1 day = 1 year</div>
                   {Object.entries(prog.pos).filter(([pk])=>P[pk]).map(([pk,np])=>{
                     const pl=P[pk],natal=natalPos[pk];
                     const diff=natal?((norm(np.lon-natal.lon+180)-180)).toFixed(1):null;
                     return(
-                      <div key={pk} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                      <div key={pk} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:"1px solid rgba(var(--tint-rgb),0.04)"}}>
                         <span style={{fontSize:14,color:pl.col,width:20}}>{pl.sym}</span>
                         <div style={{flex:1}}>
                           <div style={{fontFamily:F,fontSize:11,color:"#C4A870"}}>{np.zodiac.degree}° {np.zodiac.name}{np.isRetro&&<span style={{color:"#9B4040",fontSize:9}}> ℞</span>}</div>
-                          {diff&&<div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)"}}>Δ {diff}° from natal</div>}
+                          {diff&&<div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.35)"}}>Δ {diff}° from natal</div>}
                         </div>
                       </div>
                     );
@@ -431,15 +431,15 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                 </div>
                 <div className="card" style={{margin:"0 14px 8px"}}>
                   <div style={L()}>Solar Arc Directions</div>
-                  <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",marginBottom:8}}>Arc: {sa.arc}°</div>
+                  <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.4)",marginBottom:8}}>Arc: {sa.arc}°</div>
                   {Object.entries(sa.directed).filter(([pk])=>P[pk]).map(([pk,dp])=>{
                     const pl=P[pk];
                     const isActive=Math.abs(parseFloat(sa.arc)-Math.round(parseFloat(sa.arc)))<0.017;
                     return(
-                      <div key={pk} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                      <div key={pk} style={{display:"flex",alignItems:"center",gap:8,padding:"5px 0",borderBottom:"1px solid rgba(var(--tint-rgb),0.04)"}}>
                         <span style={{fontSize:14,color:pl.col,width:20}}>{pl.sym}</span>
                         <div style={{fontFamily:F,fontSize:11,color:"#C4A870"}}>{lonToZodiac(dp.lon).degree}° {lonToZodiac(dp.lon).name}</div>
-                        {isActive&&<span style={{fontFamily:F,fontSize:7,color:"#5CA85C",letterSpacing:1}}>EXACT</span>}
+                        {isActive&&<span style={{fontFamily:F,fontSize:8,color:"#5CA85C",letterSpacing:1}}>EXACT</span>}
                       </div>
                     );
                   })}
@@ -463,19 +463,19 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                   <div style={L()}>Current Time Lords</div>
                   <div style={{display:"flex",gap:14,marginTop:10,marginBottom:10}}>
                     <div style={{flex:1,padding:"10px",borderRadius:10,background:`${majPl.col}10`,border:`1px solid ${majPl.col}30`}}>
-                      <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,marginBottom:4}}>MAJOR LORD</div>
+                      <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:2,marginBottom:4}}>MAJOR LORD</div>
                       <div style={{fontSize:26,color:majPl.col}}>{majPl.sym}</div>
                       <div style={{fontFamily:F,fontSize:12,color:majPl.col,marginTop:2}}>{majPl.name}</div>
-                      <div style={{height:3,borderRadius:2,background:`rgba(200,175,100,0.1)`,marginTop:8}}><div style={{height:3,borderRadius:2,background:majPl.col,width:`${fd.pct.toFixed(0)}%`}}/></div>
-                      <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.3)",marginTop:3}}>{fd.pct.toFixed(0)}% elapsed</div>
+                      <div style={{height:3,borderRadius:2,background:`rgba(var(--tint-rgb),0.1)`,marginTop:8}}><div style={{height:3,borderRadius:2,background:majPl.col,width:`${fd.pct.toFixed(0)}%`}}/></div>
+                      <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",marginTop:3}}>{fd.pct.toFixed(0)}% elapsed</div>
                     </div>
                     <div style={{flex:1,padding:"10px",borderRadius:10,background:`${minPl.col}10`,border:`1px solid ${minPl.col}30`}}>
-                      <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",letterSpacing:2,marginBottom:4}}>MINOR LORD</div>
+                      <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:2,marginBottom:4}}>MINOR LORD</div>
                       <div style={{fontSize:26,color:minPl.col}}>{minPl.sym}</div>
                       <div style={{fontFamily:F,fontSize:12,color:minPl.col,marginTop:2}}>{minPl.name}</div>
                     </div>
                   </div>
-                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)"}}>{isDayChart?"Day chart sequence":"Night chart sequence"}</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)"}}>{isDayChart?"Day chart sequence":"Night chart sequence"}</div>
                 </div>
                 <div className="card" style={{margin:"0 14px 8px"}}>
                   <div style={L()}>Period Timeline</div>
@@ -484,11 +484,11 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                       const pl=P[period.lord]||{sym:"☊",col:"#90C890",name:period.lord};
                       const isPast=period.end<new Date();
                       return(
-                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(200,175,100,0.04)",opacity:isPast?0.4:1}}>
-                          <span style={{fontSize:15,color:period.isCurrent?"#D4AF6A":pl.col,width:22}}>{pl.sym}</span>
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:"1px solid rgba(var(--tint-rgb),0.04)",opacity:isPast?0.4:1}}>
+                          <span style={{fontSize:15,color:period.isCurrent?GOLD:pl.col,width:22}}>{pl.sym}</span>
                           <div style={{flex:1}}>
-                            <div style={{fontFamily:F,fontSize:11,color:period.isCurrent?"#D4AF6A":"#C4A870"}}>{pl.name} {period.isCurrent&&<span style={{fontSize:7,color:"#5CA85C",letterSpacing:1}}>← NOW</span>}</div>
-                            <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)"}}>{period.start.getFullYear()}–{period.end.getFullYear()} · {period.years}yr</div>
+                            <div style={{fontFamily:F,fontSize:11,color:period.isCurrent?GOLD:"#C4A870"}}>{pl.name} {period.isCurrent&&<span style={{fontSize:8,color:"#5CA85C",letterSpacing:1}}>← NOW</span>}</div>
+                            <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.35)"}}>{period.start.getFullYear()}–{period.end.getFullYear()} · {period.years}yr</div>
                           </div>
                         </div>
                       );
@@ -511,29 +511,29 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                     <div style={L()}>Solar Return</div>
                     <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                      <button onClick={()=>setSrYear(y=>y-1)} style={{background:"none",border:"1px solid rgba(200,175,100,0.2)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:10,padding:"2px 7px",cursor:"pointer"}}>‹</button>
+                      <button onClick={()=>setSrYear(y=>y-1)} style={{background:"none",border:"1px solid rgba(var(--tint-rgb),0.2)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:10,padding:"2px 7px",cursor:"pointer"}}>‹</button>
                       <span style={{fontFamily:F,fontSize:11,color:GOLD}}>{srYear}</span>
-                      <button onClick={()=>setSrYear(y=>y+1)} style={{background:"none",border:"1px solid rgba(200,175,100,0.2)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:10,padding:"2px 7px",cursor:"pointer"}}>›</button>
+                      <button onClick={()=>setSrYear(y=>y+1)} style={{background:"none",border:"1px solid rgba(var(--tint-rgb),0.2)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:10,padding:"2px 7px",cursor:"pointer"}}>›</button>
                     </div>
                   </div>
                   {sr?(
                     <>
-                      <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.6)",marginBottom:8}}>{sr.date.toLocaleDateString()} {sr.date.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})} UTC{sr.asc!=null&&` · ASC ${lonToZodiac(sr.asc).degree}° ${lonToZodiac(sr.asc).name}`}</div>
+                      <div style={{fontFamily:F,fontSize:10,color:"rgba(var(--tint-rgb),0.6)",marginBottom:8}}>{sr.date.toLocaleDateString()} {sr.date.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})} UTC{sr.asc!=null&&` · ASC ${lonToZodiac(sr.asc).degree}° ${lonToZodiac(sr.asc).name}`}</div>
                       {Object.entries(sr.pos).filter(([pk])=>P[pk]).map(([pk,np])=>{
                         const pl=P[pk];
-                        return(<div key={pk} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                        return(<div key={pk} style={{display:"flex",alignItems:"center",gap:8,padding:"4px 0",borderBottom:"1px solid rgba(var(--tint-rgb),0.04)"}}>
                           <span style={{fontSize:13,color:pl.col,width:20}}>{pl.sym}</span>
                           <div style={{fontFamily:F,fontSize:10,color:"#C4A870"}}>{np.zodiac.degree}° {np.zodiac.name}</div>
                         </div>);
                       })}
                     </>
-                  ):<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)"}}>Could not compute solar return.</div>}
+                  ):<div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.3)"}}>Could not compute solar return.</div>}
                 </div>
                 {sr&&<NatalWheelChart natalPos={natalPos} outerPos={sr.pos} outerLabel="SR" cusps={cusps} houseSys={houseSys} onSelectPlanet={setSelPlanet} selPlanet={selPlanet}/>}
                 {lr&&(
                   <div className="card" style={{margin:"8px 14px 8px"}}>
                     <div style={L()}>Next Lunar Return</div>
-                    <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.6)",marginTop:6}}>{lr.date.toLocaleDateString()} {lr.date.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})} UTC{lr.asc!=null&&` · ASC ${lonToZodiac(lr.asc).degree}° ${lonToZodiac(lr.asc).name}`}</div>
+                    <div style={{fontFamily:F,fontSize:10,color:"rgba(var(--tint-rgb),0.6)",marginTop:6}}>{lr.date.toLocaleDateString()} {lr.date.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})} UTC{lr.asc!=null&&` · ASC ${lonToZodiac(lr.asc).degree}° ${lonToZodiac(lr.asc).name}`}</div>
                     <div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:8}}>
                       {Object.entries(lr.pos).filter(([pk])=>P[pk]).map(([pk,np])=>{
                         const pl=P[pk];
@@ -565,26 +565,26 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                 <div className="card" style={{margin:"0 14px 8px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                     <div style={L()}>People Library</div>
-                    <button onClick={()=>setShowAddPerson(v=>!v)} style={{padding:"5px 10px",borderRadius:8,border:"1px solid rgba(200,175,100,0.3)",background:"rgba(200,175,100,0.06)",color:GOLD,fontFamily:F,fontSize:9,cursor:"pointer"}}>+ Add</button>
+                    <button onClick={()=>setShowAddPerson(v=>!v)} style={{padding:"5px 10px",borderRadius:8,border:"1px solid rgba(var(--tint-rgb),0.3)",background:"rgba(var(--tint-rgb),0.06)",color:GOLD,fontFamily:F,fontSize:9,cursor:"pointer"}}>+ Add</button>
                   </div>
                   {showAddPerson&&(
-                    <div style={{background:"rgba(8,5,22,0.8)",borderRadius:8,padding:10,marginBottom:10,border:"1px solid rgba(200,175,100,0.1)"}}>
+                    <div style={{background:"rgba(8,5,22,0.8)",borderRadius:8,padding:10,marginBottom:10,border:"1px solid rgba(var(--tint-rgb),0.1)"}}>
                       <div style={{display:"flex",gap:8,marginBottom:6}}>
-                        <div style={{flex:2}}><div style={L("rgba(200,175,100,0.4)",7)}>Name</div><input value={newPerson.name} onChange={e=>setNewPerson(p=>({...p,name:e.target.value}))} style={{width:"100%",marginTop:4,fontSize:11}} placeholder="Name"/></div>
+                        <div style={{flex:2}}><div style={L("rgba(var(--tint-rgb),0.4)",7)}>Name</div><input value={newPerson.name} onChange={e=>setNewPerson(p=>({...p,name:e.target.value}))} style={{width:"100%",marginTop:4,fontSize:11}} placeholder="Name"/></div>
                       </div>
                       <div style={{display:"flex",gap:8,marginBottom:8}}>
-                        <div style={{flex:2}}><div style={L("rgba(200,175,100,0.4)",7)}>Date</div><input type="date" value={newPerson.date} onChange={e=>setNewPerson(p=>({...p,date:e.target.value}))} style={{width:"100%",marginTop:4,fontSize:11}}/></div>
-                        <div style={{flex:1}}><div style={L("rgba(200,175,100,0.4)",7)}>Time</div><input type="time" value={newPerson.time} onChange={e=>setNewPerson(p=>({...p,time:e.target.value}))} style={{width:"100%",marginTop:4,fontSize:11}}/></div>
+                        <div style={{flex:2}}><div style={L("rgba(var(--tint-rgb),0.4)",7)}>Date</div><input type="date" value={newPerson.date} onChange={e=>setNewPerson(p=>({...p,date:e.target.value}))} style={{width:"100%",marginTop:4,fontSize:11}}/></div>
+                        <div style={{flex:1}}><div style={L("rgba(var(--tint-rgb),0.4)",7)}>Time</div><input type="time" value={newPerson.time} onChange={e=>setNewPerson(p=>({...p,time:e.target.value}))} style={{width:"100%",marginTop:4,fontSize:11}}/></div>
                       </div>
-                      <button onClick={savePerson} disabled={!newPerson.name||!newPerson.date} style={{padding:"7px 14px",borderRadius:8,background:"rgba(212,175,106,0.1)",border:"1px solid rgba(212,175,106,0.3)",color:GOLD,fontFamily:F,fontSize:9,cursor:"pointer"}}>Save Person</button>
+                      <button onClick={savePerson} disabled={!newPerson.name||!newPerson.date} style={{padding:"7px 14px",borderRadius:8,background:"rgba(var(--tint-rgb),0.1)",border:"1px solid rgba(var(--tint-rgb),0.3)",color:GOLD,fontFamily:F,fontSize:9,cursor:"pointer"}}>Save Person</button>
                     </div>
                   )}
-                  {people.length===0&&!showAddPerson&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)",padding:"8px 0"}}>No people saved yet. Add someone to compare charts.</div>}
+                  {people.length===0&&!showAddPerson&&<div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.3)",padding:"8px 0"}}>No people saved yet. Add someone to compare charts.</div>}
                   {people.map(person=>(
-                    <div key={person.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:"1px solid rgba(200,175,100,0.05)"}}>
+                    <div key={person.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:"1px solid rgba(var(--tint-rgb),0.05)"}}>
                       <button onClick={()=>setSynPerson(synPerson?.id===person.id?null:person)} style={{flex:1,background:"none",border:"none",cursor:"pointer",textAlign:"left",padding:0}}>
-                        <div style={{fontFamily:F,fontSize:12,color:synPerson?.id===person.id?"#D4AF6A":"#C4A870"}}>{person.name}</div>
-                        <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)"}}>{person.date}{person.time?" "+person.time:""}</div>
+                        <div style={{fontFamily:F,fontSize:12,color:synPerson?.id===person.id?GOLD:"#C4A870"}}>{person.name}</div>
+                        <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.35)"}}>{person.date}{person.time?" "+person.time:""}</div>
                       </button>
                       <button onClick={()=>removePerson(person.id)} style={{background:"none",border:"none",color:"rgba(200,100,100,0.4)",fontSize:12,cursor:"pointer",padding:4}}>✕</button>
                     </div>
@@ -592,7 +592,7 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                 </div>
                 {synPerson&&synPerson.pos&&(
                   <>
-                    <div style={{textAlign:"center",fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)",marginBottom:4}}>
+                    <div style={{textAlign:"center",fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.5)",marginBottom:4}}>
                       Inner: You · Outer: {synPerson.name}
                     </div>
                     {/* Their lots and profection (needs their birth time+place for an Asc) */}
@@ -631,11 +631,11 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                             }
                           }
                           return aspList.slice(0,20).map((a,i)=>(
-                            <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                            <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 0",borderBottom:"1px solid rgba(var(--tint-rgb),0.04)"}}>
                               <span style={{fontSize:12,color:P[a.mk]?.col}}>{P[a.mk]?.sym}</span>
                               <span style={{fontFamily:F,fontSize:8,color:a.benefic?"#5CA85C":"#D24B31"}}>{a.asp}</span>
                               <span style={{fontSize:12,color:P[a.tk]?.col}}>{P[a.tk]?.sym}</span>
-                              <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginLeft:"auto"}}>±{a.diff}°</span>
+                              <span style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",marginLeft:"auto"}}>±{a.diff}°</span>
                             </div>
                           ));
                         })()}
@@ -656,16 +656,16 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
               <div>
                 <div className="card" style={{margin:"0 14px 8px"}}>
                   <div style={L()}>Midpoints</div>
-                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginBottom:8}}>Stimulated midpoints (planet within 1.5°) highlighted</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",marginBottom:8}}>Stimulated midpoints (planet within 1.5°) highlighted</div>
                   <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                     {mp.map((pair,i)=>{
                       const active=pair.activated.length>0;
                       return(
-                        <div key={i} style={{padding:"4px 8px",borderRadius:6,border:`1px solid ${active?"rgba(200,175,100,0.3)":"rgba(200,175,100,0.08)"}`,background:active?"rgba(200,175,100,0.06)":"transparent"}}>
-                          <div style={{fontFamily:F,fontSize:8,color:active?GOLD:"rgba(200,175,100,0.4)"}}>
+                        <div key={i} style={{padding:"4px 8px",borderRadius:6,border:`1px solid ${active?"rgba(var(--tint-rgb),0.3)":"rgba(var(--tint-rgb),0.08)"}`,background:active?"rgba(var(--tint-rgb),0.06)":"transparent"}}>
+                          <div style={{fontFamily:F,fontSize:8,color:active?GOLD:"rgba(var(--tint-rgb),0.4)"}}>
                             {P[pair.a]?.sym}{P[pair.b]?.sym} {pair.zodiacNear.degree}°{pair.zodiacNear.sym}
                           </div>
-                          {active&&<div style={{fontFamily:F,fontSize:7,color:"#5CA85C"}}>{pair.activated.map(k=>P[k]?.sym).join("")} ✦</div>}
+                          {active&&<div style={{fontFamily:F,fontSize:8,color:"#5CA85C"}}>{pair.activated.map(k=>P[k]?.sym).join("")} ✦</div>}
                         </div>
                       );
                     })}
@@ -675,20 +675,20 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                   <div style={L()}>Declinations</div>
                   <div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:8}}>
                     {Object.entries(decls).map(([pk,d])=>(
-                      <div key={pk} style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.6)"}}>
+                      <div key={pk} style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.6)"}}>
                         <span style={{color:P[pk]?.col}}>{P[pk]?.sym}</span> {d>0?"+":""}{parseFloat(d).toFixed(1)}°
                       </div>
                     ))}
                   </div>
                   {declAsp.length>0&&(
                     <div style={{marginTop:8}}>
-                      <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.4)",marginBottom:6}}>Parallels & Contra-Parallels</div>
+                      <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",marginBottom:6}}>Parallels & Contra-Parallels</div>
                       {declAsp.map((a,i)=>(
-                        <div key={i} style={{display:"flex",gap:8,padding:"4px 0",borderBottom:"1px solid rgba(200,175,100,0.04)"}}>
+                        <div key={i} style={{display:"flex",gap:8,padding:"4px 0",borderBottom:"1px solid rgba(var(--tint-rgb),0.04)"}}>
                           <span style={{fontSize:12,color:P[a.p1]?.col}}>{P[a.p1]?.sym}</span>
-                          <span style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.5)"}}>{a.type}</span>
+                          <span style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.5)"}}>{a.type}</span>
                           <span style={{fontSize:12,color:P[a.p2]?.col}}>{P[a.p2]?.sym}</span>
-                          <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginLeft:"auto"}}>{a.d1}° / {a.d2}°</span>
+                          <span style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",marginLeft:"auto"}}>{a.d1}° / {a.d2}°</span>
                         </div>
                       ))}
                     </div>

@@ -9,14 +9,13 @@
 // Exports a clean printable HTML almanac (print → PDF on any iPad).
 
 import { useState, useMemo } from "react";
-import { F, L, T } from "../ui/theme.js";
+import { F, L, T, GOLD } from "../ui/theme.js";
 import { P } from "../data/planets.js";
 import { buildMonthModel, dayHours, EVENT_GLYPH } from "../lib/almanac.js";
 import { loadFeed, FEED_KIND_META } from "../lib/intake.js";
 import { loadCastings } from "../lib/castings.js";
 import { downloadText, shareOnNative } from "../lib/backup.js";
 
-const GOLD = "#D4AF6A";
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
 export default function AlmanacScreen({ now, profile }) {
@@ -89,11 +88,11 @@ export default function AlmanacScreen({ now, profile }) {
           <div style={T(20)}>Almanac</div>
         </div>
         <div style={{ position: "relative" }}>
-          <button onClick={() => setExportOpen(o => !o)} style={{ padding: "7px 12px", borderRadius: 9, background: "rgba(212,175,106,0.1)", border: "1px solid rgba(212,175,106,0.28)", fontFamily: F, fontSize: 8.5, color: GOLD, letterSpacing: 1.5, cursor: "pointer" }}>⎙ EXPORT ▾</button>
+          <button onClick={() => setExportOpen(o => !o)} style={{ padding: "7px 12px", borderRadius: 9, background: "rgba(var(--tint-rgb),0.1)", border: "1px solid rgba(var(--tint-rgb),0.28)", fontFamily: F, fontSize: 8.5, color: GOLD, letterSpacing: 1.5, cursor: "pointer" }}>⎙ EXPORT ▾</button>
           {exportOpen && (
-            <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 4, zIndex: 20, background: "rgba(8,5,22,0.98)", border: "1px solid rgba(212,175,106,0.3)", borderRadius: 10, overflow: "hidden", boxShadow: "0 8px 30px rgba(0,0,0,0.6)" }}>
+            <div style={{ position: "absolute", right: 0, top: "100%", marginTop: 4, zIndex: 20, background: "rgba(8,5,22,0.98)", border: "1px solid rgba(var(--tint-rgb),0.3)", borderRadius: 10, overflow: "hidden", boxShadow: "0 8px 30px rgba(0,0,0,0.6)" }}>
               {[["This Month", 1], ["This Season (3 mo)", 3], ["The Year (12 mo)", 12]].map(([lbl, n]) => (
-                <button key={n} onClick={() => exportRange(n)} style={{ display: "block", width: "100%", whiteSpace: "nowrap", padding: "9px 14px", background: "none", border: "none", borderBottom: "1px solid rgba(200,175,100,0.08)", fontFamily: F, fontSize: 9.5, color: "#C4A870", textAlign: "left", cursor: "pointer" }}>{lbl}</button>
+                <button key={n} onClick={() => exportRange(n)} style={{ display: "block", width: "100%", whiteSpace: "nowrap", padding: "9px 14px", background: "none", border: "none", borderBottom: "1px solid rgba(var(--tint-rgb),0.08)", fontFamily: F, fontSize: 9.5, color: "#C4A870", textAlign: "left", cursor: "pointer" }}>{lbl}</button>
               ))}
             </div>
           )}
@@ -102,9 +101,9 @@ export default function AlmanacScreen({ now, profile }) {
 
       {/* Month nav */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "4px 14px 8px" }}>
-        <button onClick={() => { setOffset(o => o - 1); setSelDay(null); }} style={{ background: "none", border: "none", color: "rgba(200,175,100,0.5)", fontSize: 15, cursor: "pointer", padding: "4px 10px" }}>‹</button>
+        <button onClick={() => { setOffset(o => o - 1); setSelDay(null); }} style={{ background: "none", border: "none", color: "rgba(var(--tint-rgb),0.5)", fontSize: 15, cursor: "pointer", padding: "4px 10px" }}>‹</button>
         <div style={{ fontFamily: F, fontSize: 12, color: GOLD, letterSpacing: 2 }}>{MONTHS[month].toUpperCase()} {year}</div>
-        <button onClick={() => { setOffset(o => o + 1); setSelDay(null); }} style={{ background: "none", border: "none", color: "rgba(200,175,100,0.5)", fontSize: 15, cursor: "pointer", padding: "4px 10px" }}>›</button>
+        <button onClick={() => { setOffset(o => o + 1); setSelDay(null); }} style={{ background: "none", border: "none", color: "rgba(var(--tint-rgb),0.5)", fontSize: 15, cursor: "pointer", padding: "4px 10px" }}>›</button>
       </div>
 
       {/* Weekday header — colored by each day's planetary ruler */}
@@ -129,15 +128,15 @@ export default function AlmanacScreen({ now, profile }) {
             <button key={dm.day} onClick={() => setSelDay(isSel ? null : dm.day)} style={{
               aspectRatio: "0.82", borderRadius: 8, padding: "3px 2px 2px",
               background: isSel ? rc + "1E" : "rgba(8,5,22,0.6)",
-              border: isToday ? `1.5px solid ${rc}90` : isSel ? `1px solid ${rc}70` : "1px solid rgba(200,175,100,0.07)",
+              border: isToday ? `1.5px solid ${rc}90` : isSel ? `1px solid ${rc}70` : "1px solid rgba(var(--tint-rgb),0.07)",
               cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", position: "relative", overflow: "hidden",
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center" }}>
-                <span style={{ fontFamily: F, fontSize: 9, color: isToday ? GOLD : "rgba(200,175,100,0.6)" }}>{dm.day}</span>
+                <span style={{ fontFamily: F, fontSize: 9, color: isToday ? GOLD : "rgba(var(--tint-rgb),0.6)" }}>{dm.day}</span>
                 <span style={{ fontSize: 8, color: rc }}>{P[dm.dayRuler].sym}</span>
               </div>
               <div style={{ fontSize: 11, color: "#C8DDED", lineHeight: 1, marginTop: 1 }}>{dm.moon.phaseGlyph}</div>
-              <div style={{ fontFamily: F, fontSize: 6, color: "rgba(200,175,100,0.4)", marginTop: 1 }}>{dm.moon.signSym}{dm.voc ? "∅" : ""}</div>
+              <div style={{ fontFamily: F, fontSize: 6, color: "rgba(var(--tint-rgb),0.4)", marginTop: 1 }}>{dm.moon.signSym}{dm.voc ? "∅" : ""}</div>
               <div style={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "center", marginTop: "auto", minHeight: 8 }}>
                 {bigEvents.slice(0, 2).map((e, i) => <span key={i} style={{ fontSize: 6.5, color: e.kind === "station" ? "#C878A8" : e.kind === "lunation" ? "#C8DDED" : "#7CB8E0" }}>{EVENT_GLYPH[e.kind]}</span>)}
                 {elect.length > 0 && <span style={{ fontSize: 6.5, color: "#5CA85C" }}>◈</span>}
@@ -149,7 +148,7 @@ export default function AlmanacScreen({ now, profile }) {
       </div>
 
       {/* Legend */}
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", padding: "8px 16px 0", fontFamily: F, fontSize: 7.5, color: "rgba(200,175,100,0.4)" }}>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", padding: "8px 16px 0", fontFamily: F, fontSize: 7.5, color: "rgba(var(--tint-rgb),0.4)" }}>
         <span>☽ phase</span><span style={{ color: "#7CB8E0" }}>≡ ingress</span><span style={{ color: "#C878A8" }}>℞ station</span><span style={{ color: "#C8DDED" }}>○ lunation</span><span style={{ color: "#5CA85C" }}>◈ your election</span><span style={{ color: GOLD }}>• timing letter</span><span>∅ void</span>
       </div>
 
@@ -173,14 +172,14 @@ function DayDetail({ dm, year, month, location, feed, elect }) {
       <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
         <div style={T(17)}>{new Date(year, month, dm.day).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div>
         <span style={{ fontSize: 13, color: P[dm.dayRuler].col }}>{P[dm.dayRuler].sym}</span>
-        <span style={{ fontFamily: F, fontSize: 9, color: "rgba(200,175,100,0.45)" }}>Day of {P[dm.dayRuler].name}</span>
+        <span style={{ fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.45)" }}>Day of {P[dm.dayRuler].name}</span>
       </div>
 
       {/* Sky summary */}
-      <div style={{ borderRadius: 12, background: "rgba(8,5,22,0.65)", border: "1px solid rgba(200,175,100,0.1)", padding: "11px 13px", marginBottom: 8 }}>
+      <div style={{ borderRadius: 12, background: "rgba(8,5,22,0.65)", border: "1px solid rgba(var(--tint-rgb),0.1)", padding: "11px 13px", marginBottom: 8 }}>
         <div style={{ fontFamily: F, fontSize: 10.5, color: "#C8DDED" }}>{dm.moon.phaseGlyph} {dm.moon.phaseName} Moon in {dm.moon.sign} {dm.moon.signSym}{dm.voc ? " — Void of Course" : ""}</div>
-        <div style={{ fontFamily: F, fontSize: 9.5, color: "rgba(200,175,100,0.6)", marginTop: 3 }}>Mansion {dm.mansion.n} · {dm.mansion.name} ({dm.mansion.nature})</div>
-        <div style={{ fontFamily: F, fontSize: 9.5, color: "rgba(200,175,100,0.6)", marginTop: 2 }}>Sun in decan {dm.sunDecan.idx + 1} — {dm.sunDecan.name} ({dm.sunDecan.ruler ? P[dm.sunDecan.ruler]?.name : ""})</div>
+        <div style={{ fontFamily: F, fontSize: 9.5, color: "rgba(var(--tint-rgb),0.6)", marginTop: 3 }}>Mansion {dm.mansion.n} · {dm.mansion.name} ({dm.mansion.nature})</div>
+        <div style={{ fontFamily: F, fontSize: 9.5, color: "rgba(var(--tint-rgb),0.6)", marginTop: 2 }}>Sun in decan {dm.sunDecan.idx + 1} — {dm.sunDecan.name} ({dm.sunDecan.ruler ? P[dm.sunDecan.ruler]?.name : ""})</div>
       </div>
 
       {/* Events */}
@@ -203,9 +202,9 @@ function DayDetail({ dm, year, month, location, feed, elect }) {
       {feed.map(e => {
         const k = FEED_KIND_META[e.kind];
         return (
-          <div key={e.id} style={{ padding: "7px 10px", borderRadius: 9, background: "rgba(200,175,100,0.05)", border: `1px solid ${k.col}30`, marginBottom: 5 }}>
+          <div key={e.id} style={{ padding: "7px 10px", borderRadius: 9, background: "rgba(var(--tint-rgb),0.05)", border: `1px solid ${k.col}30`, marginBottom: 5 }}>
             <div style={{ fontFamily: F, fontSize: 9.5, color: "#C4A870", lineHeight: 1.5 }}><span style={{ color: k.col }}>{k.glyph}</span> {e.title}</div>
-            <div style={{ fontFamily: F, fontSize: 7.5, color: "rgba(200,175,100,0.4)", marginTop: 2 }}>{e.source}{e.time ? ` · ${e.time}` : ""} · {k.label}</div>
+            <div style={{ fontFamily: F, fontSize: 7.5, color: "rgba(var(--tint-rgb),0.4)", marginTop: 2 }}>{e.source}{e.time ? ` · ${e.time}` : ""} · {k.label}</div>
           </div>
         );
       })}
@@ -220,8 +219,8 @@ function DayDetail({ dm, year, month, location, feed, elect }) {
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 8px", borderRadius: 7, background: active ? P[h.planet].col + "18" : i % 2 ? "rgba(0,0,0,0.15)" : "transparent" }}>
                 <span style={{ fontSize: 11, color: P[h.planet].col, width: 16 }}>{P[h.planet].sym}</span>
                 <span style={{ fontFamily: F, fontSize: 9.5, color: active ? GOLD : "#C4A870", flex: 1 }}>{P[h.planet].name}</span>
-                <span style={{ fontFamily: F, fontSize: 8.5, color: "rgba(200,175,100,0.4)" }}>{h.isDay ? "☀" : "☾"}</span>
-                <span style={{ fontFamily: F, fontSize: 9, color: "rgba(200,175,100,0.5)", width: 92, textAlign: "right" }}>
+                <span style={{ fontFamily: F, fontSize: 8.5, color: "rgba(var(--tint-rgb),0.4)" }}>{h.isDay ? "☀" : "☾"}</span>
+                <span style={{ fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.5)", width: 92, textAlign: "right" }}>
                   {h.start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}–{h.end.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>

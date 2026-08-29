@@ -10,7 +10,7 @@
 // judged true or false in Review when life delivers the verdict.
 
 import { useState } from "react";
-import { F, L, T } from "../ui/theme.js";
+import { F, L, T, GOLD } from "../ui/theme.js";
 import { P } from "../data/planets.js";
 import { TRADITIONS } from "../data/traditions.js";
 import { buildSystemPrompt } from "../ai/prompt.js";
@@ -20,8 +20,7 @@ import { QUESTION_HOUSES } from "../engine/horary.js";
 import { createCasting } from "../lib/castings.js";
 import { askAI, aiConfigured, aiUnconfiguredMessage } from "../ai/client.js";
 
-const GOLD = "#D4AF6A";
-const TONE = { good: { col: "#5CA85C", label: "Favourable" }, bad: { col: "#D24B31", label: "Unfavourable" }, mixed: { col: "#D4AF6A", label: "Mixed" }, unknown: { col: "#8A7050", label: "—" } };
+const TONE = { good: { col: "#5CA85C", label: "Favourable" }, bad: { col: "#D24B31", label: "Unfavourable" }, mixed: { col: GOLD, label: "Mixed" }, unknown: { col: "#8A7050", label: "—" } };
 
 // Draw a geomantic figure: four rows, each a single dot or a pair.
 function Fig({ pattern, size = 7, col = "#C4A870" }) {
@@ -41,8 +40,8 @@ function FigCell({ label, pattern, highlight }) {
   const rec = identify(pattern);
   const tone = TONE[rec?.tone || "unknown"];
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "6px 4px", borderRadius: 9, background: highlight ? tone.col + "18" : "rgba(0,0,0,0.25)", border: `1px solid ${highlight ? tone.col + "55" : "rgba(200,175,100,0.1)"}`, minWidth: 44 }}>
-      {label && <div style={{ fontFamily: F, fontSize: 6.5, color: "rgba(200,175,100,0.4)", letterSpacing: 0.5, textAlign: "center" }}>{label}</div>}
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "6px 4px", borderRadius: 9, background: highlight ? tone.col + "18" : "rgba(0,0,0,0.25)", border: `1px solid ${highlight ? tone.col + "55" : "rgba(var(--tint-rgb),0.1)"}`, minWidth: 44 }}>
+      {label && <div style={{ fontFamily: F, fontSize: 6.5, color: "rgba(var(--tint-rgb),0.4)", letterSpacing: 0.5, textAlign: "center" }}>{label}</div>}
       <Fig pattern={pattern} col={tone.col} />
       <div style={{ fontFamily: F, fontSize: 6.5, color: tone.col, textAlign: "center", lineHeight: 1.1 }}>{rec?.name || "?"}</div>
     </div>
@@ -110,7 +109,7 @@ export default function GeomancyScreen({ profile, natalPos }) {
     } catch {}
   };
 
-  const IS = { width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(200,175,100,0.18)", borderRadius: 10, color: "#C4A870", fontFamily: F, outline: "none", padding: "9px 11px", fontSize: 12, boxSizing: "border-box" };
+  const IS = { width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(var(--tint-rgb),0.18)", borderRadius: 10, color: "#C4A870", fontFamily: F, outline: "none", padding: "9px 11px", fontSize: 12, boxSizing: "border-box" };
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", paddingBottom: 20 }}>
@@ -123,11 +122,11 @@ export default function GeomancyScreen({ profile, natalPos }) {
         <div className="card" style={{ marginBottom: 9 }}>
           <div style={L()}>The Question</div>
           <textarea value={question} onChange={e => setQuestion(e.target.value)} rows={2} placeholder="Will the matter come to pass? Where is the lost thing? Should I…" style={{ ...IS, marginTop: 8, resize: "none" }} />
-          <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.4)", letterSpacing: 2, textTransform: "uppercase", margin: "10px 0 5px" }}>The Matter Belongs To</div>
+          <div style={{ fontFamily: F, fontSize: 8, color: "rgba(var(--tint-rgb),0.4)", letterSpacing: 2, textTransform: "uppercase", margin: "10px 0 5px" }}>The Matter Belongs To</div>
           <select value={houseId} onChange={e => setHouseId(e.target.value)} style={IS}>
             {QUESTION_HOUSES.map(q => <option key={q.id} value={q.id}>House {q.house} — {q.label}</option>)}
           </select>
-          <button onClick={cast} disabled={!question.trim()} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 11, background: question.trim() ? "rgba(212,175,106,0.12)" : "rgba(0,0,0,0.3)", border: `1px solid ${question.trim() ? "rgba(212,175,106,0.35)" : "rgba(200,175,100,0.1)"}`, fontFamily: F, fontSize: 10, color: question.trim() ? GOLD : "#5A4020", letterSpacing: 3, textTransform: "uppercase", cursor: question.trim() ? "pointer" : "default" }}>{shield ? "Cast Again" : "Cast the Figures"}</button>
+          <button onClick={cast} disabled={!question.trim()} style={{ width: "100%", marginTop: 10, padding: "12px 0", borderRadius: 11, background: question.trim() ? "rgba(var(--tint-rgb),0.12)" : "rgba(0,0,0,0.3)", border: `1px solid ${question.trim() ? "rgba(var(--tint-rgb),0.35)" : "rgba(var(--tint-rgb),0.1)"}`, fontFamily: F, fontSize: 10, color: question.trim() ? GOLD : "#5A4020", letterSpacing: 3, textTransform: "uppercase", cursor: question.trim() ? "pointer" : "default" }}>{shield ? "Cast Again" : "Cast the Figures"}</button>
         </div>
 
         {shield && verdict && (
@@ -136,7 +135,7 @@ export default function GeomancyScreen({ profile, natalPos }) {
             <div style={{ borderRadius: 13, background: "rgba(8,5,22,0.8)", border: `1px solid ${TONE[verdict.tone]?.col || GOLD}45`, padding: "13px 14px", marginBottom: 9, display: "flex", gap: 12, alignItems: "center" }}>
               <div style={{ flexShrink: 0 }}><Fig pattern={shield.judge} size={9} col={TONE[verdict.tone]?.col} /></div>
               <div>
-                <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.5)", letterSpacing: 2, textTransform: "uppercase" }}>The Judge — {TONE[verdict.tone]?.label}</div>
+                <div style={{ fontFamily: F, fontSize: 8, color: "rgba(var(--tint-rgb),0.5)", letterSpacing: 2, textTransform: "uppercase" }}>The Judge — {TONE[verdict.tone]?.label}</div>
                 <div style={{ fontFamily: F, fontSize: 15, color: TONE[verdict.tone]?.col }}>{verdict.figure}</div>
                 <div style={{ fontFamily: F, fontSize: 10, color: "#9A8060", fontStyle: "italic", lineHeight: 1.6, marginTop: 3 }}>{verdict.text}</div>
                 {!judgeIsValid(shield.judge) && <div style={{ fontFamily: F, fontSize: 8.5, color: "#D24B31", marginTop: 3 }}>⚠ Odd Judge — a cast error (should never occur).</div>}
@@ -144,8 +143,8 @@ export default function GeomancyScreen({ profile, natalPos }) {
             </div>
 
             {/* Shield: witnesses + judge */}
-            <div style={{ borderRadius: 13, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(200,175,100,0.1)", padding: "12px 10px", marginBottom: 9 }}>
-              <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.45)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, textAlign: "center" }}>The Shield</div>
+            <div style={{ borderRadius: 13, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(var(--tint-rgb),0.1)", padding: "12px 10px", marginBottom: 9 }}>
+              <div style={{ fontFamily: F, fontSize: 8, color: "rgba(var(--tint-rgb),0.45)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, textAlign: "center" }}>The Shield</div>
               <div style={{ display: "flex", justifyContent: "center", gap: 5, marginBottom: 6, flexWrap: "wrap" }}>
                 {shield.mothers.map((m, i) => <FigCell key={"m" + i} label={`Mother ${4 - i}`} pattern={shield.mothers[3 - i]} />)}
               </div>
@@ -164,7 +163,7 @@ export default function GeomancyScreen({ profile, natalPos }) {
             {/* Perfection — the mechanical judgment */}
             {perf && (
               <div style={{ borderRadius: 13, background: perf.perfects ? "rgba(92,168,92,0.08)" : "rgba(180,80,60,0.07)", border: `1px solid ${perf.perfects ? "rgba(92,168,92,0.3)" : "rgba(180,80,60,0.28)"}`, padding: "11px 13px", marginBottom: 9 }}>
-                <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.5)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 5 }}>Perfection</div>
+                <div style={{ fontFamily: F, fontSize: 8, color: "rgba(var(--tint-rgb),0.5)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 5 }}>Perfection</div>
                 {perf.perfects ? perf.modes.map((m, i) => (
                   <div key={i} style={{ fontFamily: F, fontSize: 10.5, color: "#7AB07A", lineHeight: 1.65, padding: "1px 0" }}>✓ <span style={{ textTransform: "capitalize" }}>{m.mode}</span> — {m.note}</div>
                 )) : (
@@ -180,8 +179,8 @@ export default function GeomancyScreen({ profile, natalPos }) {
             )}
 
             {/* House chart */}
-            <div style={{ borderRadius: 13, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(200,175,100,0.1)", padding: "12px 10px", marginBottom: 9 }}>
-              <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.45)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, textAlign: "center" }}>The Twelve Houses</div>
+            <div style={{ borderRadius: 13, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(var(--tint-rgb),0.1)", padding: "12px 10px", marginBottom: 9 }}>
+              <div style={{ fontFamily: F, fontSize: 8, color: "rgba(var(--tint-rgb),0.45)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8, textAlign: "center" }}>The Twelve Houses</div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 4 }}>
                 {chart.map(h => (
                   <FigCell key={h.house} label={`${h.house}${h.house === 1 ? " · Querent" : h.house === qh.house ? " · Quesited" : ""}`} pattern={h.figure} highlight={h.house === qh.house || h.house === 1} />
@@ -191,7 +190,7 @@ export default function GeomancyScreen({ profile, natalPos }) {
 
             <div style={{ display: "flex", gap: 7, marginBottom: 9 }}>
               <button onClick={draftReading} disabled={busy} style={{ flex: 1, padding: "11px 0", borderRadius: 11, background: "rgba(100,80,160,0.15)", border: "1px solid rgba(100,80,160,0.35)", fontFamily: F, fontSize: 9, color: "rgba(160,140,220,0.85)", letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{busy ? "Reading…" : "✧ Draft Judgment"}</button>
-              <button onClick={save} style={{ flex: 1, padding: "11px 0", borderRadius: 11, background: saved ? "rgba(92,168,92,0.15)" : "rgba(212,175,106,0.1)", border: `1px solid ${saved ? "rgba(92,168,92,0.4)" : "rgba(212,175,106,0.3)"}`, fontFamily: F, fontSize: 9, color: saved ? "#7AB07A" : GOLD, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{saved ? "✓ Recorded" : "⚑ Record Casting"}</button>
+              <button onClick={save} style={{ flex: 1, padding: "11px 0", borderRadius: 11, background: saved ? "rgba(92,168,92,0.15)" : "rgba(var(--tint-rgb),0.1)", border: `1px solid ${saved ? "rgba(92,168,92,0.4)" : "rgba(var(--tint-rgb),0.3)"}`, fontFamily: F, fontSize: 9, color: saved ? "#7AB07A" : GOLD, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{saved ? "✓ Recorded" : "⚑ Record Casting"}</button>
             </div>
 
             {reading && (

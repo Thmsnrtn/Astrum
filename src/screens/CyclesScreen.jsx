@@ -54,7 +54,7 @@ export default function CyclesScreen({now,profile,eph}){
     }catch(e){setAiReport(e.message||"Cycles report unavailable — check connection.");}
     setAiLoading(false);
   };
-  const GOLD="#D4AF6A";const G=`rgba(200,175,100,`;
+  const GOLD=GOLD;const G=`rgba(var(--tint-rgb),`;
   return(
     <div style={{flex:1,overflowY:"auto",paddingBottom:32}}>
       <div style={{padding:"16px 18px 10px"}}>
@@ -101,7 +101,7 @@ export default function CyclesScreen({now,profile,eph}){
 
       {/* ── Great Mutation Panel ── */}
       <div style={{padding:"0 14px",marginBottom:10}}>
-        <div style={{borderRadius:14,background:"rgba(8,5,22,0.85)",border:"1px solid rgba(200,175,100,0.15)",padding:"14px 15px"}}>
+        <div style={{borderRadius:14,background:"rgba(8,5,22,0.85)",border:"1px solid rgba(var(--tint-rgb),0.15)",padding:"14px 15px"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:9}}>
             <span style={{fontSize:18}}>♃♄</span>
             <div>
@@ -113,7 +113,7 @@ export default function CyclesScreen({now,profile,eph}){
             Dec 21, 2020 — {lastJS.sign} {lastJS.lon.toFixed(1)}° — <span style={{color:GOLD}}>{lastJS.label}</span>
           </div>
           <div style={{height:3,background:G+"0.08)",borderRadius:2,marginBottom:5}}>
-            <div style={{height:"100%",width:`${jsElapsed*100}%`,background:"linear-gradient(90deg,#D4AF6A,#78A8C8)",borderRadius:2}}/>
+            <div style={{height:"100%",width:`${jsElapsed*100}%`,background:`linear-gradient(90deg,${GOLD},#78A8C8)`,borderRadius:2}}/>
           </div>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
             <div style={{fontFamily:F,fontSize:8,color:G+"0.4)"}}>{jsYearsElapsed}yr elapsed</div>
@@ -130,9 +130,9 @@ export default function CyclesScreen({now,profile,eph}){
           <div style={{fontFamily:F,fontSize:8,color:G+"0.3)",letterSpacing:3,textTransform:"uppercase",marginBottom:6}}>Upcoming Ingresses</div>
           {upcoming.map((e,i)=>{
             const pName=e.planet==="uranus"?"♅":e.planet==="neptune"?"♆":e.planet==="pluto"?"♇":e.planet==="saturn"?"♄":"♃";
-            const pCol=e.planet==="uranus"?"#78C8D8":e.planet==="neptune"?"#7888E8":e.planet==="pluto"?"#C878A8":e.planet==="saturn"?"#78A888":"#D4AF6A";
+            const pCol=e.planet==="uranus"?"#78C8D8":e.planet==="neptune"?"#7888E8":e.planet==="pluto"?"#C878A8":e.planet==="saturn"?"#78A888":GOLD;
             return(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 12px",borderRadius:10,background:"rgba(8,5,22,0.5)",border:"1px solid rgba(200,175,100,0.07)",marginBottom:4}}>
+              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 12px",borderRadius:10,background:"rgba(8,5,22,0.5)",border:"1px solid rgba(var(--tint-rgb),0.07)",marginBottom:4}}>
                 <span style={{fontSize:16,color:pCol}}>{pName}</span>
                 <div style={{flex:1}}>
                   <div style={{fontFamily:F,fontSize:11,color:G+"0.8)"}}>{e.event}</div>
@@ -146,11 +146,11 @@ export default function CyclesScreen({now,profile,eph}){
 
       {/* ── AI Synthesis Button ── */}
       <div style={{padding:"0 14px",marginBottom:10}}>
-        <button onClick={generateReport} disabled={aiLoading} style={{width:"100%",padding:"13px",borderRadius:13,background:"rgba(212,175,106,0.07)",border:"1px solid rgba(212,175,106,0.22)",fontFamily:F,fontSize:11,color:aiLoading?G+"0.4)":GOLD,letterSpacing:2,cursor:aiLoading?"default":"pointer",transition:"all 0.2s"}}>
+        <button onClick={generateReport} disabled={aiLoading} style={{width:"100%",padding:"13px",borderRadius:13,background:"rgba(var(--tint-rgb),0.07)",border:"1px solid rgba(var(--tint-rgb),0.22)",fontFamily:F,fontSize:11,color:aiLoading?G+"0.4)":GOLD,letterSpacing:2,cursor:aiLoading?"default":"pointer",transition:"all 0.2s"}}>
           {aiLoading?"READING THE CYCLES…":"✦ WHAT DO THESE CYCLES MEAN FOR ME?"}
         </button>
         {aiReport&&(
-          <div style={{marginTop:8,borderRadius:13,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(200,175,100,0.1)",padding:"14px 15px"}}>
+          <div style={{marginTop:8,borderRadius:13,background:"rgba(8,5,22,0.7)",border:"1px solid rgba(var(--tint-rgb),0.1)",padding:"14px 15px"}}>
             <div style={{fontFamily:F,fontSize:11,color:"#C4A870",lineHeight:1.95,whiteSpace:"pre-wrap"}}>{aiReport}</div>
           </div>
         )}

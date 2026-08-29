@@ -1,3 +1,4 @@
+import { GOLD } from "../ui/theme.js";
 // ═══════════════════════════════════════════════════════════════════════
 // ALCHEMICAL OPERATIONS — the laboratory repertoire
 // ═══════════════════════════════════════════════════════════════════════
@@ -37,7 +38,7 @@ export const OPERATION_FAMILIES = {
 
 export const TIER_META = {
   novice:       { label: "Novice",       col: "#5CA85C" },
-  practitioner: { label: "Practitioner", col: "#D4AF6A" },
+  practitioner: { label: "Practitioner", col: GOLD },
   adept:        { label: "Adept",        col: "#C878A8" },
 };
 

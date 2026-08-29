@@ -1,3 +1,4 @@
+import { GOLD } from "../ui/theme.js";
 // ═══════════════════════════════════════════════════════════════════════
 // LEARN — topics library + the Foundations path
 // ═══════════════════════════════════════════════════════════════════════
@@ -53,7 +54,7 @@ export const LEARN_TOPICS=[
 ];
 export const FOUNDATIONS=[
   {id:"f1",title:"Animism & the Living World",subtitle:"How the world is made of relationships, not objects",lessons:5,topics:["animism-foundation","spirits-allies","liminal-entities"],icon:"🌿",color:"#5CA87C"},
-  {id:"f2",title:"Timing & the Sky",subtitle:"Planetary hours, lunar cycles, and elections",lessons:7,topics:["planetary-hours","lunar-timing","electional"],icon:"☽",color:"#D4AF6A"},
+  {id:"f2",title:"Timing & the Sky",subtitle:"Planetary hours, lunar cycles, and elections",lessons:7,topics:["planetary-hours","lunar-timing","electional"],icon:"☽",color:GOLD},
   {id:"f3",title:"The Dead & the Ancestors",subtitle:"Working with the ancestor current and the holy dead",lessons:4,topics:["ancestor-work","saints-holy-dead"],icon:"⚰",color:"#8A78C8"},
   {id:"f4",title:"Divination & Fortune",subtitle:"Reading the patterns — omens, lots, and the future",lessons:5,topics:["fortune-divination","dream-work"],icon:"◈",color:"#C87878"},
   {id:"f5",title:"The Blended Cycle Model",subtitle:"Placing your magic in historical time",lessons:3,topics:["blended-cycle"],icon:"⟳",color:"#78A8C8"},

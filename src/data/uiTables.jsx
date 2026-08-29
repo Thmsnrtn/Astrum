@@ -4,7 +4,7 @@
 // whichever screen's cut region contained them).
 // ═══════════════════════════════════════════════════════════════════════
 import { P } from "./planets.js";
-import { F } from "../ui/theme.js";
+import { F, GOLD } from "../ui/theme.js";
 
 export const ROMAN=["I","II","III","IV"];
 
@@ -99,10 +99,10 @@ export function KameaPreview({pts,planet,size=180}){
   if(!pts||pts.length<2)return null;
   const d=pts.map((p,i)=>`${i===0?"M":"L"}${(p[0]*scale).toFixed(1)} ${(p[1]*scale).toFixed(1)}`).join(" ");
   return(
-    <svg width={size} height={size} style={{background:"rgba(0,0,0,0.4)",borderRadius:8,border:"1px solid rgba(200,175,100,0.15)"}}>
+    <svg width={size} height={size} style={{background:"rgba(0,0,0,0.4)",borderRadius:8,border:"1px solid rgba(var(--tint-rgb),0.15)"}}>
       {Array.from({length:km.size}).map((_,r)=>Array.from({length:km.size}).map((_,c)=>{
         const cell=size/(km.size+1),x=cell*(c+1),y=cell*(r+1);
-        return <circle key={`${r}-${c}`} cx={x} cy={y} r={1.2} fill="rgba(200,175,100,0.25)"/>;
+        return <circle key={`${r}-${c}`} cx={x} cy={y} r={1.2} fill="rgba(var(--tint-rgb),0.25)"/>;
       })).flat()}
       <path d={d} fill="none" stroke={P[planet].col} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
       <circle cx={pts[0][0]*scale} cy={pts[0][1]*scale} r={3.5} fill="none" stroke={P[planet].col} strokeWidth={1}/>
@@ -136,4 +136,4 @@ export const CYCLE_LORE = {
 
 export const fmtD = d => d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
 
-export const ASP_COLORS={Conjunction:"#D4AF6A",Opposition:"#D24B31",Trine:"#5CA85C",Square:"#D24B31",Sextile:"#7CB8E0"};
+export const ASP_COLORS={Conjunction:GOLD,Opposition:"#D24B31",Trine:"#5CA85C",Square:"#D24B31",Sextile:"#7CB8E0"};

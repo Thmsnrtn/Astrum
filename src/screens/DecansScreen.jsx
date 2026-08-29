@@ -4,7 +4,7 @@ import { DECAN_IMAGES } from "../data/decanImages.js";
 import { DECANS } from "../data/decans.js";
 import { P } from "../data/planets.js";
 import { fmtTime } from "../engine/astro.js";
-import { DIGNITY_COL, DIGNITY_LBL, F, L, T } from "../ui/theme.js";
+import { DIGNITY_COL, DIGNITY_LBL, F, L, T, GOLD } from "../ui/theme.js";
 
 export default function DecansScreen({eph,fractal,natalPos,mode,setMode}){
   const [sel,setSel]=useState(eph.decanIdx);
@@ -23,11 +23,11 @@ export default function DecansScreen({eph,fractal,natalPos,mode,setMode}){
           <div style={{flex:1}}>
             <div style={L(`${col}80`,8)}>Decan {d.n} · {d.sym} {d.sign} · {d.ruler.charAt(0).toUpperCase()+d.ruler.slice(1)}</div>
             <div style={T(18,col)}>{d.name}</div>
-            <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",marginTop:2}}>Tarot: {d.tarot}</div>
+            <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.4)",marginTop:2}}>Tarot: {d.tarot}</div>
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
-            {isCurrentSolar&&<span className="chip" style={{color:"#D4AF6A",borderColor:"rgba(212,175,106,0.3)"}}>Solar Now</span>}
-            {isFractalActive&&<span className="chip" style={{color:"#D4AF6A",borderColor:"rgba(212,175,106,0.3)"}}>Fractal Active</span>}
+            {isCurrentSolar&&<span className="chip" style={{color:GOLD,borderColor:"rgba(var(--tint-rgb),0.3)"}}>Solar Now</span>}
+            {isFractalActive&&<span className="chip" style={{color:GOLD,borderColor:"rgba(var(--tint-rgb),0.3)"}}>Fractal Active</span>}
             {isNatal&&<span className="chip" style={{color:"#FFD700",borderColor:"rgba(255,215,0,0.3)"}}>In Natal</span>}
           </div>
         </div>
@@ -37,9 +37,9 @@ export default function DecansScreen({eph,fractal,natalPos,mode,setMode}){
           <div style={{marginTop:10,padding:"10px 12px",borderRadius:10,background:"rgba(0,0,0,0.3)",border:`1px solid ${col}20`}}>
             <div style={{fontFamily:F,fontSize:8,color:`${col}90`,letterSpacing:2,textTransform:"uppercase",marginBottom:5}}>The Image of the Face</div>
             <div style={{fontFamily:F,fontSize:10.5,color:"#C4A870",fontStyle:"italic",lineHeight:1.8}}>{DECAN_IMAGES[sel].p}</div>
-            <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.35)",marginTop:3}}>— Picatrix II.11 (Latin tradition)</div>
+            <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.35)",marginTop:3}}>— Picatrix II.11 (Latin tradition)</div>
             <div style={{fontFamily:F,fontSize:10,color:"#9A8060",fontStyle:"italic",lineHeight:1.7,marginTop:7}}>{DECAN_IMAGES[sel].a}</div>
-            <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.35)",marginTop:3}}>— Agrippa II.37</div>
+            <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.35)",marginTop:3}}>— Agrippa II.37</div>
             {DECAN_IMAGES[sel].v&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.6)",fontStyle:"italic",marginTop:5,lineHeight:1.5}}>Variant: {DECAN_IMAGES[sel].v}</div>}
             <div style={{fontFamily:F,fontSize:9,color:`${col}90`,marginTop:6}}>{DECAN_IMAGES[sel].t}</div>
           </div>
@@ -60,9 +60,9 @@ export default function DecansScreen({eph,fractal,natalPos,mode,setMode}){
             const rc=P[dec.ruler].col, isSel=dec.n-1===sel, isSolar=dec.n-1===eph.decanIdx;
             const isNat=natalPos&&Object.entries(natalPos).filter(([pk])=>P[pk]).some(([,np])=>np.decanIdx===dec.n-1);
             return (
-              <div key={dec.n} onClick={()=>setSel(dec.n-1)} style={{aspectRatio:"1",borderRadius:8,background:isSel?`${rc}20`:isSolar?`${rc}10`:"rgba(0,0,0,0.3)",border:`1px solid ${isSel?rc+"60":isSolar?rc+"30":"rgba(200,175,100,0.08)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",position:"relative"}}>
+              <div key={dec.n} onClick={()=>setSel(dec.n-1)} style={{aspectRatio:"1",borderRadius:8,background:isSel?`${rc}20`:isSolar?`${rc}10`:"rgba(0,0,0,0.3)",border:`1px solid ${isSel?rc+"60":isSolar?rc+"30":"rgba(var(--tint-rgb),0.08)"}`,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",cursor:"pointer",position:"relative"}}>
                 <div style={{fontSize:10,color:rc}}>{P[dec.ruler].sym}</div>
-                <div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.4)",marginTop:1}}>{dec.n}</div>
+                <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.4)",marginTop:1}}>{dec.n}</div>
                 {isNat&&<div style={{position:"absolute",top:2,right:2,width:3,height:3,borderRadius:2,background:"#FFD700"}}/>}
               </div>
             );

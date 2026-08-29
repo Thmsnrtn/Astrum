@@ -2,6 +2,7 @@
 // ASTRO — the astronomy/astrology engine core (extracted from App.jsx)
 // Pure math + tables: positions, dignities, hours, VoC, angles, houses.
 // ═══════════════════════════════════════════════════════════════════════
+import { GOLD } from "../ui/theme.js";
 import { swPlanetLon, swDailyMotion, swTrueNode, swChiron, swLilith, swFixstar } from "./sweph.js";
 import { DECANS } from "../data/decans.js";
 import { computeLots } from "./lots.js";
@@ -381,7 +382,7 @@ export const DECADE_FORECAST=[
 export function getAspectsAll(pos){
   const pks=Object.keys(pos),asps=[];
   const ADefs=[
-    {n:"Conjunction",a:0,o:8,nat:"variable",col:"#D4AF6A",s:"☌"},
+    {n:"Conjunction",a:0,o:8,nat:"variable",col:GOLD,s:"☌"},
     {n:"Opposition",a:180,o:8,nat:"tension",col:"#D24B31",s:"☍"},
     {n:"Trine",a:120,o:7,nat:"harmony",col:"#5CA85C",s:"△"},
     {n:"Square",a:90,o:7,nat:"tension",col:"#D24B31",s:"□"},

@@ -7,14 +7,13 @@
 
 import { fmtT } from "../data/uiTables.jsx";
 import { useState, useMemo } from "react";
-import { F, L, T } from "../ui/theme.js";
+import { F, L, T, GOLD } from "../ui/theme.js";
 import { dateToJD, planetLon } from "../engine/astro.js";
 import { conditionsFromProfile } from "../engine/chart.js";
 import { MANSIONS, MANSION_WIDTH, getMansion } from "../data/mansions.js";
 import { createCasting } from "../lib/castings.js";
 
-const GOLD = "#D4AF6A";
-const NATURE_COL = { favorable: "#5CA85C", unfavorable: "#B05050", mixed: "#D4AF6A" };
+const NATURE_COL = { favorable: "#5CA85C", unfavorable: "#B05050", mixed: GOLD };
 
 // Next time the Moon reaches eclipticLon `target` after jd (bisection).
 function nextMoonCrossing(target, jd) {
@@ -80,8 +79,8 @@ export default function MansionsScreen({ eph, now, profile, natalPos }) {
       {/* Wheel of 28 */}
       <div style={{ display: "flex", justifyContent: "center", padding: "4px 0 8px" }}>
         <svg width={280} height={280} viewBox="0 0 280 280">
-          <circle cx={140} cy={140} r={126} fill="none" stroke="rgba(200,175,100,0.12)" strokeWidth={1} />
-          <circle cx={140} cy={140} r={92} fill="none" stroke="rgba(200,175,100,0.07)" strokeWidth={1} />
+          <circle cx={140} cy={140} r={126} fill="none" stroke="rgba(var(--tint-rgb),0.12)" strokeWidth={1} />
+          <circle cx={140} cy={140} r={92} fill="none" stroke="rgba(var(--tint-rgb),0.07)" strokeWidth={1} />
           {MANSIONS.map((m, i) => {
             const a0 = (i * MANSION_WIDTH - 90) * Math.PI / 180;
             const aMid = ((i + 0.5) * MANSION_WIDTH - 90) * Math.PI / 180;
@@ -89,17 +88,17 @@ export default function MansionsScreen({ eph, now, profile, natalPos }) {
             const isSel = sel === i;
             return (
               <g key={m.n} onClick={() => setSel(isSel ? null : i)} style={{ cursor: "pointer" }}>
-                <line x1={140 + 92 * Math.cos(a0)} y1={140 + 92 * Math.sin(a0)} x2={140 + 126 * Math.cos(a0)} y2={140 + 126 * Math.sin(a0)} stroke="rgba(200,175,100,0.15)" strokeWidth={0.6} />
+                <line x1={140 + 92 * Math.cos(a0)} y1={140 + 92 * Math.sin(a0)} x2={140 + 126 * Math.cos(a0)} y2={140 + 126 * Math.sin(a0)} stroke="rgba(var(--tint-rgb),0.15)" strokeWidth={0.6} />
                 <circle cx={140 + 109 * Math.cos(aMid)} cy={140 + 109 * Math.sin(aMid)} r={isCur ? 8 : 6}
-                  fill={isCur ? "rgba(200,221,237,0.25)" : isSel ? "rgba(212,175,106,0.25)" : "rgba(8,5,22,0.8)"}
+                  fill={isCur ? "rgba(200,221,237,0.25)" : isSel ? "rgba(var(--tint-rgb),0.25)" : "rgba(8,5,22,0.8)"}
                   stroke={isCur ? "#C8DDED" : isSel ? GOLD : NATURE_COL[m.nature] + "55"} strokeWidth={isCur ? 1.5 : 0.8} />
-                <text x={140 + 109 * Math.cos(aMid)} y={140 + 109 * Math.sin(aMid) + 2.5} textAnchor="middle" fontSize={6.5} fontFamily={F} fill={isCur ? "#C8DDED" : "rgba(200,175,100,0.6)"}>{m.n}</text>
+                <text x={140 + 109 * Math.cos(aMid)} y={140 + 109 * Math.sin(aMid) + 2.5} textAnchor="middle" fontSize={6.5} fontFamily={F} fill={isCur ? "#C8DDED" : "rgba(var(--tint-rgb),0.6)"}>{m.n}</text>
               </g>
             );
           })}
           {/* Moon marker */}
           {(() => { const a = (moonLonNow - 90) * Math.PI / 180; return <text x={140 + 126 * Math.cos(a)} y={140 + 126 * Math.sin(a) + 4} textAnchor="middle" fontSize={13} fill="#C8DDED">☽</text>; })()}
-          <text x={140} y={136} textAnchor="middle" fontFamily={F} fontSize={9} fill="rgba(200,175,100,0.5)" letterSpacing={2}>MANSION</text>
+          <text x={140} y={136} textAnchor="middle" fontFamily={F} fontSize={9} fill="rgba(var(--tint-rgb),0.5)" letterSpacing={2}>MANSION</text>
           <text x={140} y={154} textAnchor="middle" fontFamily={F} fontSize={16} fill="#C8DDED">{current.index}</text>
         </svg>
       </div>
@@ -110,7 +109,7 @@ export default function MansionsScreen({ eph, now, profile, natalPos }) {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
               <div style={{ fontFamily: F, fontSize: 15, color: GOLD }}>{shown.index ?? shown.n}. {shown.arabic}</div>
-              <div style={{ fontFamily: F, fontSize: 9, color: "rgba(200,175,100,0.45)", marginTop: 2, fontStyle: "italic" }}>{shown.latin} — "{shown.translation}" · {shown.sign}</div>
+              <div style={{ fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.45)", marginTop: 2, fontStyle: "italic" }}>{shown.latin} — "{shown.translation}" · {shown.sign}</div>
             </div>
             <span style={{ fontFamily: F, fontSize: 8, color: NATURE_COL[shown.nature], letterSpacing: 1.5, textTransform: "uppercase", border: `1px solid ${NATURE_COL[shown.nature]}50`, borderRadius: 7, padding: "3px 8px" }}>{shown.nature}</span>
           </div>
@@ -137,11 +136,11 @@ export default function MansionsScreen({ eph, now, profile, natalPos }) {
         <div style={{ borderRadius: 13, background: "rgba(8,5,22,0.65)", border: "1px solid rgba(200,221,237,0.14)", padding: "12px 14px", marginBottom: 9 }}>
           <div style={{ fontFamily: F, fontSize: 9, color: "rgba(200,221,237,0.6)", letterSpacing: 3, textTransform: "uppercase", marginBottom: 7 }}>Next Mansion Entries</div>
           {upcoming.map(u => (
-            <div key={u.n} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid rgba(200,175,100,0.05)" }}>
+            <div key={u.n} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: "1px solid rgba(var(--tint-rgb),0.05)" }}>
               <div style={{ fontFamily: F, fontSize: 10.5, color: "#C4A870" }}>
                 <span style={{ color: NATURE_COL[u.mansion.nature] }}>{u.n}.</span> {u.mansion.arabic}
               </div>
-              <div style={{ fontFamily: F, fontSize: 9.5, color: "rgba(200,175,100,0.5)" }}>{fmtT(u.at)}</div>
+              <div style={{ fontFamily: F, fontSize: 9.5, color: "rgba(var(--tint-rgb),0.5)" }}>{fmtT(u.at)}</div>
             </div>
           ))}
         </div>

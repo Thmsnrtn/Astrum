@@ -9,11 +9,10 @@
 // ambient scheduler.
 
 import { useState } from "react";
-import { F, L, T } from "../ui/theme.js";
+import { F, L, T, GOLD } from "../ui/theme.js";
 import { P } from "../data/planets.js";
 import { SPIRIT_KINDS, loadSpirits, createSpirit, updateSpirit, deleteSpirit, addLogEntry, upcomingObservances, daysSinceOffering } from "../lib/spirits.js";
 
-const GOLD = "#D4AF6A";
 const KIND = Object.fromEntries(SPIRIT_KINDS.map(k => [k.id, k]));
 const LOG_TYPES = [["offering", "Offering"], ["contact", "Contact"], ["petition", "Petition"], ["response", "Response"]];
 
@@ -27,7 +26,7 @@ export default function SpiritCourtScreen({ profile }) {
   const selected = spirits.find(s => s.id === sel);
   const observances = upcomingObservances(spirits, new Date(), 30);
 
-  const IS = { width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(200,175,100,0.18)", borderRadius: 10, color: "#C4A870", fontFamily: F, outline: "none", padding: "9px 11px", fontSize: 12, boxSizing: "border-box" };
+  const IS = { width: "100%", background: "rgba(0,0,0,0.45)", border: "1px solid rgba(var(--tint-rgb),0.18)", borderRadius: 10, color: "#C4A870", fontFamily: F, outline: "none", padding: "9px 11px", fontSize: 12, boxSizing: "border-box" };
 
   const submit = () => {
     if (!form.name.trim()) return;
@@ -61,11 +60,11 @@ export default function SpiritCourtScreen({ profile }) {
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column", paddingBottom: 20 }}>
         <div style={{ padding: "14px 16px 6px", display: "flex", alignItems: "center", gap: 10 }}>
-          <button onClick={() => setSel(null)} style={{ background: "none", border: "1px solid rgba(200,175,100,0.2)", borderRadius: 8, color: "#8A7050", fontFamily: F, fontSize: 10, padding: "5px 11px", cursor: "pointer" }}>← Court</button>
+          <button onClick={() => setSel(null)} style={{ background: "none", border: "1px solid rgba(var(--tint-rgb),0.2)", borderRadius: 8, color: "#8A7050", fontFamily: F, fontSize: 10, padding: "5px 11px", cursor: "pointer" }}>← Court</button>
           <div style={{ fontFamily: F, fontSize: 9, color: "#8A7040", letterSpacing: 2, textTransform: "uppercase" }}>{k.icon} {k.label}</div>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: "0 14px" }}>
-          <div style={{ padding: "13px 15px", borderRadius: 13, background: "rgba(8,5,22,0.75)", border: "1px solid rgba(200,175,100,0.15)", marginBottom: 9 }}>
+          <div style={{ padding: "13px 15px", borderRadius: 13, background: "rgba(8,5,22,0.75)", border: "1px solid rgba(var(--tint-rgb),0.15)", marginBottom: 9 }}>
             <div style={T(19)}>{selected.name}</div>
             {selected.epithet && <div style={{ fontFamily: F, fontSize: 10, color: "#9A8060", fontStyle: "italic", marginTop: 2 }}>{selected.epithet}</div>}
             {selected.planet && P[selected.planet] && <div style={{ fontFamily: F, fontSize: 10, color: P[selected.planet].col, marginTop: 4 }}>{P[selected.planet].sym} Sphere of {P[selected.planet].name}</div>}
@@ -73,28 +72,28 @@ export default function SpiritCourtScreen({ profile }) {
             {dso == null && (selected.log || []).length === 0 && <div style={{ fontFamily: F, fontSize: 9.5, color: "#8A7050", marginTop: 6, fontStyle: "italic" }}>No offerings on record yet — relationship begins with the first gift.</div>}
             {selected.offerings && <div style={{ fontFamily: F, fontSize: 10, color: "#B8A578", marginTop: 8, lineHeight: 1.6 }}><span style={{ color: "#7A6030", fontSize: 8.5, letterSpacing: 1.5, textTransform: "uppercase" }}>Preferred offerings · </span>{selected.offerings}</div>}
             {selected.notes && <div style={{ fontFamily: F, fontSize: 10.5, color: "#9A8060", marginTop: 8, lineHeight: 1.7 }}>{selected.notes}</div>}
-            {(selected.feastDays || []).length > 0 && <div style={{ marginTop: 8 }}>{selected.feastDays.map((f, i) => <span key={i} style={{ display: "inline-block", fontFamily: F, fontSize: 8.5, color: GOLD, background: "rgba(212,175,106,0.1)", border: "1px solid rgba(212,175,106,0.25)", borderRadius: 6, padding: "2px 8px", marginRight: 5 }}>{f.label || "Feast"} · {f.month}/{f.day}</span>)}</div>}
+            {(selected.feastDays || []).length > 0 && <div style={{ marginTop: 8 }}>{selected.feastDays.map((f, i) => <span key={i} style={{ display: "inline-block", fontFamily: F, fontSize: 8.5, color: GOLD, background: "rgba(var(--tint-rgb),0.1)", border: "1px solid rgba(var(--tint-rgb),0.25)", borderRadius: 6, padding: "2px 8px", marginRight: 5 }}>{f.label || "Feast"} · {f.month}/{f.day}</span>)}</div>}
           </div>
 
           {/* Log an entry */}
           <div className="card" style={{ marginBottom: 9 }}>
             <div style={L()}>Tend the Relationship</div>
             <div style={{ display: "flex", gap: 5, margin: "8px 0" }}>
-              {LOG_TYPES.map(([id, lbl]) => <button key={id} onClick={() => setLogForm(f => ({ ...f, type: id }))} style={{ flex: 1, padding: "6px 0", borderRadius: 8, background: logForm.type === id ? "rgba(212,175,106,0.14)" : "rgba(0,0,0,0.3)", border: `1px solid ${logForm.type === id ? "rgba(212,175,106,0.35)" : "rgba(200,175,100,0.1)"}`, fontFamily: F, fontSize: 8.5, color: logForm.type === id ? GOLD : "#6A5030", letterSpacing: 1, cursor: "pointer" }}>{lbl}</button>)}
+              {LOG_TYPES.map(([id, lbl]) => <button key={id} onClick={() => setLogForm(f => ({ ...f, type: id }))} style={{ flex: 1, padding: "6px 0", borderRadius: 8, background: logForm.type === id ? "rgba(var(--tint-rgb),0.14)" : "rgba(0,0,0,0.3)", border: `1px solid ${logForm.type === id ? "rgba(var(--tint-rgb),0.35)" : "rgba(var(--tint-rgb),0.1)"}`, fontFamily: F, fontSize: 8.5, color: logForm.type === id ? GOLD : "#6A5030", letterSpacing: 1, cursor: "pointer" }}>{lbl}</button>)}
             </div>
             <textarea value={logForm.text} onChange={e => setLogForm(f => ({ ...f, text: e.target.value }))} rows={2} placeholder={logForm.type === "offering" ? "What was given — water, candle, bread, attention…" : logForm.type === "response" ? "What was observed — dream, sign, shift, silence…" : "What passed between you…"} style={{ ...IS, resize: "none" }} />
-            <button onClick={logIt} disabled={!logForm.text.trim()} style={{ width: "100%", marginTop: 8, padding: "10px 0", borderRadius: 10, background: logForm.text.trim() ? "rgba(212,175,106,0.12)" : "rgba(0,0,0,0.3)", border: `1px solid ${logForm.text.trim() ? "rgba(212,175,106,0.35)" : "rgba(200,175,100,0.1)"}`, fontFamily: F, fontSize: 9.5, color: logForm.text.trim() ? GOLD : "#5A4020", letterSpacing: 2, textTransform: "uppercase", cursor: logForm.text.trim() ? "pointer" : "default" }}>⚑ Record</button>
+            <button onClick={logIt} disabled={!logForm.text.trim()} style={{ width: "100%", marginTop: 8, padding: "10px 0", borderRadius: 10, background: logForm.text.trim() ? "rgba(var(--tint-rgb),0.12)" : "rgba(0,0,0,0.3)", border: `1px solid ${logForm.text.trim() ? "rgba(var(--tint-rgb),0.35)" : "rgba(var(--tint-rgb),0.1)"}`, fontFamily: F, fontSize: 9.5, color: logForm.text.trim() ? GOLD : "#5A4020", letterSpacing: 2, textTransform: "uppercase", cursor: logForm.text.trim() ? "pointer" : "default" }}>⚑ Record</button>
           </div>
 
           {/* The log */}
           {(selected.log || []).length > 0 && (
-            <div style={{ padding: "12px 14px", borderRadius: 13, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(200,175,100,0.1)", marginBottom: 9 }}>
-              <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.45)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>The Record · {selected.log.length}</div>
+            <div style={{ padding: "12px 14px", borderRadius: 13, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(var(--tint-rgb),0.1)", marginBottom: 9 }}>
+              <div style={{ fontFamily: F, fontSize: 8, color: "rgba(var(--tint-rgb),0.45)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 8 }}>The Record · {selected.log.length}</div>
               {selected.log.slice(0, 30).map(l => (
-                <div key={l.id} style={{ padding: "6px 0", borderBottom: "1px solid rgba(200,175,100,0.05)" }}>
+                <div key={l.id} style={{ padding: "6px 0", borderBottom: "1px solid rgba(var(--tint-rgb),0.05)" }}>
                   <div style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
                     <span style={{ fontFamily: F, fontSize: 8.5, color: l.type === "response" ? "#7AB07A" : l.type === "offering" ? GOLD : "#8A9FE0", letterSpacing: 1, textTransform: "uppercase", flexShrink: 0 }}>{l.type}</span>
-                    <span style={{ fontFamily: F, fontSize: 8.5, color: "rgba(200,175,100,0.35)", marginLeft: "auto", flexShrink: 0 }}>{new Date(l.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                    <span style={{ fontFamily: F, fontSize: 8.5, color: "rgba(var(--tint-rgb),0.35)", marginLeft: "auto", flexShrink: 0 }}>{new Date(l.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                   </div>
                   <div style={{ fontFamily: F, fontSize: 10.5, color: "#9A8060", lineHeight: 1.6, marginTop: 2 }}>{l.text}</div>
                 </div>
@@ -118,12 +117,12 @@ export default function SpiritCourtScreen({ profile }) {
       <div style={{ flex: 1, overflowY: "auto", padding: "0 14px" }}>
         {/* Coming observances */}
         {observances.length > 0 && (
-          <div style={{ padding: "10px 13px", borderRadius: 12, background: "rgba(212,175,106,0.07)", border: "1px solid rgba(212,175,106,0.25)", marginBottom: 9 }}>
+          <div style={{ padding: "10px 13px", borderRadius: 12, background: "rgba(var(--tint-rgb),0.07)", border: "1px solid rgba(var(--tint-rgb),0.25)", marginBottom: 9 }}>
             <div style={{ fontFamily: F, fontSize: 8, color: GOLD, letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}>Coming Observances</div>
             {observances.slice(0, 5).map((o, i) => (
               <div key={i} style={{ display: "flex", gap: 8, fontFamily: F, fontSize: 10, color: "#C4A870", padding: "3px 0" }}>
                 <span>{KIND[o.kind]?.icon}</span><span style={{ flex: 1 }}>{o.label}</span>
-                <span style={{ color: "rgba(200,175,100,0.5)" }}>{o.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                <span style={{ color: "rgba(var(--tint-rgb),0.5)" }}>{o.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
               </div>
             ))}
           </div>
@@ -134,7 +133,7 @@ export default function SpiritCourtScreen({ profile }) {
             <div style={L()}>New Member of the Court</div>
             <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Name…" style={{ ...IS, marginTop: 8 }} />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 4, margin: "7px 0" }}>
-              {SPIRIT_KINDS.map(k => <button key={k.id} onClick={() => setForm(f => ({ ...f, kind: k.id }))} style={{ padding: "6px 4px", borderRadius: 8, background: form.kind === k.id ? "rgba(212,175,106,0.14)" : "rgba(0,0,0,0.3)", border: `1px solid ${form.kind === k.id ? "rgba(212,175,106,0.35)" : "rgba(200,175,100,0.1)"}`, fontFamily: F, fontSize: 8, color: form.kind === k.id ? GOLD : "#6A5030", cursor: "pointer" }}>{k.icon} {k.label}</button>)}
+              {SPIRIT_KINDS.map(k => <button key={k.id} onClick={() => setForm(f => ({ ...f, kind: k.id }))} style={{ padding: "6px 4px", borderRadius: 8, background: form.kind === k.id ? "rgba(var(--tint-rgb),0.14)" : "rgba(0,0,0,0.3)", border: `1px solid ${form.kind === k.id ? "rgba(var(--tint-rgb),0.35)" : "rgba(var(--tint-rgb),0.1)"}`, fontFamily: F, fontSize: 8, color: form.kind === k.id ? GOLD : "#6A5030", cursor: "pointer" }}>{k.icon} {k.label}</button>)}
             </div>
             <input value={form.epithet} onChange={e => setForm(f => ({ ...f, epithet: e.target.value }))} placeholder="Epithet / relation — 'my great-grandmother', 'spirit of the river'…" style={{ ...IS, marginBottom: 7 }} />
             <input value={form.offerings} onChange={e => setForm(f => ({ ...f, offerings: e.target.value }))} placeholder="Preferred offerings — water, tobacco, rose incense…" style={{ ...IS, marginBottom: 7 }} />
@@ -145,12 +144,12 @@ export default function SpiritCourtScreen({ profile }) {
               <input value={form.feastLabel} onChange={e => setForm(f => ({ ...f, feastLabel: e.target.value }))} placeholder="Feast / anniversary label (optional)" style={IS} />
             </div>
             <div style={{ display: "flex", gap: 7 }}>
-              <button onClick={submit} disabled={!form.name.trim()} style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: form.name.trim() ? "rgba(212,175,106,0.12)" : "rgba(0,0,0,0.3)", border: `1px solid ${form.name.trim() ? "rgba(212,175,106,0.35)" : "rgba(200,175,100,0.1)"}`, fontFamily: F, fontSize: 9.5, color: form.name.trim() ? GOLD : "#5A4020", letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>Welcome to the Court</button>
-              <button onClick={() => setAdding(false)} style={{ padding: "10px 16px", borderRadius: 10, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(200,175,100,0.12)", fontFamily: F, fontSize: 9, color: "#7A6030", cursor: "pointer" }}>Cancel</button>
+              <button onClick={submit} disabled={!form.name.trim()} style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: form.name.trim() ? "rgba(var(--tint-rgb),0.12)" : "rgba(0,0,0,0.3)", border: `1px solid ${form.name.trim() ? "rgba(var(--tint-rgb),0.35)" : "rgba(var(--tint-rgb),0.1)"}`, fontFamily: F, fontSize: 9.5, color: form.name.trim() ? GOLD : "#5A4020", letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>Welcome to the Court</button>
+              <button onClick={() => setAdding(false)} style={{ padding: "10px 16px", borderRadius: 10, background: "rgba(0,0,0,0.3)", border: "1px solid rgba(var(--tint-rgb),0.12)", fontFamily: F, fontSize: 9, color: "#7A6030", cursor: "pointer" }}>Cancel</button>
             </div>
           </div>
         ) : (
-          <button onClick={() => setAdding(true)} style={{ width: "100%", padding: "12px 0", borderRadius: 11, background: "rgba(212,175,106,0.1)", border: "1px solid rgba(212,175,106,0.3)", fontFamily: F, fontSize: 10, color: GOLD, letterSpacing: 2.5, textTransform: "uppercase", cursor: "pointer", marginBottom: 9 }}>+ Add to the Court</button>
+          <button onClick={() => setAdding(true)} style={{ width: "100%", padding: "12px 0", borderRadius: 11, background: "rgba(var(--tint-rgb),0.1)", border: "1px solid rgba(var(--tint-rgb),0.3)", fontFamily: F, fontSize: 10, color: GOLD, letterSpacing: 2.5, textTransform: "uppercase", cursor: "pointer", marginBottom: 9 }}>+ Add to the Court</button>
         )}
 
         {/* Roster grouped by kind */}
@@ -159,17 +158,17 @@ export default function SpiritCourtScreen({ profile }) {
           if (!members.length) return null;
           return (
             <div key={k.id} style={{ marginBottom: 10 }}>
-              <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.45)", letterSpacing: 2, textTransform: "uppercase", margin: "2px 4px 6px" }}>{k.icon} {k.label}s</div>
+              <div style={{ fontFamily: F, fontSize: 8, color: "rgba(var(--tint-rgb),0.45)", letterSpacing: 2, textTransform: "uppercase", margin: "2px 4px 6px" }}>{k.icon} {k.label}s</div>
               {members.map(s => {
                 const dso = daysSinceOffering(s);
                 return (
-                  <div key={s.id} onClick={() => setSel(s.id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", borderRadius: 11, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(200,175,100,0.1)", marginBottom: 6, cursor: "pointer" }}>
+                  <div key={s.id} onClick={() => setSel(s.id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 13px", borderRadius: 11, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(var(--tint-rgb),0.1)", marginBottom: 6, cursor: "pointer" }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: F, fontSize: 12.5, color: "#D4C098" }}>{s.name}</div>
                       {s.epithet && <div style={{ fontFamily: F, fontSize: 9, color: "#7A6030", fontStyle: "italic", marginTop: 1 }}>{s.epithet}</div>}
                     </div>
                     {s.planet && P[s.planet] && <span style={{ fontSize: 14, color: P[s.planet].col }}>{P[s.planet].sym}</span>}
-                    {dso != null && <span style={{ fontFamily: F, fontSize: 8.5, color: dso > 30 ? "#D28060" : "rgba(200,175,100,0.45)" }}>{dso}d</span>}
+                    {dso != null && <span style={{ fontFamily: F, fontSize: 8.5, color: dso > 30 ? "#D28060" : "rgba(var(--tint-rgb),0.45)" }}>{dso}d</span>}
                   </div>
                 );
               })}
@@ -184,10 +183,10 @@ export default function SpiritCourtScreen({ profile }) {
         )}
 
         {/* Seed the planetary court */}
-        <div style={{ padding: "11px 13px", borderRadius: 12, background: "rgba(8,5,22,0.5)", border: "1px solid rgba(200,175,100,0.08)", marginBottom: 10 }}>
-          <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,175,100,0.4)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 7 }}>Seed a Sphere's Court (Agrippa)</div>
+        <div style={{ padding: "11px 13px", borderRadius: 12, background: "rgba(8,5,22,0.5)", border: "1px solid rgba(var(--tint-rgb),0.08)", marginBottom: 10 }}>
+          <div style={{ fontFamily: F, fontSize: 8, color: "rgba(var(--tint-rgb),0.4)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 7 }}>Seed a Sphere's Court (Agrippa)</div>
           <div style={{ display: "flex", gap: 4 }}>
-            {Object.keys(P).map(pk => <button key={pk} onClick={() => seedCourt(pk)} title={`${P[pk].angel} · ${P[pk].intelligence} · ${P[pk].spirit}`} style={{ flex: 1, padding: "7px 2px", borderRadius: 8, background: "rgba(8,5,22,0.5)", border: "1px solid rgba(200,175,100,0.1)", cursor: "pointer" }}><div style={{ fontSize: 13, textAlign: "center", color: P[pk].col }}>{P[pk].sym}</div></button>)}
+            {Object.keys(P).map(pk => <button key={pk} onClick={() => seedCourt(pk)} title={`${P[pk].angel} · ${P[pk].intelligence} · ${P[pk].spirit}`} style={{ flex: 1, padding: "7px 2px", borderRadius: 8, background: "rgba(8,5,22,0.5)", border: "1px solid rgba(var(--tint-rgb),0.1)", cursor: "pointer" }}><div style={{ fontSize: 13, textAlign: "center", color: P[pk].col }}>{P[pk].sym}</div></button>)}
           </div>
           <div style={{ fontFamily: F, fontSize: 8.5, color: "#5A4020", fontStyle: "italic", marginTop: 6 }}>Adds the sphere's angel, intelligence, and spirit with their offerings and approach.</div>
         </div>

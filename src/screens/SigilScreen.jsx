@@ -183,7 +183,7 @@ export default function SigilScreen({eph,profile,natalPos}){
         <svg width={W} height={H} style={{display:"block"}}>
           <rect width={W} height={H} fill="rgba(0,0,0,0.4)" rx={4}/>
           {/* Rose cross grid dots */}
-          {[1,2,3,4,5].map(r=>[1,2,3,4,5].map(c=>{const [px,py]=roseCrossXY(r,c,260,260).map(v=>v*scale);return<circle key={`${r}-${c}`} cx={px} cy={py} r={1.5} fill="rgba(200,175,100,0.3)"/>})).flat()}
+          {[1,2,3,4,5].map(r=>[1,2,3,4,5].map(c=>{const [px,py]=roseCrossXY(r,c,260,260).map(v=>v*scale);return<circle key={`${r}-${c}`} cx={px} cy={py} r={1.5} fill="rgba(var(--tint-rgb),0.3)"/>})).flat()}
           <path d={d} fill="none" stroke={P[planet]?.color||"#C8AF64"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
           <circle cx={first[0]} cy={first[1]} r={4} fill="none" stroke={P[planet]?.color||"#C8AF64"} strokeWidth={1.5}/>
           <circle cx={last[0]} cy={last[1]} r={3} fill={P[planet]?.color||"#C8AF64"}/>
@@ -201,8 +201,8 @@ export default function SigilScreen({eph,profile,natalPos}){
           <rect width={W} height={H} fill="rgba(0,0,0,0.4)" rx={4}/>
           {/* Kamea grid */}
           {Array.from({length:km.size+1},(_,i)=><>
-            <line key={`h${i}`} x1={0} y1={i*cell} x2={W} y2={i*cell} stroke="rgba(200,175,100,0.12)" strokeWidth={0.5}/>
-            <line key={`v${i}`} x1={i*cell} y1={0} x2={i*cell} y2={H} stroke="rgba(200,175,100,0.12)" strokeWidth={0.5}/>
+            <line key={`h${i}`} x1={0} y1={i*cell} x2={W} y2={i*cell} stroke="rgba(var(--tint-rgb),0.12)" strokeWidth={0.5}/>
+            <line key={`v${i}`} x1={i*cell} y1={0} x2={i*cell} y2={H} stroke="rgba(var(--tint-rgb),0.12)" strokeWidth={0.5}/>
           </>)}
           <path d={d} fill="none" stroke={P[svgData.planet||planet]?.color||"#C8AF64"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
           <circle cx={first[0]} cy={first[1]} r={4} fill="none" stroke={P[svgData.planet||planet]?.color||"#C8AF64"} strokeWidth={1.5}/>
@@ -222,7 +222,7 @@ export default function SigilScreen({eph,profile,natalPos}){
     return null;
   };
 
-  const statusColors={created:"rgba(200,175,100,0.6)",charged:"#7AB87A",deployed:"#7AB8C8",fulfilled:"#C8AF64",retired:"rgba(200,175,100,0.25)"};
+  const statusColors={created:"rgba(var(--tint-rgb),0.6)",charged:"#7AB87A",deployed:"#7AB8C8",fulfilled:"#C8AF64",retired:"rgba(var(--tint-rgb),0.25)"};
   const statusOrder=["created","charged","deployed","fulfilled","retired"];
 
   if(mode==="view"&&sel){
@@ -230,29 +230,29 @@ export default function SigilScreen({eph,profile,natalPos}){
     const note=sel.aiNote||aiNote;
     return(
       <div style={{padding:"28px 24px",fontFamily:F,color:GOLD,maxWidth:600,margin:"0 auto"}}>
-        <button onClick={()=>setMode("list")} style={{background:"none",border:"none",color:"rgba(200,175,100,0.5)",fontFamily:F,fontSize:10,letterSpacing:2,cursor:"pointer",marginBottom:20,padding:0}}>← SIGILS</button>
+        <button onClick={()=>setMode("list")} style={{background:"none",border:"none",color:"rgba(var(--tint-rgb),0.5)",fontFamily:F,fontSize:10,letterSpacing:2,cursor:"pointer",marginBottom:20,padding:0}}>← SIGILS</button>
         <div style={{display:"flex",gap:20,alignItems:"flex-start",marginBottom:24}}>
           <div style={{flexShrink:0}}><SigilPreview svgData={sel.svgData} size={140}/></div>
           <div style={{flex:1}}>
-            <div style={{fontSize:11,letterSpacing:3,color:"rgba(200,175,100,0.5)",marginBottom:4}}>{pl?.sym} {pl?.name?.toUpperCase()}</div>
+            <div style={{fontSize:11,letterSpacing:3,color:"rgba(var(--tint-rgb),0.5)",marginBottom:4}}>{pl?.sym} {pl?.name?.toUpperCase()}</div>
             <div style={{fontSize:16,marginBottom:6,color:pl?.col||GOLD}}>{sel.intent||"(no intention)"}</div>
-            {sel.word&&<div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:8}}>WORD: {sel.word}</div>}
-            <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.35)",marginBottom:12}}>{new Date(sel.date).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"})}</div>
+            {sel.word&&<div style={{fontSize:9,letterSpacing:2,color:"rgba(var(--tint-rgb),0.4)",marginBottom:8}}>WORD: {sel.word}</div>}
+            <div style={{fontSize:9,letterSpacing:2,color:"rgba(var(--tint-rgb),0.35)",marginBottom:12}}>{new Date(sel.date).toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"})}</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
               {statusOrder.map(st=>(
-                <button key={st} onClick={()=>updateStatus(sel.id,st)} style={{padding:"3px 10px",borderRadius:10,border:`1px solid ${sel.status===st?statusColors[st]:"rgba(200,175,100,0.15)"}`,background:sel.status===st?`${statusColors[st]}22`:"transparent",color:sel.status===st?statusColors[st]:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer",textTransform:"uppercase"}}>{st}</button>
+                <button key={st} onClick={()=>updateStatus(sel.id,st)} style={{padding:"3px 10px",borderRadius:10,border:`1px solid ${sel.status===st?statusColors[st]:"rgba(var(--tint-rgb),0.15)"}`,background:sel.status===st?`${statusColors[st]}22`:"transparent",color:sel.status===st?statusColors[st]:"rgba(var(--tint-rgb),0.4)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer",textTransform:"uppercase"}}>{st}</button>
               ))}
             </div>
           </div>
         </div>
         {/* AI Timing */}
-        <div style={{borderTop:"1px solid rgba(200,175,100,0.08)",paddingTop:20,marginBottom:20}}>
-          <div style={{fontSize:10,letterSpacing:2,color:"rgba(200,175,100,0.5)",marginBottom:10}}>✧ AI TIMING GUIDANCE</div>
-          {note?<div style={{fontSize:12,lineHeight:1.7,color:"rgba(200,175,100,0.75)"}}>{note}</div>
-          :<button onClick={()=>getAITiming(sel)} disabled={aiLoading||!aiConfigured()} style={{padding:"6px 16px",border:"1px solid rgba(200,175,100,0.2)",borderRadius:4,background:"transparent",color:aiLoading?"rgba(200,175,100,0.35)":GOLD,fontFamily:F,fontSize:10,letterSpacing:2,cursor:"pointer"}}>
+        <div style={{borderTop:"1px solid rgba(var(--tint-rgb),0.08)",paddingTop:20,marginBottom:20}}>
+          <div style={{fontSize:10,letterSpacing:2,color:"rgba(var(--tint-rgb),0.5)",marginBottom:10}}>✧ AI TIMING GUIDANCE</div>
+          {note?<div style={{fontSize:12,lineHeight:1.7,color:"rgba(var(--tint-rgb),0.75)"}}>{note}</div>
+          :<button onClick={()=>getAITiming(sel)} disabled={aiLoading||!aiConfigured()} style={{padding:"6px 16px",border:"1px solid rgba(var(--tint-rgb),0.2)",borderRadius:4,background:"transparent",color:aiLoading?"rgba(var(--tint-rgb),0.35)":GOLD,fontFamily:F,fontSize:10,letterSpacing:2,cursor:"pointer"}}>
             {aiLoading?"READING SKY…":"GET TIMING"}
           </button>}
-          {!aiConfigured()&&<div style={{fontSize:9,color:"rgba(200,175,100,0.3)",marginTop:6}}>Set an AI engine in Profile to enable AI timing.</div>}
+          {!aiConfigured()&&<div style={{fontSize:9,color:"rgba(var(--tint-rgb),0.3)",marginTop:6}}>Set an AI engine in Profile to enable AI timing.</div>}
         </div>
         <button onClick={()=>deleteSigil(sel.id)} style={{padding:"5px 14px",border:"1px solid rgba(200,100,100,0.2)",borderRadius:4,background:"transparent",color:"rgba(200,100,100,0.5)",fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>DELETE SIGIL</button>
       </div>
@@ -264,40 +264,40 @@ export default function SigilScreen({eph,profile,natalPos}){
     const activeSeal=method==="seal"?getSeal(planet,sealKind):null;
     return(
       <div style={{padding:"28px 24px",fontFamily:F,color:GOLD,maxWidth:560,margin:"0 auto"}}>
-        <button onClick={()=>setMode("list")} style={{background:"none",border:"none",color:"rgba(200,175,100,0.5)",fontFamily:F,fontSize:10,letterSpacing:2,cursor:"pointer",marginBottom:24,padding:0}}>← SIGILS</button>
-        <div style={{fontSize:11,letterSpacing:3,color:"rgba(200,175,100,0.5)",marginBottom:20}}>NEW SIGIL</div>
+        <button onClick={()=>setMode("list")} style={{background:"none",border:"none",color:"rgba(var(--tint-rgb),0.5)",fontFamily:F,fontSize:10,letterSpacing:2,cursor:"pointer",marginBottom:24,padding:0}}>← SIGILS</button>
+        <div style={{fontSize:11,letterSpacing:3,color:"rgba(var(--tint-rgb),0.5)",marginBottom:20}}>NEW SIGIL</div>
 
         {/* Method picker */}
         <div style={{display:"flex",gap:8,marginBottom:20}}>
           {[["rose","Rose Cross"],["kamea","Kamea"],["seal","Seal"],["free","Freehand"]].map(([m,lbl])=>(
-            <button key={m} onClick={()=>setMethod(m)} style={{flex:1,padding:"6px 0",border:`1px solid ${method===m?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.1)"}`,borderRadius:4,background:method===m?"rgba(200,175,100,0.06)":"transparent",color:method===m?GOLD:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>{lbl.toUpperCase()}</button>
+            <button key={m} onClick={()=>setMethod(m)} style={{flex:1,padding:"6px 0",border:`1px solid ${method===m?"rgba(var(--tint-rgb),0.5)":"rgba(var(--tint-rgb),0.1)"}`,borderRadius:4,background:method===m?"rgba(var(--tint-rgb),0.06)":"transparent",color:method===m?GOLD:"rgba(var(--tint-rgb),0.4)",fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>{lbl.toUpperCase()}</button>
           ))}
         </div>
 
         {/* Planet */}
         <div style={{marginBottom:16}}>
-          <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:8}}>PLANET</div>
+          <div style={{fontSize:9,letterSpacing:2,color:"rgba(var(--tint-rgb),0.4)",marginBottom:8}}>PLANET</div>
           <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
             {Object.keys(P).map(pk=>(
-              <button key={pk} onClick={()=>setSigilPlanet(pk)} style={{padding:"4px 12px",border:`1px solid ${planet===pk?P[pk].col:"rgba(200,175,100,0.1)"}`,borderRadius:10,background:planet===pk?`${P[pk].col}22`:"transparent",color:planet===pk?P[pk].col:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:10,cursor:"pointer"}}>{P[pk].sym} {P[pk].name}</button>
+              <button key={pk} onClick={()=>setSigilPlanet(pk)} style={{padding:"4px 12px",border:`1px solid ${planet===pk?P[pk].col:"rgba(var(--tint-rgb),0.1)"}`,borderRadius:10,background:planet===pk?`${P[pk].col}22`:"transparent",color:planet===pk?P[pk].col:"rgba(var(--tint-rgb),0.4)",fontFamily:F,fontSize:10,cursor:"pointer"}}>{P[pk].sym} {P[pk].name}</button>
             ))}
           </div>
         </div>
 
         {/* Intention */}
         <div style={{marginBottom:16}}>
-          <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:6}}>INTENTION</div>
-          <input value={intent} onChange={e=>setIntent(e.target.value)} placeholder="Describe the working intention..." style={{width:"100%",padding:"8px 12px",background:"rgba(0,0,0,0.3)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:12,boxSizing:"border-box"}}/>
+          <div style={{fontSize:9,letterSpacing:2,color:"rgba(var(--tint-rgb),0.4)",marginBottom:6}}>INTENTION</div>
+          <input value={intent} onChange={e=>setIntent(e.target.value)} placeholder="Describe the working intention..." style={{width:"100%",padding:"8px 12px",background:"rgba(0,0,0,0.3)",border:"1px solid rgba(var(--tint-rgb),0.15)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:12,boxSizing:"border-box"}}/>
         </div>
 
         {/* Word / drawing */}
         {(method==="rose"||method==="kamea")&&(
           <div style={{marginBottom:20}}>
-            <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:6}}>SIGILIZATION WORD {method==="rose"?"(Rose Cross)":"(Kamea)"}</div>
-            <div style={{fontSize:9,color:"rgba(200,175,100,0.3)",marginBottom:8}}>
+            <div style={{fontSize:9,letterSpacing:2,color:"rgba(var(--tint-rgb),0.4)",marginBottom:6}}>SIGILIZATION WORD {method==="rose"?"(Rose Cross)":"(Kamea)"}</div>
+            <div style={{fontSize:9,color:"rgba(var(--tint-rgb),0.3)",marginBottom:8}}>
               {method==="rose"?"Enter a key word from your intention. Vowels often removed by practitioners.":"Enter letters — each is mapped to its number on the "+P[planet].name+" kamea."}
             </div>
-            <input value={word} onChange={e=>setWord(e.target.value)} placeholder={method==="rose"?"e.g. INCREASE or NCRSE":"e.g. PROSPER"} style={{width:"100%",padding:"8px 12px",background:"rgba(0,0,0,0.3)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:12,boxSizing:"border-box",marginBottom:16}}/>
+            <input value={word} onChange={e=>setWord(e.target.value)} placeholder={method==="rose"?"e.g. INCREASE or NCRSE":"e.g. PROSPER"} style={{width:"100%",padding:"8px 12px",background:"rgba(0,0,0,0.3)",border:"1px solid rgba(var(--tint-rgb),0.15)",borderRadius:4,color:GOLD,fontFamily:F,fontSize:12,boxSizing:"border-box",marginBottom:16}}/>
             {/* Live preview */}
             {word.length>=2&&previewPts&&(
               <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
@@ -308,17 +308,17 @@ export default function SigilScreen({eph,profile,natalPos}){
         )}
         {method==="seal"&&(
           <div style={{marginBottom:20}}>
-            <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:6}}>AGRIPPA SEAL (Three Books II.22)</div>
-            <div style={{fontSize:9,color:"rgba(200,175,100,0.3)",marginBottom:8,lineHeight:1.6}}>The name of the {P[planet].name}'s {sealKind} traced by gematria across its kamea. The intelligence guides; the spirit is raw force — classically the talisman bears the intelligence to govern the spirit.</div>
+            <div style={{fontSize:9,letterSpacing:2,color:"rgba(var(--tint-rgb),0.4)",marginBottom:6}}>AGRIPPA SEAL (Three Books II.22)</div>
+            <div style={{fontSize:9,color:"rgba(var(--tint-rgb),0.3)",marginBottom:8,lineHeight:1.6}}>The name of the {P[planet].name}'s {sealKind} traced by gematria across its kamea. The intelligence guides; the spirit is raw force — classically the talisman bears the intelligence to govern the spirit.</div>
             <div style={{display:"flex",gap:8,marginBottom:12}}>
               {[["intelligence","Intelligence"],["spirit","Spirit"]].map(([k,lbl])=>(
-                <button key={k} onClick={()=>setSealKind(k)} style={{flex:1,padding:"8px 0",border:`1px solid ${sealKind===k?"rgba(200,175,100,0.5)":"rgba(200,175,100,0.12)"}`,borderRadius:4,background:sealKind===k?"rgba(200,175,100,0.07)":"transparent",color:sealKind===k?GOLD:"rgba(200,175,100,0.4)",fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>{lbl.toUpperCase()}</button>
+                <button key={k} onClick={()=>setSealKind(k)} style={{flex:1,padding:"8px 0",border:`1px solid ${sealKind===k?"rgba(var(--tint-rgb),0.5)":"rgba(var(--tint-rgb),0.12)"}`,borderRadius:4,background:sealKind===k?"rgba(var(--tint-rgb),0.07)":"transparent",color:sealKind===k?GOLD:"rgba(var(--tint-rgb),0.4)",fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>{lbl.toUpperCase()}</button>
               ))}
             </div>
             {activeSeal&&(
               <div style={{textAlign:"center",marginBottom:10}}>
-                <div style={{fontFamily:F,fontSize:13,color:P[planet].col}}>{activeSeal.name} <span style={{fontSize:12,color:"rgba(200,175,100,0.5)"}}>{activeSeal.hebrew}</span></div>
-                {activeSeal.abbreviated&&<div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.3)",marginTop:2,fontStyle:"italic"}}>customary short form of the full name</div>}
+                <div style={{fontFamily:F,fontSize:13,color:P[planet].col}}>{activeSeal.name} <span style={{fontSize:12,color:"rgba(var(--tint-rgb),0.5)"}}>{activeSeal.hebrew}</span></div>
+                {activeSeal.abbreviated&&<div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",marginTop:2,fontStyle:"italic"}}>customary short form of the full name</div>}
               </div>
             )}
             {previewPts&&(
@@ -330,8 +330,8 @@ export default function SigilScreen({eph,profile,natalPos}){
         )}
         {method==="free"&&(
           <div style={{marginBottom:20}}>
-            <div style={{fontSize:9,letterSpacing:2,color:"rgba(200,175,100,0.4)",marginBottom:8}}>DRAW YOUR SIGIL</div>
-            <div style={{position:"relative",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4,background:"rgba(0,0,0,0.4)",display:"inline-block",cursor:"crosshair",touchAction:"none"}}>
+            <div style={{fontSize:9,letterSpacing:2,color:"rgba(var(--tint-rgb),0.4)",marginBottom:8}}>DRAW YOUR SIGIL</div>
+            <div style={{position:"relative",border:"1px solid rgba(var(--tint-rgb),0.15)",borderRadius:4,background:"rgba(0,0,0,0.4)",display:"inline-block",cursor:"crosshair",touchAction:"none"}}>
               <svg width={260} height={260} onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
                 onTouchStart={e=>{e.preventDefault();onMouseDown(e);}} onTouchMove={e=>{e.preventDefault();onMouseMove(e);}} onTouchEnd={onMouseUp}>
                 {paths.map((path,i)=><polyline key={i} points={path.map(p=>p.join(",")).join(" ")} fill="none" stroke={P[planet].col} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>)}
@@ -339,13 +339,13 @@ export default function SigilScreen({eph,profile,natalPos}){
               </svg>
             </div>
             <div style={{marginTop:8,display:"flex",gap:8}}>
-              <button onClick={()=>{setPaths(prev=>prev.slice(0,-1));}} style={{padding:"4px 12px",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4,background:"transparent",color:"rgba(200,175,100,0.5)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer"}}>UNDO</button>
-              <button onClick={()=>{setPaths([]);setCurPath([]);}} style={{padding:"4px 12px",border:"1px solid rgba(200,175,100,0.15)",borderRadius:4,background:"transparent",color:"rgba(200,175,100,0.5)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer"}}>CLEAR</button>
+              <button onClick={()=>{setPaths(prev=>prev.slice(0,-1));}} style={{padding:"4px 12px",border:"1px solid rgba(var(--tint-rgb),0.15)",borderRadius:4,background:"transparent",color:"rgba(var(--tint-rgb),0.5)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer"}}>UNDO</button>
+              <button onClick={()=>{setPaths([]);setCurPath([]);}} style={{padding:"4px 12px",border:"1px solid rgba(var(--tint-rgb),0.15)",borderRadius:4,background:"transparent",color:"rgba(var(--tint-rgb),0.5)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer"}}>CLEAR</button>
             </div>
           </div>
         )}
 
-        <button onClick={createSigil} disabled={method==="seal"?false:(!intent||(method!=="free"&&word.length<2)||(method==="free"&&!paths.length))} style={{width:"100%",padding:"10px",border:`1px solid rgba(200,175,100,${intent||method==="seal"?"0.4":"0.1"})`,borderRadius:4,background:"transparent",color:intent||method==="seal"?GOLD:"rgba(200,175,100,0.3)",fontFamily:F,fontSize:10,letterSpacing:3,cursor:"pointer"}}>{method==="seal"?"INSCRIBE SEAL":"SEAL SIGIL"}</button>
+        <button onClick={createSigil} disabled={method==="seal"?false:(!intent||(method!=="free"&&word.length<2)||(method==="free"&&!paths.length))} style={{width:"100%",padding:"10px",border:`1px solid rgba(var(--tint-rgb),${intent||method==="seal"?"0.4":"0.1"})`,borderRadius:4,background:"transparent",color:intent||method==="seal"?GOLD:"rgba(var(--tint-rgb),0.3)",fontFamily:F,fontSize:10,letterSpacing:3,cursor:"pointer"}}>{method==="seal"?"INSCRIBE SEAL":"SEAL SIGIL"}</button>
       </div>
     );
   }
@@ -358,17 +358,17 @@ export default function SigilScreen({eph,profile,natalPos}){
   return(
     <div style={{padding:"28px 24px",fontFamily:F,color:GOLD,maxWidth:600,margin:"0 auto"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
-        <div style={{fontSize:11,letterSpacing:3,color:"rgba(200,175,100,0.5)"}}>SIGIL WORKSHOP</div>
-        <button onClick={()=>setMode("create")} style={{padding:"5px 14px",border:"1px solid rgba(200,175,100,0.3)",borderRadius:4,background:"transparent",color:GOLD,fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>+ NEW</button>
+        <div style={{fontSize:11,letterSpacing:3,color:"rgba(var(--tint-rgb),0.5)"}}>SIGIL WORKSHOP</div>
+        <button onClick={()=>setMode("create")} style={{padding:"5px 14px",border:"1px solid rgba(var(--tint-rgb),0.3)",borderRadius:4,background:"transparent",color:GOLD,fontFamily:F,fontSize:9,letterSpacing:2,cursor:"pointer"}}>+ NEW</button>
       </div>
       {/* Status filter */}
       <div style={{display:"flex",gap:6,marginBottom:20,flexWrap:"wrap"}}>
         {statusFilter.map(f=>(
-          <button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 10px",borderRadius:10,border:`1px solid ${filter===f?"rgba(200,175,100,0.4)":"rgba(200,175,100,0.1)"}`,background:filter===f?"rgba(200,175,100,0.07)":"transparent",color:filter===f?GOLD:"rgba(200,175,100,0.35)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer",textTransform:"uppercase"}}>{f}</button>
+          <button key={f} onClick={()=>setFilter(f)} style={{padding:"3px 10px",borderRadius:10,border:`1px solid ${filter===f?"rgba(var(--tint-rgb),0.4)":"rgba(var(--tint-rgb),0.1)"}`,background:filter===f?"rgba(var(--tint-rgb),0.07)":"transparent",color:filter===f?GOLD:"rgba(var(--tint-rgb),0.35)",fontFamily:F,fontSize:9,letterSpacing:1,cursor:"pointer",textTransform:"uppercase"}}>{f}</button>
         ))}
       </div>
       {shown.length===0?(
-        <div style={{textAlign:"center",padding:"60px 20px",color:"rgba(200,175,100,0.2)",fontSize:12}}>
+        <div style={{textAlign:"center",padding:"60px 20px",color:"rgba(var(--tint-rgb),0.2)",fontSize:12}}>
           {sigils.length===0?"No sigils yet. Create your first working.":"No sigils with this status."}
         </div>
       ):(
@@ -376,11 +376,11 @@ export default function SigilScreen({eph,profile,natalPos}){
           {shown.map(s=>{
             const pl=P[s.planet];
             return(
-              <button key={s.id} onClick={()=>{setSel(s);setMode("view");setAiNote("");}} style={{background:"rgba(0,0,0,0.2)",border:`1px solid ${statusColors[s.status]||"rgba(200,175,100,0.12)"}22`,borderRadius:6,padding:12,cursor:"pointer",textAlign:"left",display:"flex",flexDirection:"column",gap:8}}>
+              <button key={s.id} onClick={()=>{setSel(s);setMode("view");setAiNote("");}} style={{background:"rgba(0,0,0,0.2)",border:`1px solid ${statusColors[s.status]||"rgba(var(--tint-rgb),0.12)"}22`,borderRadius:6,padding:12,cursor:"pointer",textAlign:"left",display:"flex",flexDirection:"column",gap:8}}>
                 <div style={{display:"flex",justifyContent:"center"}}><SigilPreview svgData={s.svgData} size={110}/></div>
                 <div style={{fontSize:8,letterSpacing:2,color:pl?.col||GOLD,opacity:0.7}}>{pl?.sym} {pl?.name?.toUpperCase()}</div>
                 <div style={{fontSize:10,color:GOLD,lineHeight:1.3}}>{s.intent||"—"}</div>
-                <div style={{fontSize:8,letterSpacing:1,color:statusColors[s.status]||"rgba(200,175,100,0.3)",textTransform:"uppercase"}}>{s.status}</div>
+                <div style={{fontSize:8,letterSpacing:1,color:statusColors[s.status]||"rgba(var(--tint-rgb),0.3)",textTransform:"uppercase"}}>{s.status}</div>
               </button>
             );
           })}

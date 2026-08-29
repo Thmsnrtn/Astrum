@@ -1,3 +1,4 @@
+import { GOLD } from "../ui/theme.js";
 // ═══════════════════════════════════════════════════════════════════════
 // THE ALCHEMICAL CORPUS — verified reference data for the Athanor
 // ═══════════════════════════════════════════════════════════════════════
@@ -33,7 +34,7 @@ export const GREAT_WORK_STAGES = [
     meaning: "Purification and washing — the ablutio. The matter cleansed of blackness into the lunar, silver state. The first great goal of the Work.",
     operations: "Solution, ablution, distillation",
     inner: "Washing of projections; the dawn-light of insight — still silver, still lacking the blood of life." },
-  { key: "citrinitas", name: "Citrinitas", greek: "xanthosis", color: "#E8C868", accent: "#D4AF6A",
+  { key: "citrinitas", name: "Citrinitas", greek: "xanthosis", color: "#E8C868", accent: GOLD,
     epithet: "The Yellowing",
     meaning: "The transmutation of lunar silver-consciousness into the solar dawning — the transitional gold-hue. After the 15th century most writers folded this stage into rubedo.",
     operations: "Digestion under increasing fire",

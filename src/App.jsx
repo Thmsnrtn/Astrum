@@ -117,8 +117,8 @@ import { FIXED_STARS } from "./data/fixedStars.js";
 // ═══════════════════════════════════════════════════════════════════════
 // STYLES + NAV — moved to src/ui/ (de-cycling). Temporary re-export shim.
 // ═══════════════════════════════════════════════════════════════════════
-import { CSS, F, GOLD, L, T, B, TINT_PRESETS, DIGNITY_COL, DIGNITY_LBL, VOWELS } from "./ui/theme.js";
-import { NAV_SECTIONS } from "./ui/nav.js";
+import { CSS, F, GOLD, L, T, B, TINT_PRESETS, applyTintJs, DIGNITY_COL, DIGNITY_LBL, VOWELS } from "./ui/theme.js";
+import { NAV_SECTIONS, NAV_GROUPS } from "./ui/nav.js";
 
 // ═══════════════════════════════════════════════════════════════════════
 // TRADITION MODULES
@@ -141,7 +141,7 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
   const navItems=NAV_SECTIONS.filter(s=>!q||s.label.toLowerCase().includes(q)||s.desc.toLowerCase().includes(q));
   const calcItems=[
     {id:"scan-transits",label:"Scan Transits",desc:"90-day transit hit list against natal chart",icon:"⟳",screen:"transits"},
-    {id:"solar-return",label:"Solar Return",desc:"Calculate this year's solar return chart",icon:"☉",screen:"natal"},
+    {id:"solar-return",label:"Solar Return (Natal → Returns)",desc:"Open the returns view of the natal screen",icon:"☉",screen:"natal"},
     {id:"lunar-return",label:"Lunar Return",desc:"Find the next lunar return date",icon:"☽",screen:"natal"},
     {id:"ingresses",label:"Sign Ingresses",desc:"Upcoming planetary sign changes (6 months)",icon:"≡",screen:"ephemeris"},
     {id:"stations",label:"Retrograde Stations",desc:"Next Rx and Direct stations",icon:"℞",screen:"ephemeris"},
@@ -200,23 +200,23 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
           <input ref={inputRef} value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={handleKey}
             placeholder={mode==="ask"?"Ask the Oracle anything…":"Search screens, actions, calculations…"}
             style={{flex:1,background:"none",border:"none",color:"var(--tint-primary)",fontFamily:F,fontSize:14,outline:"none",padding:0,boxShadow:"none"}}/>
-          {query&&<button onClick={()=>setQuery("")} style={{background:"none",border:"none",color:"rgba(200,175,100,0.3)",cursor:"pointer",fontSize:13,padding:2}}>✕</button>}
+          {query&&<button onClick={()=>setQuery("")} style={{background:"none",border:"none",color:"rgba(var(--tint-rgb),0.3)",cursor:"pointer",fontSize:13,padding:2}}>✕</button>}
         </div>
         {/* Mode tabs */}
         <div style={{display:"flex",padding:"0 6px",borderBottom:"1px solid rgba(var(--tint-rgb),0.07)"}}>
           {MODES.map(([m,lbl])=>(
-            <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:"8px 2px",background:"none",border:"none",borderBottom:`2px solid ${mode===m?"var(--tint-primary)":"transparent"}`,color:mode===m?"var(--tint-primary)":"rgba(200,175,100,0.3)",fontFamily:F,fontSize:7.5,letterSpacing:0.5,cursor:"pointer",transition:"border-color 0.15s,color 0.15s",whiteSpace:"nowrap"}}>{lbl}</button>
+            <button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:"8px 2px",background:"none",border:"none",borderBottom:`2px solid ${mode===m?"var(--tint-primary)":"transparent"}`,color:mode===m?"var(--tint-primary)":"rgba(var(--tint-rgb),0.3)",fontFamily:F,fontSize:8.5,letterSpacing:0.5,cursor:"pointer",transition:"border-color 0.15s,color 0.15s",whiteSpace:"nowrap"}}>{lbl}</button>
           ))}
         </div>
         {/* Results */}
         <div style={{maxHeight:320,overflowY:"auto"}}>
           {mode==="ask"?(
             <div style={{padding:"18px 16px"}}>
-              <div style={{fontFamily:F,fontSize:8.5,color:"rgba(200,175,100,0.35)",letterSpacing:2,marginBottom:12}}>TYPE YOUR QUESTION · PRESS ⏎ TO CONSULT ORACLE</div>
-              {eph?.pos?.moon&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",lineHeight:1.8}}>☽ Moon in {eph.pos.moon.zodiac.name} · {eph.moonPhase||""}{eph.voc?.isVoC?" · VoC":""}{natalPos?" · Natal loaded":""}</div>}
+              <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.35)",letterSpacing:2,marginBottom:12}}>TYPE YOUR QUESTION · PRESS ⏎ TO CONSULT ORACLE</div>
+              {eph?.pos?.moon&&<div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.4)",lineHeight:1.8}}>☽ Moon in {eph.pos.moon.zodiac.name} · {eph.moonPhase||""}{eph.voc?.isVoC?" · VoC":""}{natalPos?" · Natal loaded":""}</div>}
             </div>
           ):items.length===0?(
-            <div style={{padding:"26px",textAlign:"center",fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.22)"}}>No results for "{query}"</div>
+            <div style={{padding:"26px",textAlign:"center",fontFamily:F,fontSize:10,color:"rgba(var(--tint-rgb),0.22)"}}>No results for "{query}"</div>
           ):items.map((item,i)=>{
             const active=i===idx;
             return(
@@ -225,9 +225,9 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
                 <span style={{fontSize:14,color:"var(--tint-primary)",width:22,textAlign:"center",flexShrink:0}}>{item.icon}</span>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontFamily:F,fontSize:12,color:active?"var(--tint-primary)":"#C4A870",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.label}</div>
-                  <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.32)",marginTop:1}}>{item.desc}</div>
+                  <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.32)",marginTop:1}}>{item.desc}</div>
                 </div>
-                {mode==="history"&&item.ts&&<div style={{fontFamily:F,fontSize:7,color:"rgba(200,175,100,0.22)",flexShrink:0}}>{Math.max(0,Math.round((Date.now()-item.ts)/60000))}m</div>}
+                {mode==="history"&&item.ts&&<div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.22)",flexShrink:0}}>{Math.max(0,Math.round((Date.now()-item.ts)/60000))}m</div>}
               </button>
             );
           })}
@@ -236,8 +236,8 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
         <div style={{padding:"8px 16px",borderTop:"1px solid rgba(var(--tint-rgb),0.07)",display:"flex",gap:14,flexWrap:"wrap"}}>
           {[["↑↓","Move"],["⏎","Select"],["⇥","Mode"],["Esc","Close"]].map(([k,v])=>(
             <div key={k} style={{display:"flex",alignItems:"center",gap:4}}>
-              <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.5)",padding:"2px 5px",background:"rgba(200,175,100,0.07)",borderRadius:4,border:"1px solid rgba(200,175,100,0.12)"}}>{k}</span>
-              <span style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.25)"}}>{v}</span>
+              <span style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.5)",padding:"2px 5px",background:"rgba(var(--tint-rgb),0.07)",borderRadius:4,border:"1px solid rgba(var(--tint-rgb),0.12)"}}>{k}</span>
+              <span style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.25)"}}>{v}</span>
             </div>
           ))}
         </div>
@@ -276,19 +276,19 @@ function AstralLiveBarInner({tab,eph,now,natalPos,hour}){
       {/* Live dot */}
       <div style={{width:4,height:4,borderRadius:2,background:"var(--tint-primary)",animation:"live-dot 2s ease-in-out infinite",flexShrink:0}}/>
       {/* Breadcrumb */}
-      <div style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.5)",letterSpacing:2.5,textTransform:"uppercase",flexShrink:0,whiteSpace:"nowrap"}}>{nav?.icon} {nav?.label}</div>
+      <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.5)",letterSpacing:2.5,textTransform:"uppercase",flexShrink:0,whiteSpace:"nowrap"}}>{nav?.icon} {nav?.label}</div>
       {/* Separator */}
-      <div style={{width:1,height:12,background:"rgba(200,175,100,0.12)",flexShrink:0}}/>
+      <div style={{width:1,height:12,background:"rgba(var(--tint-rgb),0.12)",flexShrink:0}}/>
       {/* Event ticker */}
       <div style={{flex:1,overflow:"hidden",position:"relative",height:"100%",display:"flex",alignItems:"center"}}>
         {multi?(
           <div style={{display:"flex",gap:0,animation:"ticker-scroll 18s linear infinite",whiteSpace:"nowrap"}}>
             {[...events,...events].map((ev,i)=>(
-              <span key={i} style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.38)",letterSpacing:1.2,paddingRight:44}}>{ev}</span>
+              <span key={i} style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.38)",letterSpacing:1.2,paddingRight:44}}>{ev}</span>
             ))}
           </div>
         ):(
-          <span style={{fontFamily:F,fontSize:7.5,color:"rgba(200,175,100,0.35)",letterSpacing:1.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{events[0]||nav?.desc}</span>
+          <span style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.35)",letterSpacing:1.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{events[0]||nav?.desc}</span>
         )}
       </div>
     </div>
@@ -357,16 +357,16 @@ function SidebarInner({tab, setTab, hour, eph, open, setOpen}) {
       <div style={{position:"fixed",left:0,top:0,bottom:0,width:open?240:0,background:"rgba(var(--glass-bg,8,5,22),0.82)",backdropFilter:"blur(40px) saturate(200%) brightness(1.05)",WebkitBackdropFilter:"blur(40px) saturate(200%) brightness(1.05)",borderRight:"1px solid rgba(var(--tint-rgb,200,175,100),0.13)",zIndex:300,overflow:"hidden",transition:"width 0.32s cubic-bezier(0.34,1.56,0.64,1)",boxShadow:open?"12px 0 50px rgba(0,0,0,0.65),inset -1px 0 0 rgba(255,255,255,0.04)":"none"}}>
         {open && (
           <div style={{width:240,height:"100%",overflowY:"auto",display:"flex",flexDirection:"column"}}>
-            <div style={{padding:"22px 20px 16px",borderBottom:"1px solid rgba(200,175,100,0.08)"}}>
+            <div style={{padding:"22px 20px 16px",borderBottom:"1px solid rgba(var(--tint-rgb),0.08)"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                <div style={{fontFamily:F,fontSize:13,color:"#D4AF6A",letterSpacing:6,textTransform:"uppercase"}}>ASTRUM</div>
-                <button onClick={()=>setOpen(false)} style={{background:"none",border:"none",color:"rgba(200,175,100,0.4)",fontSize:16,cursor:"pointer",padding:4}}>✕</button>
+                <div style={{fontFamily:F,fontSize:13,color:GOLD,letterSpacing:6,textTransform:"uppercase"}}>ASTRUM</div>
+                <button onClick={()=>setOpen(false)} style={{background:"none",border:"none",color:"rgba(var(--tint-rgb),0.4)",fontSize:16,cursor:"pointer",padding:4}}>✕</button>
               </div>
               <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:8}}>
                 <span style={{fontSize:18,color:p.col}}>{p.sym}</span>
                 <div>
                   <div style={L(`${p.col}80`,7)}>Hour of {p.name}</div>
-                  <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.4)",letterSpacing:2}}>
+                  <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:2}}>
                     {Math.floor(hour.msRemaining/60000)}m {Math.floor((hour.msRemaining%60000)/1000)}s remaining
                   </div>
                 </div>
@@ -378,24 +378,29 @@ function SidebarInner({tab, setTab, hour, eph, open, setOpen}) {
                 </div>
               )}
               {eph?.pos?.moon && (
-                <div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.5)"}}>
+                <div style={{fontFamily:F,fontSize:10,color:"rgba(var(--tint-rgb),0.5)"}}>
                   Moon: {eph.pos.moon.zodiac.sym} {eph.pos.moon.zodiac.degree}° · {eph.moonPhase}
                 </div>
               )}
             </div>
             <div style={{padding:"12px 0",flex:1}}>
-              {NAV_SECTIONS.map(s=>{
+              {NAV_GROUPS.map(g=>(
+                <div key={g}>
+                  <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.35)",letterSpacing:3,textTransform:"uppercase",padding:"12px 20px 4px"}}>{g}</div>
+                  {NAV_SECTIONS.filter(s=>s.group===g).map(s=>{
                 const active=tab===s.id;
                 return (
-                  <button key={s.id} onClick={()=>{setTab(s.id);setOpen(false);}} style={{width:"100%",background:active?"rgba(200,175,100,0.1)":"none",border:"none",borderLeft:active?"2px solid #D4AF6A":"2px solid transparent",cursor:"pointer",padding:"10px 20px",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
-                    <span style={{fontSize:15,color:active?"#D4AF6A":"rgba(200,175,100,0.4)",width:20,textAlign:"center",position:"relative"}}>{s.icon}{s.id==="profile"&&backupStale&&<span style={{position:"absolute",top:-2,right:-4,width:7,height:7,borderRadius:4,background:"#D2A060"}}/>}</span>
+                  <button key={s.id} aria-label={s.label} onClick={()=>{setTab(s.id);setOpen(false);}} style={{width:"100%",background:active?"rgba(var(--tint-rgb),0.1)":"none",border:"none",borderLeft:active?`2px solid ${GOLD}`:"2px solid transparent",cursor:"pointer",padding:"10px 20px",display:"flex",alignItems:"center",gap:12,textAlign:"left"}}>
+                    <span style={{fontSize:15,color:active?GOLD:"rgba(var(--tint-rgb),0.4)",width:20,textAlign:"center",position:"relative"}}>{s.icon}{s.id==="profile"&&backupStale&&<span style={{position:"absolute",top:-2,right:-4,width:7,height:7,borderRadius:4,background:"#D2A060"}}/>}</span>
                     <div>
-                      <div style={{fontFamily:F,fontSize:13,color:active?"#D4AF6A":"rgba(200,175,100,0.7)"}}>{s.label}</div>
-                      <div style={{fontFamily:F,fontSize:9,color:"rgba(200,175,100,0.3)"}}>{s.desc}</div>
+                      <div style={{fontFamily:F,fontSize:13,color:active?GOLD:"rgba(var(--tint-rgb),0.7)"}}>{s.label}</div>
+                      <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.3)"}}>{s.desc}</div>
                     </div>
                   </button>
                 );
               })}
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -492,35 +497,35 @@ function OraclePanel({open,onClose,context,profile}){
   return(
     <div style={{position:"fixed",inset:0,zIndex:500,display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
       <div onClick={onClose} style={{position:"absolute",inset:0,background:"rgba(0,0,0,0.55)",backdropFilter:"blur(6px)"}}/>
-      <div style={{position:"relative",background:"rgba(4,4,18,0.98)",border:"1px solid rgba(200,175,100,0.13)",borderBottom:"none",borderRadius:"20px 20px 0 0",maxHeight:"74vh",display:"flex",flexDirection:"column",boxShadow:"0 -12px 56px rgba(0,0,0,0.75)"}}>
-        <div style={{padding:"14px 16px 10px",borderBottom:"1px solid rgba(200,175,100,0.08)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+      <div style={{position:"relative",background:"rgba(4,4,18,0.98)",border:"1px solid rgba(var(--tint-rgb),0.13)",borderBottom:"none",borderRadius:"20px 20px 0 0",maxHeight:"74vh",display:"flex",flexDirection:"column",boxShadow:"0 -12px 56px rgba(0,0,0,0.75)"}}>
+        <div style={{padding:"14px 16px 10px",borderBottom:"1px solid rgba(var(--tint-rgb),0.08)",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
           <div style={{display:"flex",alignItems:"center",gap:9}}>
-            <div style={{width:28,height:28,borderRadius:14,background:"rgba(212,175,106,0.12)",border:"1px solid rgba(212,175,106,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:"#D4AF6A"}}>✧</div>
+            <div style={{width:28,height:28,borderRadius:14,background:"rgba(var(--tint-rgb),0.12)",border:"1px solid rgba(var(--tint-rgb),0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:GOLD}}>✧</div>
             <div>
-              <div style={{fontFamily:F,fontSize:12,color:"#D4AF6A",letterSpacing:2}}>ORACLE</div>
-              <div style={{fontFamily:F,fontSize:8,color:"rgba(200,175,100,0.35)",letterSpacing:1,marginTop:1}}>{tradLabel}</div>
+              <div style={{fontFamily:F,fontSize:12,color:GOLD,letterSpacing:2}}>ORACLE</div>
+              <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.35)",letterSpacing:1,marginTop:1}}>{tradLabel}</div>
             </div>
           </div>
-          <button onClick={onClose} style={{background:"none",border:"none",color:"rgba(200,175,100,0.4)",fontSize:18,cursor:"pointer",padding:"4px 8px",lineHeight:1}}>×</button>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"rgba(var(--tint-rgb),0.4)",fontSize:18,cursor:"pointer",padding:"4px 8px",lineHeight:1}}>×</button>
         </div>
         <div style={{flex:1,overflowY:"auto",padding:"16px 16px 8px"}}>
           {loading&&msgs.length<=1&&(
             <div style={{display:"flex",gap:5,padding:"32px 0",justifyContent:"center"}}>
-              {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}
+              {[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(var(--tint-rgb),0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}
             </div>
           )}
           {msgs.filter(m=>m.role==="assistant"||msgs.indexOf(m)>0).map((m,i)=>(
             <div key={i} style={{marginBottom:14}}>
-              {m.role==="user"&&msgs.indexOf(m)>0&&<div style={{fontFamily:F,fontSize:10,color:"rgba(200,175,100,0.35)",marginBottom:5,letterSpacing:1}}>YOUR QUESTION</div>}
+              {m.role==="user"&&msgs.indexOf(m)>0&&<div style={{fontFamily:F,fontSize:10,color:"rgba(var(--tint-rgb),0.35)",marginBottom:5,letterSpacing:1}}>YOUR QUESTION</div>}
               <div style={{fontFamily:F,fontSize:11.5,color:m.role==="user"?"#9A8060":"#C4A870",lineHeight:1.95,whiteSpace:"pre-wrap"}}>{m.content}</div>
             </div>
           ))}
-          {loading&&msgs.length>1&&<div style={{display:"flex",gap:5,padding:"8px 0"}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(200,175,100,0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}</div>}
+          {loading&&msgs.length>1&&<div style={{display:"flex",gap:5,padding:"8px 0"}}>{[0,1,2].map(i=><div key={i} style={{width:5,height:5,borderRadius:3,background:"rgba(var(--tint-rgb),0.4)",animation:"breathe 1.2s ease-in-out infinite",animationDelay:`${i*0.3}s`}}/>)}</div>}
           <div ref={bottomRef}/>
         </div>
-        <div style={{padding:"8px 12px 20px",borderTop:"1px solid rgba(200,175,100,0.06)",display:"flex",gap:8,flexShrink:0}}>
-          <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();sendFollow();}}} placeholder="Ask a follow-up question…" style={{flex:1,background:"rgba(0,0,0,0.4)",border:"1px solid rgba(200,175,100,0.15)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:11}}/>
-          <button onClick={sendFollow} disabled={!input.trim()||loading} style={{padding:"0 12px",borderRadius:10,background:input.trim()?"rgba(212,175,106,0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(input.trim()?"rgba(212,175,106,0.28)":"rgba(200,175,100,0.08)"),fontFamily:F,fontSize:9,color:input.trim()?"#D4AF6A":"#4A3020",letterSpacing:1,cursor:input.trim()?"pointer":"default",height:36}}>ASK</button>
+        <div style={{padding:"8px 12px 20px",borderTop:"1px solid rgba(var(--tint-rgb),0.06)",display:"flex",gap:8,flexShrink:0}}>
+          <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();sendFollow();}}} placeholder="Ask a follow-up question…" style={{flex:1,background:"rgba(0,0,0,0.4)",border:"1px solid rgba(var(--tint-rgb),0.15)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:11}}/>
+          <button onClick={sendFollow} disabled={!input.trim()||loading} style={{padding:"0 12px",borderRadius:10,background:input.trim()?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(input.trim()?"rgba(var(--tint-rgb),0.28)":"rgba(var(--tint-rgb),0.08)"),fontFamily:F,fontSize:9,color:input.trim()?GOLD:"#4A3020",letterSpacing:1,cursor:input.trim()?"pointer":"default",height:36}}>ASK</button>
         </div>
       </div>
     </div>
@@ -565,7 +570,7 @@ const Sidebar=React_memo(SidebarInner);
 
 function ScreenLoading(){
   return <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
-    <div style={{fontFamily:F,fontSize:11,color:"rgba(200,175,100,0.4)",letterSpacing:3,textTransform:"uppercase"}}>✦ opening…</div>
+    <div style={{fontFamily:F,fontSize:11,color:"rgba(var(--tint-rgb),0.4)",letterSpacing:3,textTransform:"uppercase"}}>✦ opening…</div>
   </div>;
 }
 class ScreenBoundary extends Component {
@@ -575,16 +580,70 @@ class ScreenBoundary extends Component {
   render(){
     if(this.state.err)return <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"30px 24px",textAlign:"center"}}>
       <div style={{fontSize:30,color:"#8A7050",marginBottom:12}}>⚠</div>
-      <div style={{fontFamily:F,fontSize:15,color:"#D4AF6A"}}>This room is disturbed</div>
+      <div style={{fontFamily:F,fontSize:15,color:GOLD}}>This room is disturbed</div>
       <div style={{fontFamily:F,fontSize:10,color:"#8A7050",fontStyle:"italic",lineHeight:1.7,margin:"8px 0 14px",maxWidth:340}}>{String(this.state.err?.message||this.state.err).slice(0,180)}</div>
-      <button onClick={()=>this.setState({err:null})} style={{padding:"10px 22px",borderRadius:10,background:"rgba(212,175,106,0.12)",border:"1px solid rgba(212,175,106,0.35)",fontFamily:F,fontSize:10,color:"#D4AF6A",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Enter again</button>
+      <button onClick={()=>this.setState({err:null})} style={{padding:"10px 22px",borderRadius:10,background:"rgba(var(--tint-rgb),0.12)",border:"1px solid rgba(var(--tint-rgb),0.35)",fontFamily:F,fontSize:10,color:GOLD,letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Enter again</button>
     </div>;
     return this.props.children;
   }
 }
 
+
+// ── First-run welcome: three light steps, skippable, shown once ─────────
+function Welcome({onDone,setProfile}){
+  const [step,setStep]=useState(0);
+  const [name,setName]=useState("");
+  const [trads,setTrads]=useState(["western-ceremonial"]);
+  const [natal,setNatal]=useState({date:"",time:"12:00",city:"",lat:null,lon:null});
+  const IS={width:"100%",background:"rgba(0,0,0,0.5)",border:"1px solid rgba(var(--tint-rgb),0.25)",borderRadius:10,color:GOLD,fontFamily:F,outline:"none",padding:"11px 12px",fontSize:13,boxSizing:"border-box"};
+  const finish=(withNatal)=>{
+    setProfile(p=>{
+      const next={...(p||{}),name:name.trim()||p?.name||"",traditions:trads,
+        natal:withNatal?{...natal,lat:natal.lat?+natal.lat:null,lon:natal.lon?+natal.lon:null}:(p?.natal||{date:"",time:"",city:"",lat:null,lon:null})};
+      try{window.storage.set("astrum_profile",JSON.stringify(next));}catch{}
+      return next;
+    });
+    try{localStorage.setItem("astrum_welcomed","1");}catch{}
+    onDone();
+  };
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:800,background:"rgba(2,3,10,0.96)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div style={{maxWidth:400,width:"100%"}}>
+        <div style={{textAlign:"center",marginBottom:18}}>
+          <div style={{fontFamily:F,fontSize:22,color:GOLD,letterSpacing:8,textTransform:"uppercase"}}>Astrum</div>
+          <div style={{fontFamily:F,fontSize:10,color:"rgba(var(--tint-rgb),0.5)",fontStyle:"italic",marginTop:4}}>an instrument for the practice</div>
+        </div>
+        {step===0&&<>
+          <div style={{fontFamily:F,fontSize:12,color:"#C4A870",lineHeight:1.8,marginBottom:12}}>What shall the instrument call you, and which currents do you work in?</div>
+          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Your name (or working name)…" style={{...IS,marginBottom:9}} aria-label="Your name"/>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5,marginBottom:12}}>
+            {Object.entries(TRADITIONS).slice(0,8).map(([id,t])=>{
+              const on=trads.includes(id);
+              return <button key={id} onClick={()=>setTrads(x=>on?x.filter(v=>v!==id):[...x,id])} style={{padding:"9px 6px",borderRadius:9,background:on?"rgba(var(--tint-rgb),0.14)":"rgba(0,0,0,0.3)",border:`1px solid ${on?"rgba(var(--tint-rgb),0.4)":"rgba(var(--tint-rgb),0.1)"}`,fontFamily:F,fontSize:9,color:on?GOLD:"rgba(var(--tint-rgb),0.45)",cursor:"pointer",minHeight:36}}>{t.label}</button>;
+            })}
+          </div>
+          <button onClick={()=>setStep(1)} style={{width:"100%",padding:"13px 0",borderRadius:11,background:"rgba(var(--tint-rgb),0.13)",border:"1px solid rgba(var(--tint-rgb),0.4)",fontFamily:F,fontSize:11,color:GOLD,letterSpacing:3,textTransform:"uppercase",cursor:"pointer",minHeight:44}}>Continue</button>
+        </>}
+        {step===1&&<>
+          <div style={{fontFamily:F,fontSize:12,color:"#C4A870",lineHeight:1.8,marginBottom:5}}>Your birth moment and place.</div>
+          <div style={{fontFamily:F,fontSize:9.5,color:"rgba(var(--tint-rgb),0.45)",fontStyle:"italic",lineHeight:1.6,marginBottom:11}}>This unlocks the Ascendant, the Lots, sect, profections, unequal hours — most of the instrument. It stays on this device.</div>
+          <input type="date" value={natal.date} onChange={e=>setNatal(n=>({...n,date:e.target.value}))} style={{...IS,marginBottom:7}} aria-label="Birth date"/>
+          <input type="time" value={natal.time} onChange={e=>setNatal(n=>({...n,time:e.target.value}))} style={{...IS,marginBottom:7}} aria-label="Birth time"/>
+          <div style={{display:"flex",gap:6,marginBottom:12}}>
+            <input value={natal.lat??""} onChange={e=>setNatal(n=>({...n,lat:e.target.value}))} placeholder="Latitude (51.5)" style={IS} aria-label="Latitude"/>
+            <input value={natal.lon??""} onChange={e=>setNatal(n=>({...n,lon:e.target.value}))} placeholder="Longitude (−0.12)" style={IS} aria-label="Longitude"/>
+          </div>
+          <button onClick={()=>finish(true)} disabled={!natal.date} style={{width:"100%",padding:"13px 0",borderRadius:11,background:natal.date?"rgba(var(--tint-rgb),0.13)":"rgba(0,0,0,0.3)",border:`1px solid ${natal.date?"rgba(var(--tint-rgb),0.4)":"rgba(var(--tint-rgb),0.12)"}`,fontFamily:F,fontSize:11,color:natal.date?GOLD:"rgba(var(--tint-rgb),0.3)",letterSpacing:3,textTransform:"uppercase",cursor:natal.date?"pointer":"default",minHeight:44}}>Enter the Temple</button>
+          <button onClick={()=>finish(false)} style={{width:"100%",marginTop:8,padding:"9px 0",borderRadius:9,background:"none",border:"none",fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.35)",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>Later — enter without a chart</button>
+        </>}
+      </div>
+    </div>
+  );
+}
+
 export default function App(){
-  const [tab,setTab]=useState("sky");
+  const [tab,setTab]=useState(()=>{try{return localStorage.getItem("astrum_tab")||"sky";}catch{return "sky";}});
+  useEffect(()=>{try{localStorage.setItem("astrum_tab",tab);}catch{}},[tab]);
   const [workPlanet,setWork]=useState(null);
   const [fractalMode,setFractalMode]=useState("B");
   const [natalData,setNatalData]=useState(null);
@@ -595,6 +654,7 @@ export default function App(){
   const [oracleCtx,setOracleCtx]=useState("");
   const [cmdOpen,setCmdOpen]=useState(false);
   const [swReload,setSwReload]=useState(null); // fn → a new build is waiting
+  const [showWelcome,setShowWelcome]=useState(()=>{try{return !localStorage.getItem("astrum_welcomed")&&!JSON.parse(localStorage.getItem("astrum_profile")||"{}")?.name&&!JSON.parse(localStorage.getItem("astrum_profile")||"{}")?.natal?.date;}catch{return false;}});
   // Load profile (primary) and legacy natal data
   useEffect(()=>{(async()=>{
     try{const r=await window.storage.get("astrum_profile");if(r?.value){const p=JSON.parse(r.value);setProfile(p);return;}}catch(e){}
@@ -629,6 +689,7 @@ export default function App(){
   const activeTint=profile?.tint||"solar";
   useEffect(()=>{
     const t=TINT_PRESETS[activeTint]||TINT_PRESETS.solar;
+    applyTintJs(activeTint); // keep the JS GOLD live-binding in step with the CSS vars
     const root=document.documentElement;
     root.style.setProperty("--tint-primary",t.primary);
     root.style.setProperty("--tint-rgb",t.rgb);
@@ -702,8 +763,9 @@ export default function App(){
     <ClockProvider>
     <div style={{minHeight:"100vh",background:`radial-gradient(ellipse at 20% 10%,var(--bg-grad1,rgba(60,40,120,0.25)) 0%,transparent 52%),radial-gradient(ellipse at 80% 90%,var(--bg-grad2,rgba(160,120,30,0.15)) 0%,transparent 52%),radial-gradient(ellipse at 50% 50%,${hourTint} 0%,transparent 65%),#04060F`,display:"flex",justifyContent:"center",fontFamily:F,color:"var(--tint-primary,#D4AF6A)",transition:"background 3s ease"}}>
       <style>{CSS}</style>
+      {showWelcome&&<Welcome setProfile={setProfile} onDone={()=>setShowWelcome(false)}/>}
       {swReload&&(
-        <div onClick={swReload} style={{position:"fixed",top:12,left:"50%",transform:"translateX(-50%)",zIndex:900,padding:"10px 20px",borderRadius:12,background:"rgba(20,15,40,0.95)",border:"1px solid rgba(212,175,106,0.4)",fontFamily:F,fontSize:10,color:"#D4AF6A",letterSpacing:1.5,cursor:"pointer",boxShadow:"0 6px 24px rgba(0,0,0,0.5)"}}>
+        <div onClick={swReload} style={{position:"fixed",top:12,left:"50%",transform:"translateX(-50%)",zIndex:900,padding:"10px 20px",borderRadius:12,background:"rgba(20,15,40,0.95)",border:"1px solid rgba(var(--tint-rgb),0.4)",fontFamily:F,fontSize:10,color:GOLD,letterSpacing:1.5,cursor:"pointer",boxShadow:"0 6px 24px rgba(0,0,0,0.5)"}}>
           ✦ A new sky is available — tap to renew
         </div>
       )}
@@ -712,7 +774,7 @@ export default function App(){
 
         {/* ── Liquid Glass Header Bar (Batch 1) ── */}
         <div style={{height:50,background:"rgba(var(--glass-bg,8,5,22),0.78)",backdropFilter:"blur(36px) saturate(190%) brightness(1.06)",WebkitBackdropFilter:"blur(36px) saturate(190%) brightness(1.06)",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 14px",flexShrink:0,borderBottom:"1px solid rgba(var(--tint-rgb,200,175,100),0.09)",boxShadow:"0 2px 0 rgba(255,255,255,0.025),inset 0 1px 0 rgba(255,255,255,0.07)"}}>
-          <button onClick={()=>setSidebarOpen(true)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",gap:4,padding:4}}>
+          <button aria-label="Open navigation" onClick={()=>setSidebarOpen(true)} style={{background:"none",border:"none",cursor:"pointer",display:"flex",flexDirection:"column",gap:4,padding:4}}>
             {[0,1,2].map(i=><div key={i} style={{width:i===2?14:20,height:1.5,background:"rgba(var(--tint-rgb,200,175,100),0.5)",borderRadius:1,transition:"width 0.2s"}}/>)}
           </button>
           {/* ASTRUM title — tap to open command palette (Batch 2) */}
@@ -721,10 +783,11 @@ export default function App(){
             onMouseLeave={e=>e.currentTarget.style.background="none"}>
             <div style={{fontFamily:F,fontSize:11,color:"var(--tint-primary,#D4AF6A)",letterSpacing:7,textTransform:"uppercase"}}>ASTRUM</div>
             {profile?.name
-              ?<div style={{fontFamily:F,fontSize:7,color:"rgba(var(--tint-rgb,200,175,100),0.35)",letterSpacing:2,textTransform:"uppercase",marginTop:1}}>{profile.name}</div>
-              :<div style={{fontFamily:F,fontSize:6.5,color:"rgba(var(--tint-rgb,200,175,100),0.22)",letterSpacing:1.5,marginTop:1}}>⌘K to search</div>}
+              ?<div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb,200,175,100),0.35)",letterSpacing:2,textTransform:"uppercase",marginTop:1}}>{profile.name}</div>
+              :<div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb,200,175,100),0.22)",letterSpacing:1.5,marginTop:1}}>⌘K to search</div>}
           </button>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <button aria-label="Search and commands" onClick={()=>setCmdOpen(true)} style={{background:"rgba(var(--tint-rgb,200,175,100),0.07)",border:"1px solid rgba(var(--tint-rgb,200,175,100),0.18)",borderRadius:8,cursor:"pointer",padding:"4px 9px",fontFamily:F,fontSize:11,color:"rgba(var(--tint-rgb,200,175,100),0.6)",minWidth:30,minHeight:26}}>⌘</button>
             <ClockText/>
             <span style={{fontSize:12,color:P[hour.planet].col,animation:"live-dot 3s ease-in-out infinite"}}>{P[hour.planet].sym}</span>
           </div>
