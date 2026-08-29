@@ -37,18 +37,23 @@ describe("SRS scheduling", () => {
 
 describe("buildDeck", () => {
   const deck = buildDeck();
-  it("covers mansions, figures, lots, and phases", () => {
+  it("covers mansions, figures, lots, phases, decans, and talismans", () => {
     expect(deck.filter(c => c.id.startsWith("mansion_"))).toHaveLength(28);
     expect(deck.filter(c => c.id.startsWith("figure_"))).toHaveLength(16);
     expect(deck.filter(c => c.id.startsWith("lot_"))).toHaveLength(7);
     expect(deck.filter(c => c.id.startsWith("phase_"))).toHaveLength(8);
+    expect(deck.filter(c => c.id.startsWith("decan_"))).toHaveLength(36);
+    expect(deck.filter(c => c.id.startsWith("mtalisman_"))).toHaveLength(28);
+  });
+  it("card ids are unique (grading one card must never touch another)", () => {
+    expect(new Set(deck.map(c => c.id)).size).toBe(deck.length);
   });
   it("every card has front and back", () => {
     for (const c of deck) { expect(c.front).toBeTruthy(); expect(c.back?.length).toBeGreaterThan(5); }
   });
-  it("accepts extra cards (the decans ride in from the App table)", () => {
-    const d = buildDeck([{ id: "decan_1", topic: "Decan", front: "x", back: "yyyyyy" }]);
-    expect(d.some(c => c.id === "decan_1")).toBe(true);
+  it("accepts extra cards from callers", () => {
+    const d = buildDeck([{ id: "custom_1", topic: "Custom", front: "x", back: "yyyyyy" }]);
+    expect(d.some(c => c.id === "custom_1")).toBe(true);
   });
 });
 

@@ -14,6 +14,9 @@ import { LOTS } from "../engine/lots.js";
 import { PHASES } from "./lunation.js";
 import { BEHENIAN } from "../data/behenian.js";
 import { BOUNDS } from "../engine/astro.js";
+import { DECANS } from "../data/decans.js";
+import { PICATRIX_DECANS } from "../data/picatrixDecans.js";
+import { MANSION_TALISMANS } from "../data/mansionTalismans.js";
 
 // ── Scheduling (pure) ──────────────────────────────────────────────────
 // state: { ease, intervalDays, due (ISO), reps }. grade: "again"|"good"|"easy".
@@ -59,6 +62,18 @@ export function buildDeck(extra = []) {
   BOUNDS.forEach((bs, si) => cards.push({ id: `bounds_${si}`, topic: "Egyptian bounds",
     front: `The bounds of ${SIGN_NAMES_SRS[si]}`,
     back: bs.map(b => `${CAP(b.p)} ${b.f}–${b.t}°`).join(" · ") + " — a planet in its own bound gains +2 essential dignity." }));
+  PICATRIX_DECANS.forEach(pd => {
+    const d = DECANS[pd.n - 1];
+    cards.push({ id: `decan_${pd.n}`, topic: "Decan image",
+      front: `Decan ${pd.n} — ${d.name} (${d.sign}, ruled by ${CAP(d.ruler)})`,
+      back: `${pd.picatrixImage} · Signifies: ${pd.picatrixSignification}` });
+  });
+  MANSION_TALISMANS.forEach(t => {
+    const m = MANSIONS[t.n - 1];
+    cards.push({ id: `mtalisman_${t.n}`, topic: "Mansion talisman",
+      front: `The talisman of Mansion ${t.n} — ${m.arabic}: lord and image?`,
+      back: `Lord ${t.lord} (Agrippa: ${t.agrippaLord}) · ${t.image} · For: ${t.use}` });
+  });
   extra.forEach(c => cards.push(c));
   return cards;
 }

@@ -89,7 +89,7 @@ async function triggerHaptic(style="medium"){
 // ENGINE — moved to src/engine/{astro,chart,scan}.js (de-cycling).
 // Imports below; App.jsx is now leaf-only (nothing imports from it).
 // ═══════════════════════════════════════════════════════════════════════
-import { D2R, norm, dateToJD, sunLon, moonLon, EL, equationOfCenter, planetLon, dailyMotion, SIGNS, lonToZodiac, DOMICILE, EXALT, getDignity, dignityScore, getCombustion, BOUNDS, getBound, antiscionOf, contraAntiscionOf, getAntisciaAspects, getPlanetPhase, checkVoC, nextIngress, HOUR_ORDER, DAY_RULERS, DAY_NAMES, getPlanetaryHour, precessStar, starLonAt, meanNode, sunriseSetUTC, gstDeg, lstDeg, obliquity, calcASC, calcMC, calcPOF, calcPOS, getPlanetaryHourUnequal, YEAR_SEC, L_DUR, calcFractal, fmtTime, fmtWindowTime, calcWindowBounds, calcL2Forecast, OUTER_EPOCHS, J2000_MS, outerPlanetLon, JS_CONJUNCTIONS, DECADE_FORECAST, getAspectsAll, meanLilith, chironLon, trueNode, TRIPLICITIES, ELEMENT_BY_SIGN, getTriplicity, calcHouses, getHouseNum, HOUSE_NAMES, HOUSE_MEANINGS } from "./engine/astro.js";
+import { D2R, norm, dateToJD, sunLon, moonLon, EL, equationOfCenter, planetLon, dailyMotion, SIGNS, lonToZodiac, DOMICILE, EXALT, inExaltationDegree, getDignity, dignityScore, getCombustion, BOUNDS, getBound, antiscionOf, contraAntiscionOf, getAntisciaAspects, getPlanetPhase, checkVoC, nextIngress, HOUR_ORDER, DAY_RULERS, DAY_NAMES, getPlanetaryHour, precessStar, starLonAt, meanNode, sunriseSetUTC, gstDeg, lstDeg, obliquity, calcASC, calcMC, calcPOF, calcPOS, getPlanetaryHourUnequal, YEAR_SEC, L_DUR, calcFractal, fmtTime, fmtWindowTime, calcWindowBounds, calcL2Forecast, OUTER_EPOCHS, J2000_MS, outerPlanetLon, JS_CONJUNCTIONS, DECADE_FORECAST, getAspectsAll, meanLilith, chironLon, trueNode, TRIPLICITIES, ELEMENT_BY_SIGN, getTriplicity, calcHouses, getHouseNum, HOUSE_NAMES, HOUSE_MEANINGS } from "./engine/astro.js";
 import { calcNatal, conditionsFromProfile } from "./engine/chart.js";
 import { ClockProvider, useClock, useAstroNow } from "./ui/clock.jsx";
 import { calcProgressions, calcSolarArc, TRANSIT_ASPECTS, scanTransits, FIRDARIA_DAY, FIRDARIA_NIGHT, FIRDARIA_YRS, calcFirdaria, calcSolarReturn, calcLunarReturn, scanIngresses, scanStations, scanEclipses, lonToDecl, getDeclAspects, getMidpoints, calcAllLots, checkViaCombusta, checkBesiegement, getMoonAspects, checkMaleficAffliction, getMoonSignRelation, checkTranslation, checkProhibition, getStarConj, getMoonSpeed, MOON_PHASE_NAMES, electionBandKey, electionFactors, assessElection, scanElections } from "./engine/scan.js";
@@ -263,6 +263,9 @@ function AstralLiveBarInner({tab,eph,now,natalPos,hour}){
     if(eph?.pos?.moon){const z=eph.pos.moon.zodiac;list.push(`☽ ${z.degree}° ${z.name} · ${eph.moonPhase||""}`);}
     if(hour?.planet&&P[hour.planet]){const p=P[hour.planet];list.push(`${p.sym} Hour of ${p.name} · ${Math.floor((hour.msRemaining||0)/60000)}m`);}
     if(eph?.pos?.sun){const z=eph.pos.sun.zodiac;list.push(`☉ ${z.degree}° ${z.name}`);}
+    Object.entries(eph?.pos||{}).forEach(([pk,pp])=>{
+      if(P[pk]&&pp?.lon!=null&&inExaltationDegree(pk,pp.lon))list.push(`✦ ${P[pk].sym} ${P[pk].name} on the degree of its exaltation — the throne`);
+    });
     const lastExp=lastExportedAt();
     const staleDays=lastExp?Math.floor((Date.now()-lastExp.getTime())/86400000):null;
     if(staleDays==null)list.push("⚠ The record has never been exported — bind a backup in Profile");

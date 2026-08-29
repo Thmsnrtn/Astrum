@@ -9,7 +9,7 @@
 // deliver them per platform. iOS caps ~64 pending local notifications, so
 // each plan carries a priority (lower = more important).
 
-import { getPlanetaryHour, getPlanetaryHourUnequal, checkVoC, dateToJD } from "../engine/astro.js";
+import { getPlanetaryHour, getPlanetaryHourUnequal, checkVoC, dateToJD, inExaltationDegree } from "../engine/astro.js";
 import { P } from "../data/planets.js";
 import { getMansion } from "../data/mansions.js";
 import { alchemicalSeason, moonSignOperation, moonWorkGuidance } from "../data/alchemy.js";
@@ -136,6 +136,12 @@ export function composeBriefing({ now, eph, hour, castings = [], athanor = [], o
     lines.push(`Moon ${eph.moonPhase} in ${moon.zodiac?.name}, mansion ${m.index} — ${m.arabic} (${m.nature}).`);
   }
   if (eph?.voc?.isVoC) lines.push(`⚠ Void of course — ${Math.round(eph.voc.hoursToIngress)}h until ingress. Hold new workings.`);
+  // The throne degrees — al-Biruni's exact exaltation degrees are rare
+  // (one degree per planet per zodiac) and worth announcing when struck.
+  for (const [pk, pp] of Object.entries(eph?.pos || {})) {
+    if (pp?.lon != null && inExaltationDegree(pk, pp.lon))
+      lines.push(`✦ ${cap(pk)} stands on the very degree of its exaltation — the throne. A rare fortification for works of ${cap(pk)}.`);
+  }
   if (eph?.pos?.sun && moon) {
     const season = alchemicalSeason(eph.pos.sun.lon);
     const moonOp = moonSignOperation(moon.lon);

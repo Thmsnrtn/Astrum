@@ -2,15 +2,15 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { aiConfigured, aiUnconfiguredMessage, askClaude } from "../ai/client.js";
 import { buildSystemPrompt } from "../ai/prompt.js";
-import { DECANS } from "../data/decans.js";
 import { FOUNDATIONS, LEARN_TOPICS } from "../data/learn.js";
-import { P } from "../data/planets.js";
 import { FOUNDATION_PRIMERS, TOPIC_PRIMERS } from "../data/primers.js";
 import { buildDeck, dueCards, gradeCard, loadSRS } from "../lib/srs.js";
 import { F, L, T, GOLD } from "../ui/theme.js";
 
 function DailyCard(){
-  const deck=useMemo(()=>buildDeck(DECANS.map((d,i)=>({id:`decan_${i+1}`,topic:"Decan",front:`Decan ${i+1} — ${d.name} (${d.sign}, ${P[d.ruler]?.name})`,back:d.magic}))),[]);
+  // Decan cards now ship in the deck itself with the Picatrix II.11 image
+  // and signification (roots pass) — richer than the old d.magic gloss.
+  const deck=useMemo(()=>buildDeck(),[]);
   const [states,setStates]=useState(loadSRS);
   const [card,setCard]=useState(null);
   const [flipped,setFlipped]=useState(false);
