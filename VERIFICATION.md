@@ -7,7 +7,7 @@ and fail-safe so the app degrades gracefully wherever they are absent.
 
 ## Tier 1 — unit & property tests (`npx vitest run`)
 
-~300 tests across 30 files. The load-bearing ones:
+~385 tests across 33 files. The load-bearing ones:
 
 - **Engines**: ephemeris vs Swiss Ephemeris; Hermetic Lots (sect reversal,
   Fortune+Spirit=2·Asc, Paulus/Valens); zodiacal releasing (Valens table
@@ -26,6 +26,25 @@ and fail-safe so the app degrades gracefully wherever they are absent.
 - **Architecture guard** (`src/architecture.test.js`): nothing imports
   App.jsx but main.jsx; foundation layers never import screens; the
   import graph is acyclic. The 6,500-line hub cannot silently re-form.
+- **Roots regression** (`src/engine/roots.test.js`): every fix from the
+  Aug 2026 primary-source audit pinned — firdaria years belong to
+  planets not positions (the night-chart bug), VoC has no phantom orb
+  cap and both doctrines hold (hellenistic void ⇒ lilly void, swept
+  hourly over a lunar month), besiegement survives 0° Aries, exaltation
+  degrees use the ordinal convention, Lilly combustion orbs, mansion
+  windows are coherent for all 28 stations, clean-window moments
+  re-verified against the engine's own checks. Plus data integrity for
+  the enrichment tables: 28 Picatrix IV.9 mansion talismans, 36
+  Picatrix II.11 decan images/significations, the five corrected
+  mansion elect/avoid fields.
+- **Fallback envelope** (`src/engine/fallback.test.js`): the Meeus
+  approximation's worst-case error per body vs Swiss Ephemeris is a
+  measured, tested contract over 1950–2100 (Sun 0.007° … Venus 3.53°);
+  sunrise geometry by property; the app's own ASC/MC/houses within 0.2°
+  of Swiss over a 400-point random sweep.
+- **Kameas** (`src/data/kamea.test.js`): all seven planetary squares
+  proven true magic squares cell by cell (orders 3–9, planet totals
+  45…3321).
 
 ## Tier 2 — browser E2E (`bash e2e/run.sh`, Playwright Chromium)
 
@@ -40,6 +59,11 @@ and fail-safe so the app degrades gracefully wherever they are absent.
 - `ux.mjs` — first-run welcome seeds and persists the profile; switching
   the tint preset actually recolors computed styles; grouped nav; tab
   persistence across reload.
+- `roots.mjs` — the primary-source material renders where practice
+  happens: the mansion talisman block with its next-window card and
+  commit button, both decan translation witnesses plus signification,
+  the almanac day-detail "could be made today" line, the grown SRS
+  daily card, and the VoC doctrine toggle persisting across reload.
 
 ## Tier 3 — on-device (iPad / Mac), the honest boundary
 
