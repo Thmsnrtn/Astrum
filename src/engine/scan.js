@@ -547,3 +547,29 @@ export function nextCleanMansionWindow(n,jd,maxDays=60,vocMode="lilly"){
   }
   return null;
 }
+
+// ── Behenian star windows: Thebit's rule ───────────────────────────────
+// "Take the stone and herb of that plant when the Moon doth either
+// fortunately get under, or hath a good aspect on, that Star" (Agrippa
+// II.32, citing Thebit). The corporal conjunction is the strong form:
+// the Moon's next arrival at the star's (precessed) longitude, judged
+// fortunate when she is waxing, not void, and the star itself is not
+// under the Sun's beams (<17°, Lilly's outer orb).
+export function nextStarConjunction(starLon,jd,vocMode="lilly"){
+  const cJd=nextMoonCrossing(starLon,jd);
+  const voc=checkVoC(cJd,vocMode).isVoC;
+  const waxing=norm(moonLon(cJd)-sunLon(cJd))<180;
+  let sunSep=Math.abs(norm(starLon-sunLon(cJd)));if(sunSep>180)sunSep=360-sunSep;
+  const underBeams=sunSep<17;
+  return{jd:cJd,voc,waxing,underBeams,clean:!voc&&!underBeams&&waxing};
+}
+export function nextCleanStarWindow(starLon,jd,maxDays=90,vocMode="lilly"){
+  let cursor=jd;
+  for(let i=0;i<Math.ceil(maxDays/27)+2;i++){
+    const c=nextStarConjunction(starLon,cursor,vocMode);
+    if(c.jd>jd+maxDays)return null;
+    if(c.clean)return c;
+    cursor=c.jd+1; // step past this conjunction; the next is ~27.3d on
+  }
+  return null;
+}

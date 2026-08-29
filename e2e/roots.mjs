@@ -51,6 +51,14 @@ await p.waitForTimeout(700);
 const alm = await p.evaluate(() => /Could be made today/i.test(document.body.innerText));
 console.log('almanac talisman line:', alm);
 
+// 2c) Stars: selecting a Behenian star shows Thebit's window
+await goRoom('Fixed stars');
+await p.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /Regulus/.test(x.textContent)); b && b.click(); });
+await p.waitForTimeout(900);
+const star = await p.evaluate(() => { const t = document.body.innerText; return {
+  thebit: /Thebit's Window/i.test(t), commit: /as an Election/i.test(t) }; });
+console.log('thebit window:', JSON.stringify(star));
+
 // 3) Learn: the daily card runs over the grown deck without error
 await goRoom('AI magical education');
 const learn = await p.evaluate(() => /Daily Card|canon rests/i.test(document.body.innerText));
@@ -66,7 +74,7 @@ await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(2400);
 const mode2 = await p.evaluate(() => JSON.parse(localStorage.getItem('astrum_practice_prefs') || '{}').vocMode);
 console.log('doctrine card:', doct, '· after click:', mode1, '· after reload:', mode2);
 
-const ok = Object.values(mans).every(Boolean) && Object.values(dec).every(Boolean) && learn && alm
+const ok = Object.values(mans).every(Boolean) && Object.values(dec).every(Boolean) && learn && alm && Object.values(star).every(Boolean)
   && doct && mode1 === 'hellenistic' && mode2 === 'hellenistic' && errs.length === 0;
 console.log(ok ? '✓ ROOTS E2E PASS' : '✗ ROOTS E2E FAIL');
 console.log('errors:', errs.length ? JSON.stringify([...new Set(errs)]) : 'none');

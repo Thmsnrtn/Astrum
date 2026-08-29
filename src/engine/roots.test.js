@@ -282,3 +282,46 @@ describe("nextCleanMansionWindow", () => {
     expect(nulls).toBeGreaterThan(20);
   });
 });
+
+// ── Behenian star windows: Thebit's rule, verified ─────────────────────
+describe("nextStarConjunction / nextCleanStarWindow", () => {
+  const { nextStarConjunction, nextCleanStarWindow } = scanApi;
+  const jd0 = 2460900.5;
+  const regulus = 150.2; // Regulus, precessed to ~2026
+  it("the conjunction moment puts the Moon on the star", async () => {
+    const { moonLon: mLon } = await import("./astro.js");
+    const norm360 = x => ((x % 360) + 360) % 360;
+    const c = nextStarConjunction(regulus, jd0);
+    let off = Math.abs(norm360(mLon(c.jd) - regulus));
+    if (off > 180) off = 360 - off;
+    expect(off).toBeLessThan(0.05);
+    expect(c.jd).toBeGreaterThan(jd0);
+    expect(c.jd - jd0).toBeLessThan(28.6);
+  });
+  it("consecutive conjunctions are one sidereal month apart", () => {
+    const c1 = nextStarConjunction(regulus, jd0);
+    const c2 = nextStarConjunction(regulus, c1.jd + 1);
+    expect(c2.jd - c1.jd).toBeGreaterThan(26);
+    expect(c2.jd - c1.jd).toBeLessThan(29);
+  });
+  it("a clean window really is fortunate by every check", async () => {
+    const { moonLon: mLon, sunLon: sLon, checkVoC: voc } = await import("./astro.js");
+    const norm360 = x => ((x % 360) + 360) % 360;
+    let found = 0;
+    for (const starLon of [150.2, 204.2, 56.5, 285.7]) { // Regulus, Spica, Algol, Vega ≈2026
+      const w = nextCleanStarWindow(starLon, jd0, 200);
+      if (!w) continue;
+      found++;
+      expect(w.clean).toBe(true);
+      expect(voc(w.jd, "lilly").isVoC).toBe(false);
+      expect(norm360(mLon(w.jd) - sLon(w.jd))).toBeLessThan(180);
+      let sep = Math.abs(norm360(starLon - sLon(w.jd)));
+      if (sep > 180) sep = 360 - sep;
+      expect(sep).toBeGreaterThanOrEqual(17);
+    }
+    // Clean star windows are genuinely rare — waxing coincides with a
+    // fixed-longitude conjunction only about half the sidereal months,
+    // and VoC/beams cull further. One verified window proves the math.
+    expect(found).toBeGreaterThanOrEqual(1);
+  });
+});

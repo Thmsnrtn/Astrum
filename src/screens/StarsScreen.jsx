@@ -5,7 +5,66 @@ import { FIXED_STARS } from "../data/fixedStars.js";
 import { P } from "../data/planets.js";
 import { norm, planetLon, starLonAt } from "../engine/astro.js";
 import { DEFAULT_ARCUS_VISIONIS, HELIACAL_STARS, heliacalRising, starPhase } from "../engine/heliacal.js";
+import { nextStarConjunction, nextCleanStarWindow } from "../engine/scan.js";
+import { getVoCMode } from "../lib/prefs.js";
+import { conditionsFromProfile } from "../engine/chart.js";
+import { createCasting } from "../lib/castings.js";
 import { F, L, T, GOLD } from "../ui/theme.js";
+
+const jdToDateStars = jd => new Date((jd - 2440587.5) * 86400000);
+
+// Thebit's window for a Behenian star: the Moon's next corporal
+// conjunction with the star's precessed degree, judged fortunate, and
+// committable as an election the scheduler will remind about.
+function ThebitWindow({star,eph,profile,natalPos}){
+  const [committed,setCommitted]=useState(false);
+  const win=useMemo(()=>{
+    const jd=eph?.jd;if(!jd)return null;
+    const sLon=starLonAt(star,jd);
+    const next=nextStarConjunction(sLon,jd,getVoCMode());
+    const clean=next.clean?next:nextCleanStarWindow(sLon,jd,200,getVoCMode());
+    return{next,clean};
+    // eslint-disable-next-line
+  },[star.name,Math.floor((eph?.jd||0)*4)]);
+  if(!win)return null;
+  const fmt=jd=>jdToDateStars(jd).toLocaleString([],{weekday:"short",month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
+  const chips=c=>[
+    c.voc?{t:"Void of course",bad:true}:{t:"Not void",bad:false},
+    {t:c.waxing?"Waxing":"Waning",bad:!c.waxing},
+    c.underBeams?{t:"Star under beams",bad:true}:{t:"Star clear of Sun",bad:false},
+  ];
+  const commit=c=>{
+    try{
+      const when=jdToDateStars(c.jd);
+      createCasting({kind:"election",title:`Thebit window — Moon joins ${star.name}`,
+        intent:`Behenian working of ${star.name} at the Moon's corporal conjunction (Agrippa II.32, Thebit's rule).`,
+        conditions:conditionsFromProfile(when,profile,natalPos,null,true),
+        links:{electionWindow:{start:when.toISOString(),score:c.clean?"clean":"afflicted",grade:"behenian"}}});
+      setCommitted(true);setTimeout(()=>setCommitted(false),3000);
+    }catch{}
+  };
+  const show=win.clean&&win.clean.jd!==win.next.jd?win.clean:win.next;
+  return(
+    <div style={{marginTop:8,paddingTop:8,borderTop:"1px solid rgba(200,180,255,0.12)"}}>
+      <div style={{fontFamily:F,fontSize:8,color:"rgba(200,180,255,0.65)",letterSpacing:2,textTransform:"uppercase",marginBottom:4}}>Thebit's Window — Moon joins the star</div>
+      <div style={{fontFamily:F,fontSize:10,color:"#C8DDED"}}>{fmt(win.next.jd)}{win.next.clean?"":" (afflicted)"}</div>
+      <div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:5}}>
+        {chips(win.next).map(c=>(
+          <span key={c.t} style={{fontFamily:F,fontSize:7.5,letterSpacing:1,textTransform:"uppercase",padding:"2px 7px",borderRadius:6,color:c.bad?"#B05050":"#5CA85C",border:`1px solid ${c.bad?"rgba(176,80,80,0.4)":"rgba(92,168,92,0.35)"}`}}>{c.t}</span>
+        ))}
+      </div>
+      {!win.next.clean&&win.clean&&(
+        <div style={{fontFamily:F,fontSize:9,color:"#7AB07A",marginTop:5}}>First clean conjunction: {fmt(win.clean.jd)}</div>
+      )}
+      {!win.next.clean&&!win.clean&&(
+        <div style={{fontFamily:F,fontSize:9,color:"#8A7050",fontStyle:"italic",marginTop:5}}>No clean conjunction within ~200 days — the star keeps late seasons.</div>
+      )}
+      <button onClick={()=>commit(show)} style={{width:"100%",marginTop:7,padding:"8px 0",borderRadius:9,background:committed?"rgba(92,168,92,0.15)":"rgba(200,180,255,0.08)",border:`1px solid ${committed?"rgba(92,168,92,0.4)":"rgba(200,180,255,0.3)"}`,fontFamily:F,fontSize:8.5,color:committed?"#7AB07A":"rgba(200,180,255,0.85)",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>
+        {committed?"✓ Committed — you will be reminded":`◈ Commit ${show.clean?"the clean window":"this window"} as an Election`}
+      </button>
+    </div>
+  );
+}
 
 export default function StarsScreen({eph,natalPos,profile}){
   const [sel,setSel]=useState(null);
@@ -107,6 +166,7 @@ export default function StarsScreen({eph,natalPos,profile}){
                 <div style={{fontFamily:F,fontSize:10.5,color:"#C4A870",fontStyle:"italic",lineHeight:1.7,marginTop:4}}>{b.virtue}</div>
                 {b.variant&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(160,140,220,0.6)",fontStyle:"italic",marginTop:4,lineHeight:1.5}}>{b.variant}</div>}
                 <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.4)",fontStyle:"italic",marginTop:6,lineHeight:1.6}}>{BEHENIAN_DOCTRINE.thebit}</div>
+                <ThebitWindow star={s} eph={eph} profile={profile} natalPos={natalPos}/>
               </div>
             );
           })()}
