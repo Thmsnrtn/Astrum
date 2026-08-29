@@ -132,6 +132,11 @@ export default function HoraryScreen({ profile, natalPos }) {
                   <span style={{ color: P[a.p2].col, fontSize: 12 }}>{P[a.p2].sym}</span>
                 </div>
               ))}
+              {chart.prohibition && (
+                <div style={{ marginTop: 6, padding: "7px 10px", borderRadius: 9, background: "rgba(176,80,80,0.1)", border: "1px solid rgba(176,80,80,0.35)", fontFamily: F, fontSize: 10, color: "#C87070" }}>
+                  Prohibition: {P[chart.prohibition.planet].name} perfects a {chart.prohibition.aspect.toLowerCase()} with {P[chart.prohibition.blocks].name} in ≈{chart.prohibition.daysToPerfect} days — before the significators meet. An interloper closes the matter first.
+                </div>
+              )}
               {chart.translation && (
                 <div style={{ marginTop: 6, padding: "7px 10px", borderRadius: 9, background: "rgba(124,184,224,0.08)", border: "1px solid rgba(124,184,224,0.25)", fontFamily: F, fontSize: 10, color: "#7CB8E0" }}>
                   Translation of light: {P[chart.translation.planet].name} carries the light of {P[chart.translation.from].name} to {P[chart.translation.to].name} — a third party joins the matter.
@@ -155,6 +160,21 @@ export default function HoraryScreen({ profile, natalPos }) {
                 </div>
               )}
             </div>
+
+            {/* Testimonies — accidental fortitudes & debilities of the significators */}
+            {chart.testimonies?.length > 0 && (
+              <div style={{ borderRadius: 13, background: "rgba(8,5,22,0.65)", border: "1px solid rgba(200,221,237,0.14)", padding: "12px 14px", marginBottom: 9 }}>
+                <div style={{ fontFamily: F, fontSize: 9, color: "rgba(200,221,237,0.6)", letterSpacing: 3, textTransform: "uppercase", marginBottom: 7 }}>Testimonies</div>
+                {chart.testimonies.map((t, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, padding: "4px 0", alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 10, color: t.good ? "#5CA85C" : "#B05050", width: 14, marginTop: 1 }}>{t.good ? "▲" : "▼"}</span>
+                    <span style={{ fontFamily: F, fontSize: 10, color: t.good ? "#C4A870" : "#9A7060", flex: 1, lineHeight: 1.6 }}>
+                      <span style={{ color: P[t.sig]?.col }}>{P[t.sig]?.name}</span> ({t.role}): {t.text}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 7, marginBottom: 9 }}>
               <button onClick={draftJudgment} disabled={judging} style={{ flex: 1, padding: "11px 0", borderRadius: 11, background: "rgba(100,80,160,0.15)", border: "1px solid rgba(100,80,160,0.35)", fontFamily: F, fontSize: 9, color: "rgba(160,140,220,0.85)", letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{judging ? "Judging…" : "✧ Draft Judgment"}</button>

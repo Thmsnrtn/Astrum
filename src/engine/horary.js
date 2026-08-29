@@ -7,7 +7,7 @@
 // and prohibition detection. Pure computation — the screen renders it and
 // the AI may draft a judgment from it.
 
-import { dateToJD, planetLon, dailyMotion, checkVoC, lonToZodiac, getDignity } from "./astro.js";
+import { dateToJD, planetLon, dailyMotion, checkVoC, lonToZodiac, getDignity, getCombustion, inExaltationDegree } from "./astro.js";
 import { swHouses } from "./sweph.js";
 import { mutualReception, almuten } from "./reception.js";
 
@@ -126,6 +126,59 @@ export function castHorary({ date, lat, lon, quesitedHouse }) {
     });
   }
 
+  // ── Prohibition: another planet perfects an aspect with a significator
+  //    BEFORE the significators' own aspect perfects — an interloper
+  //    closes the deal first and the matter is blocked (Lilly CA p.110).
+  //    The Moon is excluded (as co-significator her early perfection is
+  //    her own route or a translation, not a block), as is any planet
+  //    already identified as translator.
+  let prohibition = null;
+  const mainAspect = pairs.find(p => p.applying && p.daysToPerfect != null);
+  if (mainAspect) {
+    PLANETS.forEach(pk => {
+      if (prohibition || pk === "moon" || pk === mainAspect.p1 || pk === mainAspect.p2) return;
+      for (const end of [mainAspect.p1, mainAspect.p2]) {
+        const st = aspectState(pos[pk], pos[end]);
+        if (st?.applying) {
+          const days = st.orb / Math.max(0.01, Math.abs(pos[pk].speed - pos[end].speed));
+          if (days < mainAspect.daysToPerfect) {
+            prohibition = { planet: pk, blocks: end, aspect: st.aspect, daysToPerfect: +days.toFixed(1) };
+            break;
+          }
+        }
+      }
+    });
+  }
+
+  // ── Testimonies: the accidental fortitudes and debilities of each
+  //    significator that Lilly weighs before judgment ──
+  const testimonies = [];
+  const inArc = (x, from, to) => norm(x - from) <= norm(to - from);
+  const besiegedAt = l => {
+    for (const [a, b] of [[pos.mars.lon, pos.saturn.lon], [pos.saturn.lon, pos.mars.lon]]) {
+      const span = norm(b - a);
+      if (span > 0 && span < 20 && inArc(l, a, b)
+        && !["venus", "jupiter"].some(bp => inArc(pos[bp].lon, a, b))) return true;
+    }
+    return false;
+  };
+  const sigList = [["querent's significator", querentRuler],
+    ...(sameRuler ? [] : [["quesited's significator", quesitedRuler]]),
+    ["co-significator Moon", "moon"]];
+  sigList.forEach(([role, pk]) => {
+    const p = pos[pk];
+    const comb = getCombustion(pk, p.lon, pos.sun.lon);
+    if (comb?.type === "cazimi") testimonies.push({ sig: pk, role, good: true, text: "cazimi — in the heart of the Sun, supremely fortified" });
+    else if (comb?.type === "combust") testimonies.push({ sig: pk, role, good: false, text: `combust (${comb.diff}° from the Sun) — burned up, unable to act or be seen` });
+    else if (comb?.type === "sunbeams") testimonies.push({ sig: pk, role, good: false, text: "under the Sun's beams — obscured and weakened" });
+    if (p.retro) testimonies.push({ sig: pk, role, good: false, text: "retrograde — the matter returns, reverses, or comes undone" });
+    if (inExaltationDegree(pk, p.lon)) testimonies.push({ sig: pk, role, good: true, text: "standing on the very degree of its exaltation — the throne" });
+    if (pk !== "mars" && pk !== "saturn" && besiegedAt(p.lon)) testimonies.push({ sig: pk, role, good: false, text: "besieged bodily between Mars and Saturn — hemmed in on both sides" });
+  });
+  testimonies.push(pos.moon.speed > 13.176
+    ? { sig: "moon", role: "co-significator Moon", good: true, text: `Moon swift in motion (${pos.moon.speed.toFixed(2)}°/day) — the matter moves quickly` }
+    : { sig: "moon", role: "co-significator Moon", good: false, text: `Moon slow in motion (${pos.moon.speed.toFixed(2)}°/day) — the matter drags` });
+
   // ── Reception between the significators, and the almuten of the cusp ──
   const reception = sameRuler ? null : mutualReception(querentRuler, pos[querentRuler].lon, quesitedRuler, pos[quesitedRuler].lon);
   const isDay = pos.sun.lon != null ? (houseOf(pos.sun.lon, cusps) <= 6 ? false : true) : true; // sun below horizon (houses 1–6) = night
@@ -136,6 +189,7 @@ export function castHorary({ date, lat, lon, quesitedHouse }) {
     querent: { ruler: querentRuler, coSignificator: "moon", ascSign },
     quesited: { house: quesitedHouse, ruler: quesitedRuler, sign: quesitedSign, sameRuler },
     aspects: pairs, translation, collection, reception, cuspAlmuten, isDay,
+    prohibition, testimonies,
   };
 }
 
@@ -184,6 +238,8 @@ export function horaryToText(chart, question) {
       ? `MUTUAL RECEPTION between the significators (${chart.reception.a} / ${chart.reception.b}) — the strongest alliance; a received malefic becomes a helper`
       : `Reception: ${chart.reception.receiver} receives ${chart.reception.of} by ${chart.reception.by}`) : `No reception between significators`,
     chart.cuspAlmuten ? `Almuten of the quesited cusp: ${chart.cuspAlmuten.planet} (${chart.cuspAlmuten.points} pts)` : "",
+    chart.prohibition ? `PROHIBITION: ${chart.prohibition.planet} perfects a ${chart.prohibition.aspect} with ${chart.prohibition.blocks} in ~${chart.prohibition.daysToPerfect}d — BEFORE the significators' own aspect; the matter is blocked by an interloper` : "",
+    chart.testimonies?.length ? `Testimonies: ${chart.testimonies.map(t => `${t.role} ${t.sig}: ${t.text} (${t.good ? "fortitude" : "debility"})`).join("; ")}` : "",
     chart.voc.isVoC ? "Moon is VOID OF COURSE" : "",
   ];
   return lines.filter(Boolean).join("\n");
