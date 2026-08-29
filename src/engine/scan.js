@@ -499,3 +499,30 @@ export function scanElections(fromDate,days,pk,natalPos,location=null){
   }
   return results.slice(0,16).sort((a,b)=>a.date-b.date);
 }
+
+// ── Mansion windows: when does the Moon next occupy mansion n? ─────────
+// Bisection on the real lunar longitude (same technique the Mansions
+// screen uses for its "next entries" list, promoted here so elections
+// can be committed against a window and tested against the engine).
+export function nextMoonCrossing(targetLon,jd){
+  const gap0=norm(targetLon-moonLon(jd));
+  let lo=jd+gap0/15.5;             // moon max ~15.4°/day
+  let hi=jd+gap0/11.7+0.05;        // moon min ~11.8°/day
+  for(let i=0;i<40;i++){
+    const mid=(lo+hi)/2;
+    const g=norm(targetLon-moonLon(mid));
+    if(g>180)hi=mid;else lo=mid;   // passed target when gap wraps past 180
+  }
+  return (lo+hi)/2;
+}
+
+// The next full occupation of mansion n (1..28) at or after jd. If the
+// Moon is already inside, the window starts NOW (you cannot elect the
+// past) and runs to her exit.
+export function nextMansionWindow(n,jd){
+  const startLon=(n-1)*(360/28),endLon=(n%28)*(360/28);
+  const inside=norm(moonLon(jd)-startLon)<360/28;
+  const startJd=inside?jd:nextMoonCrossing(startLon,jd);
+  const endJd=nextMoonCrossing(endLon,startJd);
+  return{startJd,endJd,hours:(endJd-startJd)*24,alreadyIn:inside};
+}

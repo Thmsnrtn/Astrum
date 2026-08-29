@@ -9,6 +9,7 @@
 
 import { describe, it, expect } from "vitest";
 import { calcFirdaria, FIRDARIA_YEARS, FIRDARIA_DAY, FIRDARIA_NIGHT, checkBesiegement, getMoonSpeed } from "./scan.js";
+import * as scanApi from "./scan.js";
 import { checkVoC, EXALT, inExaltationDegree, getCombustion } from "./astro.js";
 import { MANSION_TALISMANS, talismanForMansion } from "../data/mansionTalismans.js";
 import { PICATRIX_DECANS } from "../data/picatrixDecans.js";
@@ -215,5 +216,38 @@ describe("mansion source-contradiction fixes stay fixed", () => {
   });
   it("M5 latin name is Alchatay", () => {
     expect(m(5).latin).toBe("Alchatay");
+  });
+});
+
+// ── Mansion windows: elections need real entry/exit times ──────────────
+describe("nextMansionWindow", () => {
+  const { nextMansionWindow } = scanApi;
+  const jd0 = 2460900.5;
+  it("finds a coherent window for every mansion", () => {
+    for (let n = 1; n <= 28; n++) {
+      const w = nextMansionWindow(n, jd0);
+      expect(w.endJd).toBeGreaterThan(w.startJd);
+      if (!w.alreadyIn) expect(w.hours).toBeGreaterThan(17); // full transit: 12.857° at ≤15.4°/day
+      expect(w.hours).toBeLessThan(29);      // and ≥11.7°/day
+      expect(w.startJd).toBeGreaterThanOrEqual(jd0);
+      expect(w.startJd - jd0).toBeLessThan(28.6); // within one lunar month
+    }
+  });
+  it("the Moon really is inside the mansion at mid-window", async () => {
+    const { moonLon: mLon } = await import("./astro.js");
+    const norm360 = x => ((x % 360) + 360) % 360;
+    for (const n of [1, 7, 14, 21, 28]) {
+      const w = nextMansionWindow(n, jd0);
+      const mid = norm360(mLon((w.startJd + w.endJd) / 2));
+      const off = norm360(mid - (n - 1) * (360 / 28));
+      expect(off, `mansion ${n} mid-lon offset`).toBeLessThan(360 / 28);
+    }
+  });
+  it("a window already underway starts now, not in the past", () => {
+    const w1 = nextMansionWindow(1, jd0);
+    const insideJd = (w1.startJd + w1.endJd) / 2;
+    const w = nextMansionWindow(1, insideJd);
+    expect(w.alreadyIn).toBe(true);
+    expect(w.startJd).toBe(insideJd);
   });
 });

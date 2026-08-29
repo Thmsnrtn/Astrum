@@ -26,7 +26,8 @@ const goRoom = async desc => {
 await goRoom('28 lunar stations');
 const mans = await p.evaluate(() => { const t = document.body.innerText; return {
   talisman: /Talisman of the Mansion/i.test(t), source: /Picatrix IV\.9/i.test(t),
-  lord: /Lord:/i.test(t), agrippa: /Agrippa II\.33/i.test(t) }; });
+  lord: /Lord:/i.test(t), agrippa: /Agrippa II\.33/i.test(t),
+  window: /Window Open Now|Next Window/i.test(t), commit: /Commit This Window/i.test(t) }; });
 console.log('mansions talisman block:', JSON.stringify(mans));
 
 // 2) Decans: second-witness image + signification render

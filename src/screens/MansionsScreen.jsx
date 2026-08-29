@@ -8,7 +8,9 @@
 import { fmtT } from "../data/uiTables.jsx";
 import { useState, useMemo } from "react";
 import { F, L, T, GOLD } from "../ui/theme.js";
-import { dateToJD, planetLon } from "../engine/astro.js";
+import { dateToJD, planetLon, sunLon, norm, checkVoC } from "../engine/astro.js";
+import { nextMansionWindow, nextMoonCrossing, checkBesiegement, getMoonSpeed } from "../engine/scan.js";
+import { getVoCMode } from "../lib/prefs.js";
 import { conditionsFromProfile } from "../engine/chart.js";
 import { MANSIONS, MANSION_WIDTH, getMansion } from "../data/mansions.js";
 import { talismanForMansion } from "../data/mansionTalismans.js";
@@ -16,25 +18,29 @@ import { createCasting } from "../lib/castings.js";
 
 const NATURE_COL = { favorable: "#5CA85C", unfavorable: "#B05050", mixed: GOLD };
 
-// Next time the Moon reaches eclipticLon `target` after jd (bisection).
-function nextMoonCrossing(target, jd) {
-  const lonAt = j => planetLon("moon", j);
-  const gap0 = ((target - lonAt(jd)) % 360 + 360) % 360;
-  let lo = jd + gap0 / 15.5;           // moon max ~15.4°/day
-  let hi = jd + gap0 / 11.7 + 0.05;    // moon min ~11.8°/day
-  for (let i = 0; i < 40; i++) {
-    const mid = (lo + hi) / 2;
-    const g = ((target - lonAt(mid)) % 360 + 360) % 360;
-    if (g > 180) hi = mid; else lo = mid; // passed target when gap wraps past 180
-  }
-  return (lo + hi) / 2;
-}
-
 function jdToDate(jd) { return new Date((jd - 2440587.5) * 86400000); }
+
+// Electional weather at a given moment — the classical lunar checks.
+function windowQuality(jd) {
+  const voc = checkVoC(jd, getVoCMode());
+  const waxing = norm(planetLon("moon", jd) - sunLon(jd)) < 180;
+  const besieged = checkBesiegement(jd);
+  const speed = getMoonSpeed(jd);
+  return {
+    chips: [
+      voc.isVoC ? { t: "Void of course", bad: true } : { t: "Not void", bad: false },
+      { t: waxing ? "Waxing" : "Waning", bad: !waxing },
+      besieged ? { t: "Besieged", bad: true } : { t: "Unafflicted", bad: false },
+      { t: `Moon ${speed.label.toLowerCase()}`, bad: speed.slow },
+    ],
+    clean: !voc.isVoC && waxing && !besieged,
+  };
+}
 
 export default function MansionsScreen({ eph, now, profile, natalPos }) {
   const [sel, setSel] = useState(null);
   const [committed, setCommitted] = useState(false);
+  const [windowCommitted, setWindowCommitted] = useState(false);
   const moonLonNow = eph?.pos?.moon?.lon ?? 0;
   const current = getMansion(moonLonNow);
   const shown = sel != null ? { ...MANSIONS[sel], index: sel + 1 } : current;
@@ -68,6 +74,29 @@ export default function MansionsScreen({ eph, now, profile, natalPos }) {
   }, [current.index, Math.floor(dateToJD(now) * 24)]);
 
   const fmtT = d => `${["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()]} ${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+
+  // The shown mansion's next window + the electional weather at its opening.
+  const win = useMemo(() => {
+    const w = nextMansionWindow(shown.index ?? shown.n, dateToJD(now));
+    return { ...w, start: jdToDate(w.startJd), end: jdToDate(w.endJd), quality: windowQuality(w.startJd) };
+    // eslint-disable-next-line
+  }, [shown.index ?? shown.n, Math.floor(dateToJD(now) * 24)]);
+
+  // Commit the window as an election casting — the scheduler then reminds
+  // at T-24h and T-1h, and the Almanac marks the day.
+  const commitWindow = () => {
+    try {
+      const tal = talismanForMansion(shown.index ?? shown.n);
+      createCasting({
+        kind: "election",
+        title: `Mansion ${shown.index ?? shown.n} window — ${shown.arabic}`,
+        intent: tal ? `Talisman: ${tal.use}` : shown.elect,
+        conditions: conditionsFromProfile(win.start, profile, natalPos, null, true),
+        links: { electionWindow: { start: win.start.toISOString(), end: win.end.toISOString(), score: shown.nature, grade: "mansion" } },
+      });
+      setWindowCommitted(true); setTimeout(() => setWindowCommitted(false), 3000);
+    } catch {}
+  };
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", paddingBottom: 20 }}>
@@ -144,6 +173,27 @@ export default function MansionsScreen({ eph, now, profile, natalPos }) {
               </div>
             );
           })()}
+          {/* The next window for this mansion, and the weather at its opening */}
+          <div style={{ marginTop: 9, padding: "10px 12px", borderRadius: 10, background: "rgba(200,221,237,0.05)", border: "1px solid rgba(200,221,237,0.16)" }}>
+            <div style={{ fontFamily: F, fontSize: 8, color: "rgba(200,221,237,0.6)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 5 }}>
+              {win.alreadyIn ? "Window Open Now" : "Next Window"}
+            </div>
+            <div style={{ fontFamily: F, fontSize: 10.5, color: "#C8DDED" }}>
+              {win.alreadyIn ? "Now" : fmtT(win.start)} → {fmtT(win.end)}
+              <span style={{ color: "rgba(var(--tint-rgb),0.45)" }}> · ~{Math.round(win.hours)}h</span>
+            </div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginTop: 7 }}>
+              {win.quality.chips.map(c => (
+                <span key={c.t} style={{ fontFamily: F, fontSize: 8, letterSpacing: 1.2, textTransform: "uppercase", padding: "3px 8px", borderRadius: 7, color: c.bad ? "#B05050" : "#5CA85C", border: `1px solid ${c.bad ? "rgba(176,80,80,0.4)" : "rgba(92,168,92,0.35)"}` }}>{c.t}</span>
+              ))}
+            </div>
+            <div style={{ fontFamily: F, fontSize: 8.5, color: "rgba(var(--tint-rgb),0.4)", fontStyle: "italic", marginTop: 5 }}>
+              {win.alreadyIn ? "Conditions read at this moment." : "Conditions read at the window's opening."}
+            </div>
+            <button onClick={commitWindow} style={{ width: "100%", marginTop: 8, padding: "9px 0", borderRadius: 10, background: windowCommitted ? "rgba(92,168,92,0.15)" : "rgba(var(--tint-rgb),0.08)", border: `1px solid ${windowCommitted ? "rgba(92,168,92,0.4)" : "rgba(var(--tint-rgb),0.28)"}`, fontFamily: F, fontSize: 9, color: windowCommitted ? "#7AB07A" : GOLD, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
+              {windowCommitted ? "✓ Committed — you will be reminded" : "◈ Commit This Window as an Election"}
+            </button>
+          </div>
           {(shown.index ?? shown.n) === current.index && (
             <button onClick={recordUnderMansion} style={{ width: "100%", marginTop: 8, padding: "10px 0", borderRadius: 10, background: committed ? "rgba(92,168,92,0.15)" : "rgba(200,221,237,0.08)", border: `1px solid ${committed ? "rgba(92,168,92,0.4)" : "rgba(200,221,237,0.25)"}`, fontFamily: F, fontSize: 9, color: committed ? "#7AB07A" : "#C8DDED", letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
               {committed ? "✓ Recorded — judge it in Review" : "⚑ Record a Working Under This Mansion"}
