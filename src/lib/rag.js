@@ -62,7 +62,7 @@ function formatHits(hits, maxChars) {
   return { text: out.trim(), hits: used };
 }
 
-const GROUNDING_HEADER = "\n\nFROM YOUR OWN RECORD (passages retrieved from the practitioner's journal, grimoire, castings, lab notes, and ingested letters — cite these where relevant, and say when the record is silent):\n";
+const GROUNDING_HEADER = "\n\nRETRIEVED PASSAGES (two tiers: the practitioner's own record — journal, grimoire, castings, lab notes, letters — and the app's CANON: source-verified tables of the mansions with their Picatrix IV.9 talismans, the 36 decan images, the Behenian stars, the Picatrix named elections, and the Orphic hymns. Prefer a Canon passage over your training memory when they disagree — the Canon here was verified against the primary sources. Cite what you use; say when both tiers are silent):\n";
 
 // Convenience for call sites that just want a system-prompt addendum: builds
 // the corpus fresh, retrieves, and returns a labelled block ("" if nothing).

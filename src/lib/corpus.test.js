@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { chunkText, buildCorpus } from "./corpus.js";
+import { chunkText, buildCorpus, canonDocs } from "./corpus.js";
+import { buildIndex, search } from "./retrieval.js";
 
 describe("chunkText", () => {
   it("returns a single chunk for short text", () => {
@@ -62,5 +63,33 @@ describe("buildCorpus", () => {
   it("handles missing/empty sources", () => {
     expect(buildCorpus({})).toEqual([]);
     expect(buildCorpus()).toEqual([]);
+  });
+});
+
+describe("the canon tier", () => {
+  const canon = canonDocs();
+  it("covers every reference table with unique ids", () => {
+    const by = src => canon.filter(d => d.source === src);
+    expect(by("Canon — Mansions").length).toBeGreaterThanOrEqual(28);
+    expect(by("Canon — Decans").length).toBeGreaterThanOrEqual(36);
+    expect(by("Canon — Behenian stars").length).toBeGreaterThanOrEqual(15);
+    expect(by("Canon — Picatrix elections").length).toBeGreaterThanOrEqual(19); // 18 + preconditions
+    expect(by("Canon — Orphic hymns").length).toBeGreaterThanOrEqual(7);
+    expect(new Set(canon.map(d => d.id)).size).toBe(canon.length);
+    for (const d of canon) { expect(d.tab).toBeTruthy(); expect(d.text.length).toBeGreaterThan(5); } // short tail chunks are chunkText's nature
+  });
+  it("is memoized — the tables never change at runtime", () => {
+    expect(canonDocs()).toBe(canon);
+  });
+  it("BM25 retrieval surfaces canon facts by their primary-source terms", () => {
+    const idx = buildIndex(canon);
+    // Geriz is mansion 1's Picatrix IV.9 lord — nowhere else in the app.
+    const hits = search(idx, "Geriz lord of the first mansion talisman", 3);
+    expect(hits.length).toBeGreaterThan(0);
+    expect(hits[0].doc.source).toBe("Canon — Mansions");
+    expect(hits[0].doc.text).toMatch(/Geriz/);
+    // A decan signification phrase reaches its decan.
+    const hits2 = search(idx, "wealth without shame black man axe", 3);
+    expect(hits2[0].doc.source).toBe("Canon — Decans");
   });
 });

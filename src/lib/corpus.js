@@ -1,13 +1,25 @@
 // ═══════════════════════════════════════════════════════════════════════
-// CORPUS — the practitioner's own writing, gathered for retrieval
+// CORPUS — the practitioner's record AND the verified canon, for retrieval
 // ═══════════════════════════════════════════════════════════════════════
-// Pulls every text the practitioner has authored or ingested — journal,
-// grimoire, knowledge base, castings (intents + outcomes + readings), Athanor
-// lab notes, and the ingested timing letters — and chunks it into passages the
-// BM25 index can search. buildCorpus is pure (takes the loaded stores);
-// gatherCorpus reads them from storage.
+// Two tiers. The RECORD: every text the practitioner has authored or
+// ingested — journal, grimoire, knowledge base, castings, Athanor lab
+// notes, timing letters. The CANON: the app's source-verified reference
+// tables — mansions with their Picatrix IV.9 talismans, the 36 decans
+// with images and significations, the Behenian stars, the Picatrix named
+// elections, the Orphic hymns — so the Oracle grounds its answers in the
+// SAME primary-source data every screen displays, not in its training's
+// fuzzy memory of them. buildCorpus is pure (takes the loaded stores);
+// gatherCorpus reads them from storage and appends the canon.
 
 import { loadJSON } from "./storage.js";
+import { MANSIONS } from "../data/mansions.js";
+import { MANSION_TALISMANS } from "../data/mansionTalismans.js";
+import { DECANS } from "../data/decans.js";
+import { DECAN_IMAGES } from "../data/decanImages.js";
+import { PICATRIX_DECANS } from "../data/picatrixDecans.js";
+import { BEHENIAN } from "../data/behenian.js";
+import { PICATRIX_ELECTIONS, PICATRIX_PRECONDITIONS } from "../data/picatrixElections.js";
+import { ORPHIC_HYMNS } from "../data/orphicHymns.js";
 
 // Split text into ~maxLen-char passages on paragraph/sentence boundaries so a
 // chunk is a coherent unit, not a mid-sentence fragment.
@@ -86,4 +98,53 @@ export function buildCorpus(sources = {}) {
   return docs;
 }
 
-export function gatherCorpus() { return buildCorpus(gatherSources()); }
+// ── The canon tier: static, source-verified reference docs ─────────────
+// Built once (the data never changes at runtime) and appended to every
+// gathered corpus. Each doc keeps the {id, source, tab, title, text}
+// shape so retrieval and the jump-to-screen links work unchanged.
+let CANON = null;
+export function canonDocs() {
+  if (CANON) return CANON;
+  const docs = [];
+  let n = 0;
+  const push = (source, tab, title, text) => {
+    for (const ch of chunkText(text, 800)) {
+      docs.push({ id: `canon_${n++}`, source, tab, title: title.slice(0, 70), text: ch, date: null });
+    }
+  };
+  MANSIONS.forEach(m => {
+    const tal = MANSION_TALISMANS.find(t => t.n === m.n);
+    push("Canon — Mansions", "mansions", `Mansion ${m.n} — ${m.arabic} (${m.translation})`,
+      [`Mansion ${m.n}, ${m.arabic} "${m.translation}", ${m.sign}, nature ${m.nature}.`, m.meaning,
+        m.elect && `Elect: ${m.elect}.`, m.avoid && `Avoid: ${m.avoid}.`,
+        tal && `Picatrix IV.9 talisman — lord ${tal.lord} (Agrippa III.24: ${tal.agrippaLord}): ${tal.image} For ${tal.use}.`,
+        tal && `Agrippa II.33: ${tal.agrippa}`].filter(Boolean).join(" "));
+  });
+  DECANS.forEach((d, i) => {
+    const pd = PICATRIX_DECANS[i], im = DECAN_IMAGES[i];
+    push("Canon — Decans", "decans", `Decan ${d.n} — ${d.name} (${d.sign})`,
+      [`Decan ${d.n}, ${d.name}, ${d.sign}, ruled by ${d.ruler}. Tarot: ${d.tarot}.`,
+        pd && `Picatrix II.11 image: ${pd.picatrixImage} Signifies: ${pd.picatrixSignification}`,
+        im?.a && `Agrippa II.37: ${im.a}`].filter(Boolean).join(" "));
+  });
+  Object.entries(BEHENIAN).forEach(([name, b]) => {
+    push("Canon — Behenian stars", "stars", `${name} (${b.latin})`,
+      [`Behenian star ${name}, ${b.latin}. Nature: ${b.nature}.`, `Virtue: ${b.virtue}`,
+        `Stone: ${b.stone}. Herb: ${b.herb}.`].filter(Boolean).join(" "));
+  });
+  PICATRIX_ELECTIONS.forEach(pe => {
+    push("Canon — Picatrix elections", "elect", pe.name,
+      [`Picatrix named election: ${pe.name} (${pe.planet}).`, `Conditions: ${pe.conditions}`,
+        pe.summary, pe.flag && `Textual note: ${pe.flag}`, pe.citation].filter(Boolean).join(" "));
+  });
+  push("Canon — Picatrix elections", "elect", "Universal preconditions (Picatrix I.4)", PICATRIX_PRECONDITIONS);
+  Object.entries(ORPHIC_HYMNS).forEach(([pk, h]) => {
+    push("Canon — Orphic hymns", "rite", `Orphic hymn ${h.taylorNumber} — ${h.title}`,
+      [`Orphic hymn to the ${h.planet} (${h.deity}), Taylor ${h.taylorNumber}. ${h.fumigation}`,
+        h.lines.join(" / ")].join(" "));
+  });
+  CANON = docs;
+  return CANON;
+}
+
+export function gatherCorpus() { return buildCorpus(gatherSources()).concat(canonDocs()); }
