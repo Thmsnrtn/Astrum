@@ -14,7 +14,7 @@ import { getVoCMode } from "../lib/prefs.js";
 import { conditionsFromProfile } from "../engine/chart.js";
 import { MANSIONS, MANSION_WIDTH, getMansion } from "../data/mansions.js";
 import { talismanForMansion } from "../data/mansionTalismans.js";
-import { createCasting } from "../lib/castings.js";
+import { createCasting, computeStats, loadCastings } from "../lib/castings.js";
 
 const NATURE_COL = { favorable: "#5CA85C", unfavorable: "#B05050", mixed: GOLD };
 
@@ -190,6 +190,20 @@ export default function MansionsScreen({ eph, now, profile, natalPos }) {
             <div style={{ fontFamily: F, fontSize: 8.5, color: "rgba(var(--tint-rgb),0.4)", fontStyle: "italic", marginTop: 5 }}>
               {win.alreadyIn ? "Conditions read at this moment." : "Conditions read at the window's opening."}
             </div>
+            {(() => {
+              // The operator's own record under this mansion — judged
+              // workings whose conditions carried this station.
+              try {
+                const key = `${shown.index ?? shown.n}. ${shown.arabic}`;
+                const g = (computeStats(loadCastings()).byMansion || []).find(x => x.key === key);
+                if (!g || g.n < 3 || g.pct == null) return null;
+                return (
+                  <div style={{ fontFamily: F, fontSize: 9.5, color: g.pct >= 50 ? "#7AB07A" : "#D28060", marginTop: 6 }}>
+                    ◬ Your record under this mansion: {g.pct}% favorable over {g.n} judged workings.
+                  </div>
+                );
+              } catch { return null; }
+            })()}
             <button onClick={commitWindow} style={{ width: "100%", marginTop: 8, padding: "9px 0", borderRadius: 10, background: windowCommitted ? "rgba(92,168,92,0.15)" : "rgba(var(--tint-rgb),0.08)", border: `1px solid ${windowCommitted ? "rgba(92,168,92,0.4)" : "rgba(var(--tint-rgb),0.28)"}`, fontFamily: F, fontSize: 9, color: windowCommitted ? "#7AB07A" : GOLD, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>
               {windowCommitted ? "✓ Committed — you will be reminded" : "◈ Commit This Window as an Election"}
             </button>
