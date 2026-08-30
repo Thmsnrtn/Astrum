@@ -6,6 +6,8 @@ import { P } from "../data/planets.js";
 import { norm, planetLon, starLonAt } from "../engine/astro.js";
 import { DEFAULT_ARCUS_VISIONIS, HELIACAL_STARS, heliacalRising, starPhase } from "../engine/heliacal.js";
 import { nextStarConjunction, nextCleanStarWindow } from "../engine/scan.js";
+import { eclToEqu, starRiseJD, starCulminationJD } from "../engine/heliacal.js";
+import { coordsForStar } from "../data/starCoords.js";
 import { getVoCMode } from "../lib/prefs.js";
 import { conditionsFromProfile } from "../engine/chart.js";
 import { createCasting } from "../lib/castings.js";
@@ -59,6 +61,25 @@ function ThebitWindow({star,eph,profile,natalPos}){
       {!win.next.clean&&!win.clean&&(
         <div style={{fontFamily:F,fontSize:9,color:"#8A7050",fontStyle:"italic",marginTop:5}}>No clean conjunction within ~200 days — the star keeps late seasons.</div>
       )}
+      {(()=>{
+        // Agrippa I.47's other clause — "when any Star ascends fortunately":
+        // the star's rising and culmination at the practitioner's place on
+        // the window day, from triple-witnessed J2000 coordinates.
+        const co=coordsForStar(star.name);
+        const lat=profile?.natal?.lat,lonP=profile?.natal?.lon;
+        if(!co||lat==null||lonP==null)return null;
+        const dayJd=show.jd-0.5; // scan from the window day's start
+        const lonNow=co.lonJ2000+1.396971*(show.jd-2451545)/36525;
+        const {ra,dec}=eclToEqu(lonNow,co.latJ2000);
+        const riseJd=starRiseJD(dayJd,ra,dec,lat,lonP);
+        const culmJd=starCulminationJD(dayJd,ra,lonP);
+        const t=jd=>jdToDateStars(jd).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+        return(
+          <div style={{fontFamily:F,fontSize:9,color:"rgba(200,180,255,0.6)",marginTop:5}}>
+            On the window day at your place: {riseJd?`rises ${t(riseJd)} · `:"no rising at this latitude · "}culminates {t(culmJd)}
+          </div>
+        );
+      })()}
       <button onClick={()=>commit(show)} style={{width:"100%",marginTop:7,padding:"8px 0",borderRadius:9,background:committed?"rgba(92,168,92,0.15)":"rgba(200,180,255,0.08)",border:`1px solid ${committed?"rgba(92,168,92,0.4)":"rgba(200,180,255,0.3)"}`,fontFamily:F,fontSize:8.5,color:committed?"#7AB07A":"rgba(200,180,255,0.85)",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>
         {committed?"✓ Committed — you will be reminded":`◈ Commit ${show.clean?"the clean window":"this window"} as an Election`}
       </button>

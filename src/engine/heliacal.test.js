@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { eclToEqu, gmst, altitudeAt, starRiseJD, heliacalRising, starPhase, HELIACAL_STARS } from "./heliacal.js";
+import { eclToEqu, gmst, altitudeAt, starRiseJD, starCulminationJD, heliacalRising, starPhase, HELIACAL_STARS } from "./heliacal.js";
 
 // Sirius J2000: RA 101.287°, Dec −16.716°; ecliptic λ ≈ 104.08°, β ≈ −39.61°.
 const SIRIUS = { lon: 104.08, lat: -39.61 };
@@ -98,5 +98,25 @@ describe("starPhase — morning/evening star", () => {
   });
   it("close to the Sun is under the beams", () => {
     expect(starPhase(103, 100).phase).toBe("under the beams");
+  });
+});
+
+describe("starCulminationJD", () => {
+  it("culmination is the local altitude maximum and recurs each sidereal day", () => {
+    // Regulus from London — RA/Dec from its ecliptic place via eclToEqu.
+    const { ra, dec } = eclToEqu(150.2, 0.46);
+    const jd0 = 2460900.5, lat = 51.5, lon = -0.12;
+    const c = starCulminationJD(jd0, ra, lon);
+    expect(c).toBeGreaterThanOrEqual(jd0);
+    expect(c - jd0).toBeLessThan(1.01);
+    const altC = altitudeAt(c, ra, dec, lat, lon);
+    for (const off of [-2 / 24, -1 / 24, 1 / 24, 2 / 24]) {
+      expect(altC).toBeGreaterThan(altitudeAt(c + off, ra, dec, lat, lon));
+    }
+    // Upper culmination altitude = 90 − |lat − dec| (meridian geometry).
+    expect(Math.abs(altC - (90 - Math.abs(lat - dec)))).toBeLessThan(0.01);
+    const c2 = starCulminationJD(c + 0.01, ra, lon);
+    expect((c2 - c) * 24).toBeGreaterThan(23.9);   // sidereal day ≈ 23h56m
+    expect((c2 - c) * 24).toBeLessThan(23.95);
   });
 });

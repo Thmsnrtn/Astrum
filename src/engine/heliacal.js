@@ -46,6 +46,13 @@ export function starRiseJD(jd0, ra, dec, lat, lon) {
   return jd0 + delta / 360.98564736629;
 }
 
+
+// JD of the star's upper culmination (LST = RA) nearest after jd0.
+export function starCulminationJD(jd0, ra, lon) {
+  const delta = norm360(ra - (gmst(jd0) + lon));
+  return jd0 + delta / 360.98564736629;
+}
+
 // The heliacal rising: scan a year of mornings from startJD; at each star-rise
 // compute the Sun's altitude; during invisibility the sun is too high
 // (alt > −AV) — the first transition to alt ≤ −AV is the heliacal rising.
@@ -77,7 +84,7 @@ export const HELIACAL_STARS = [
   { name: "Aldebaran", lon: 69.79,  lat: -5.47,  note: "the Watcher of the East" },
   { name: "Antares",   lon: 249.75, lat: -4.57,  note: "the Watcher of the West" },
   { name: "Vega",      lon: 285.32, lat: 61.73,  note: "the Vulture — high northern, circumpolar-leaning" },
-  { name: "Procyon",   lon: 115.87, lat: -16.02, note: "the forerunner of the Dog" },
+  { name: "Procyon",   lon: 115.79, lat: -16.02, note: "the forerunner of the Dog" }, // lon was 115.87 — a 79→87 digit slip caught by the Aug 2026 coordinate audit (SIMBAD/HIP2/BSC agree on 115.79)
 ];
 
 // Morning/evening star for an inferior planet by signed elongation.
