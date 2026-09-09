@@ -17,10 +17,11 @@ import { getMansion } from "../data/mansions.js";
 import { alchemicalSeason, moonSignOperation, moonWorkGuidance } from "../data/alchemy.js";
 import { feedInRange } from "./intake.js";
 import { loadJSON, saveJSON } from "./storage.js";
+import { CHECKIN_DAYS, effectiveVerdict } from "./castings.js";
 
 export const DEFAULT_NOTIFY_PREFS = {
   enabled: false,
-  kinds: { hourChange: true, voc: true, elections: true, briefing: true, athanor: true, observances: true },
+  kinds: { hourChange: true, voc: true, elections: true, briefing: true, athanor: true, observances: true, checkIns: true },
   hourPlanets: ["jupiter", "venus"],
   briefingTime: "07:30",
   horizonDays: 3,
@@ -105,6 +106,21 @@ export function planUpcoming({ now, location, prefs, castings = [], athanor = []
             title: `◈ ${c.title}`, body: `Your elected window ${phrase}. ${detail}` });
         }
       });
+    });
+  }
+
+  // ── Outcome check-in nudges: "how did it manifest?" at a kind-specific
+  //    interval after casting (see CHECKIN_DAYS in castings.js) — before
+  //    the 60-day staleOpen threshold, closer to when a working's own
+  //    conditions are still fresh in memory ──
+  if (prefs.kinds.checkIns !== false) {
+    castings.forEach(c => {
+      if (c.status !== "open" || effectiveVerdict(c)) return;
+      const days = CHECKIN_DAYS[c.kind];
+      if (days == null) return;
+      const at = new Date(new Date(c.createdAt).getTime() + days * 86400000);
+      if (at > now && at < end) plans.push({ id: `checkin_${c.id}`, at, kind: "checkIn", priority: 3,
+        title: `◷ How did it manifest?`, body: `“${c.title}” — cast ${days} days ago. Judge the outcome in Review while the working is still fresh.` });
     });
   }
 

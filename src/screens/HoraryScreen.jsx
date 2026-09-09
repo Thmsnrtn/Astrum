@@ -27,6 +27,7 @@ export default function HoraryScreen({ profile, natalPos }) {
   const [judgment, setJudgment] = useState(null);
   const [judging, setJudging] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [showAlmutenTable, setShowAlmutenTable] = useState(false);
 
   const location = profile?.natal?.lat && profile?.natal?.lon ? { lat: profile.natal.lat, lon: profile.natal.lon } : null;
   const qh = QUESTION_HOUSES.find(q => q.id === houseId);
@@ -150,8 +151,25 @@ export default function HoraryScreen({ profile, natalPos }) {
                 </div>
               )}
               {chart.cuspAlmuten && (
-                <div style={{ marginTop: 6, fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.5)" }}>
-                  Almuten of the quesited cusp: <span style={{ color: P[chart.cuspAlmuten.planet]?.col }}>{P[chart.cuspAlmuten.planet]?.name}</span> ({chart.cuspAlmuten.points} pts)
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ fontFamily: F, fontSize: 9, color: "rgba(var(--tint-rgb),0.5)", cursor: "pointer" }} onClick={() => setShowAlmutenTable(s => !s)}>
+                    Almuten of the quesited cusp: <span style={{ color: P[chart.cuspAlmuten.planet]?.col }}>{P[chart.cuspAlmuten.planet]?.name}</span> ({chart.cuspAlmuten.points} pts) <span style={{ opacity: 0.6 }}>{showAlmutenTable ? "▴ hide the tally" : "▾ show the tally"}</span>
+                  </div>
+                  {showAlmutenTable && (
+                    <div style={{ marginTop: 5, padding: "8px 10px", borderRadius: 9, background: "rgba(0,0,0,0.25)", border: "1px solid rgba(var(--tint-rgb),0.1)" }}>
+                      {chart.cuspAlmuten.ranking.map(([pk, pts]) => (
+                        <div key={pk} style={{ display: "flex", justifyContent: "space-between", padding: "2px 0", fontFamily: F, fontSize: 9.5 }}>
+                          <span style={{ color: P[pk]?.col }}>{P[pk]?.name}</span>
+                          <span style={{ color: "rgba(var(--tint-rgb),0.55)" }}>{pts} pt{pts === 1 ? "" : "s"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {chart.frustration && (
+                <div style={{ marginTop: 6, padding: "7px 10px", borderRadius: 9, background: "rgba(176,140,80,0.1)", border: "1px solid rgba(176,140,80,0.35)", fontFamily: F, fontSize: 10, color: "#C89860" }}>
+                  Frustration: {P[chart.frustration.planet].name} stations {chart.frustration.direction} in ≈{chart.frustration.daysToStation} days — before its own aspect perfects. Nothing blocks the matter, but the promised outcome does not arrive; the application undoes itself.
                 </div>
               )}
               {chart.collection && (

@@ -10,7 +10,7 @@ import { F, L, T, GOLD } from "../ui/theme.js";
 import { P } from "../data/planets.js";
 import { TRADITIONS } from "../data/traditions.js";
 import { buildSystemPrompt } from "../ai/prompt.js";
-import { loadCastings, addOutcome, closeCasting, deleteCasting, effectiveVerdict, computeStats, castingsToTSV, updateCasting, timeToResult, staleOpen } from "../lib/castings.js";
+import { loadCastings, addOutcome, closeCasting, deleteCasting, effectiveVerdict, computeStats, castingsToTSV, updateCasting, timeToResult, staleOpen, CHECKIN_DAYS, mostFrequentCorrespondence } from "../lib/castings.js";
 import PhotoStrip from "./PhotoStrip.jsx";
 import { composeBook } from "../lib/bookOfResults.js";
 import { loadOmens } from "../lib/omens.js";
@@ -80,6 +80,16 @@ export default function ReviewScreen({ profile }) {
   const stats = computeStats(castings);
   const open = castings.filter(c => c.status === "open").sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   const judged = castings.filter(c => effectiveVerdict(c));
+  // Due for its kind-specific check-in (CHECKIN_DAYS) but short of the
+  // 60-day staleOpen threshold — a nearer, gentler nudge while the working
+  // is still fresh, complementing the "gone quiet" banner below.
+  const dueForCheckIn = open.filter(c => {
+    if (effectiveVerdict(c)) return false;
+    const days = CHECKIN_DAYS[c.kind];
+    if (days == null) return false;
+    const ageDays = (new Date() - new Date(c.createdAt)) / 86400000;
+    return ageDays >= days && ageDays <= 60;
+  });
 
   const record = (id, verdict) => {
     addOutcome(id, { verdict, note: note.trim() });
@@ -162,6 +172,11 @@ export default function ReviewScreen({ profile }) {
         {view === "open" && (
           <div style={{ padding: "0 14px" }}>
             {open.length === 0 && <div style={{ textAlign: "center", padding: "36px 20px", fontFamily: F, fontSize: 12, color: "#5A4020", fontStyle: "italic", lineHeight: 1.8 }}>No castings awaiting outcomes.<br />Workings, sigils, and committed elections will appear here for judgment.</div>}
+            {dueForCheckIn.length > 0 && (
+              <div style={{ padding: "9px 12px", borderRadius: 11, background: "rgba(122,176,122,0.08)", border: "1px solid rgba(122,176,122,0.3)", marginBottom: 9 }}>
+                <div style={{ fontFamily: F, fontSize: 9.5, color: "#7AB07A", lineHeight: 1.6 }}>◷ {dueForCheckIn.length} casting{dueForCheckIn.length === 1 ? " is" : "s are"} due for a check-in — how did {dueForCheckIn.length === 1 ? "it" : "the oldest"} manifest? <span style={{ fontStyle: "italic" }}>"{dueForCheckIn[0].title}"</span> ({new Date(dueForCheckIn[0].createdAt).toLocaleDateString()}).</div>
+              </div>
+            )}
             {(() => { const stale = staleOpen(castings, new Date(), 60); return stale.length > 0 && (
               <div style={{ padding: "9px 12px", borderRadius: 11, background: "rgba(180,120,60,0.08)", border: "1px solid rgba(180,120,60,0.3)", marginBottom: 9 }}>
                 <div style={{ fontFamily: F, fontSize: 9.5, color: "#D2A060", lineHeight: 1.6 }}>◷ {stale.length} casting{stale.length === 1 ? " has" : "s have"} waited over 60 days — a working that never lands is itself a verdict. Judge or close {stale.length === 1 ? "it" : "the oldest"}: <span style={{ fontStyle: "italic" }}>“{stale[0].title}”</span> ({new Date(stale[0].createdAt).toLocaleDateString()}).</div>
@@ -179,6 +194,14 @@ export default function ReviewScreen({ profile }) {
                 </div>
               ))}
             </div>
+            {(() => { const mf = mostFrequentCorrespondence(castings); return mf && (
+              <div style={{ margin: "0 14px 10px", padding: "10px 13px", borderRadius: 12, background: "rgba(8,5,22,0.6)", border: "1px solid rgba(var(--tint-rgb),0.1)" }}>
+                <div style={{ fontFamily: F, fontSize: 8, color: "rgba(var(--tint-rgb),0.45)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 5 }}>Your Most-Recurring Correspondence</div>
+                <div style={{ fontFamily: F, fontSize: 11, color: "#C4A870", lineHeight: 1.6 }}>
+                  {mf.kind === "planet" ? <span style={{ color: P[mf.key]?.col }}>{P[mf.key]?.name}</span> : <span style={{ color: GOLD }}>{mf.key}</span>} appears in <span style={{ color: GOLD }}>{mf.pct}%</span> of your castings ({mf.n} of {stats.total}) — {mf.kind === "planet" ? "your most-worked planet" : "your most-invoked ally"}.
+                </div>
+              </div>
+            ); })()}
             {stats.judged < 3 ? (
               <div style={{ textAlign: "center", padding: "24px 30px", fontFamily: F, fontSize: 11, color: "#5A4020", fontStyle: "italic", lineHeight: 1.8 }}>Judge at least 3 castings and the condition statistics appear — hit rate by planet, hour, phase, mansion, and election score.</div>
             ) : (

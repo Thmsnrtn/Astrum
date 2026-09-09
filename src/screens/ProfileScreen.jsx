@@ -292,7 +292,7 @@ function NotifyCard({notifyPrefs,setNotifyPrefs}){
       setMsg("");update({enabled:true});
     }else update({enabled:false});
   };
-  const KINDS=[["hourChange","Planetary hour changes","for your chosen planets"],["voc","Void of course Moon","start and end"],["elections","Election reminders","24h and 1h before committed windows"],["briefing","Morning briefing","the day's sky at your chosen time"],["athanor","Athanor steps","when an operation's window opens"]];
+  const KINDS=[["hourChange","Planetary hour changes","for your chosen planets"],["voc","Void of course Moon","start and end"],["elections","Election reminders","24h and 1h before committed windows"],["briefing","Morning briefing","the day's sky at your chosen time"],["athanor","Athanor steps","when an operation's window opens"],["checkIns","Outcome check-ins","\"how did it manifest?\" — a few days to a few weeks after each casting"]];
   const isWeb=!window.Capacitor?.isNativePlatform?.()&&!window.__TAURI_INTERNALS__;
   return(
     <div className="card" style={{margin:"0 14px 10px"}}>

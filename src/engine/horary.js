@@ -150,6 +150,32 @@ export function castHorary({ date, lat, lon, quesitedHouse }) {
     });
   }
 
+  // ── Frustration: the applying significator stations retrograde before
+  //    its own aspect perfects, so the promised perfection never arrives —
+  //    distinct from prohibition (a third planet perfects first): here
+  //    nobody interposes, the applying planet's own motion reverses first
+  //    (Lilly, Christian Astrology, on frustration and abscission).
+  let frustration = null;
+  if (mainAspect) {
+    for (const pk of [mainAspect.p1, mainAspect.p2]) {
+      if (pk === "sun" || pk === "moon") continue; // never station
+      const speedNow = pos[pk].speed;
+      const speedAtPerfection = dailyMotion(pk, jd + mainAspect.daysToPerfect);
+      if (speedNow > 0 !== speedAtPerfection > 0) {
+        // Bisect for the station day within the window so the reading names
+        // when it happens, not just that it happens before perfection.
+        let lo = 0, hi = mainAspect.daysToPerfect;
+        for (let i = 0; i < 30; i++) {
+          const mid = (lo + hi) / 2;
+          const s = dailyMotion(pk, jd + mid);
+          if (s > 0 === speedNow > 0) lo = mid; else hi = mid;
+        }
+        frustration = { planet: pk, daysToStation: +hi.toFixed(1), direction: speedNow > 0 ? "retrograde" : "direct" };
+        break;
+      }
+    }
+  }
+
   // ── Testimonies: the accidental fortitudes and debilities of each
   //    significator that Lilly weighs before judgment ──
   const testimonies = [];
@@ -189,7 +215,7 @@ export function castHorary({ date, lat, lon, quesitedHouse }) {
     querent: { ruler: querentRuler, coSignificator: "moon", ascSign },
     quesited: { house: quesitedHouse, ruler: quesitedRuler, sign: quesitedSign, sameRuler },
     aspects: pairs, translation, collection, reception, cuspAlmuten, isDay,
-    prohibition, testimonies,
+    prohibition, frustration, testimonies,
   };
 }
 
@@ -239,6 +265,7 @@ export function horaryToText(chart, question) {
       : `Reception: ${chart.reception.receiver} receives ${chart.reception.of} by ${chart.reception.by}`) : `No reception between significators`,
     chart.cuspAlmuten ? `Almuten of the quesited cusp: ${chart.cuspAlmuten.planet} (${chart.cuspAlmuten.points} pts)` : "",
     chart.prohibition ? `PROHIBITION: ${chart.prohibition.planet} perfects a ${chart.prohibition.aspect} with ${chart.prohibition.blocks} in ~${chart.prohibition.daysToPerfect}d — BEFORE the significators' own aspect; the matter is blocked by an interloper` : "",
+    chart.frustration ? `FRUSTRATION: ${chart.frustration.planet} stations ${chart.frustration.direction} in ~${chart.frustration.daysToStation}d — before its own aspect perfects; the promised outcome does not arrive, though nothing else blocks it` : "",
     chart.testimonies?.length ? `Testimonies: ${chart.testimonies.map(t => `${t.role} ${t.sig}: ${t.text} (${t.good ? "fortitude" : "debility"})`).join("; ")}` : "",
     chart.voc.isVoC ? "Moon is VOID OF COURSE" : "",
   ];

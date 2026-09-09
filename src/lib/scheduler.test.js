@@ -77,6 +77,30 @@ describe("planUpcoming", () => {
     expect(p[0].title).toContain("Mars Tincture");
   });
 
+  // createdAt chosen so the kind's own check-in day (CHECKIN_DAYS) falls
+  // a little AHEAD of "now" — a scheduler pass plans forward, it doesn't
+  // catch a moment already past.
+  const dueSoonAt = (days, aheadMs = 3600000) => new Date(NOW.getTime() + aheadMs - days * 86400000).toISOString();
+
+  it("check-in nudges fire once, near the kind's own day, for an open unjudged casting", () => {
+    const castings = [
+      { id: "c3", kind: "election", status: "open", title: "Money working", createdAt: dueSoonAt(3), outcomes: [] },
+      { id: "c4", kind: "sigil", status: "open", title: "Old sigil", createdAt: dueSoonAt(21), outcomes: [] },
+      { id: "c5", kind: "sigil", status: "open", title: "Judged already", createdAt: dueSoonAt(21), outcomes: [{ verdict: "hit", date: NOW.toISOString() }] },
+      { id: "c6", kind: "athanor", status: "open", title: "Far off", createdAt: NOW.toISOString(), outcomes: [] }, // athanor due at 14d — outside a 2-day horizon
+    ];
+    const p = planUpcoming({ now: NOW, location: LONDON, prefs, castings, athanor: [] }).filter(x => x.kind === "checkIn");
+    expect(p.map(x => x.id).sort()).toEqual(["checkin_c3", "checkin_c4"]);
+    expect(p.every(x => /how did it manifest/i.test(x.title))).toBe(true);
+  });
+
+  it("check-in nudges are suppressed by the checkIns preference", () => {
+    const castings = [{ id: "c7", kind: "horary", status: "open", title: "Question", createdAt: dueSoonAt(3), outcomes: [] }];
+    const off = { ...prefs, kinds: { ...prefs.kinds, checkIns: false } };
+    const p = planUpcoming({ now: NOW, location: LONDON, prefs: off, castings, athanor: [] }).filter(x => x.kind === "checkIn");
+    expect(p).toHaveLength(0);
+  });
+
   it("disabled kinds produce no plans", () => {
     const quiet = { ...prefs, kinds: { hourChange: false, voc: false, elections: false, briefing: false, athanor: false } };
     expect(planUpcoming({ now: NOW, location: LONDON, prefs: quiet, castings: [], athanor: [] })).toHaveLength(0);

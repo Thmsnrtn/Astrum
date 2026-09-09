@@ -75,6 +75,27 @@ describe("prohibition and testimonies over a broad sweep", () => {
   });
 });
 
+describe("frustration over a broad sweep", () => {
+  it("when found, the frustrated planet is one of the main aspect's own participants, never the luminaries, and stations no later than the perfection it frustrates", () => {
+    let frustrations = 0, charts = 0;
+    for (let d = 0; d < 365; d += 2) {
+      const c = cast(new Date(Date.UTC(2026, 0, 5, 12) + d * 86400000).toISOString());
+      if (c.error) continue;
+      charts++;
+      if (!c.frustration) continue;
+      frustrations++;
+      const main = c.aspects.find(a => a.applying && a.daysToPerfect != null);
+      expect(main).toBeDefined();
+      expect([main.p1, main.p2]).toContain(c.frustration.planet);
+      expect(["sun", "moon"]).not.toContain(c.frustration.planet);
+      expect(["retrograde", "direct"]).toContain(c.frustration.direction);
+      expect(c.frustration.daysToStation).toBeLessThanOrEqual(main.daysToPerfect + 0.05);
+    }
+    expect(charts).toBeGreaterThan(100);
+    expect(frustrations).toBeGreaterThan(0); // a year of sky must produce some stations mid-application
+  });
+});
+
 describe("horaryToText", () => {
   it("serializes prohibition and testimonies for the AI judgment", () => {
     for (let d = 0; d < 120; d += 1) {
