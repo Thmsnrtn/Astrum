@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { initSweph } from "../engine/sweph.js";
 import { buildMonthModel, dayHours, DAY_RULERS } from "./almanac.js";
-import { getPlanetaryHourUnequal } from "../engine/astro.js";
+import { getPlanetaryHourUnequal, nextFullCoherenceWindows, dateToJD } from "../engine/astro.js";
 
 const LONDON = { lat: 51.5, lon: -0.12 };
 
@@ -51,6 +51,38 @@ describe("buildMonthModel", () => {
       expect(dm.sunDecan.idx).toBeGreaterThanOrEqual(0);
       expect(dm.sunDecan.idx).toBeLessThanOrEqual(35);
     });
+  });
+
+  it("marks the day of a real full fractal alignment, and only that day, with the correct decan", () => {
+    // A month spans roughly 3 decans, so at least one alignment should land
+    // in March; find every real window the engine reports this month and
+    // confirm the model marks exactly those days and no others.
+    const monthStartJd = dateToJD(new Date(2026, 2, 1));
+    const monthEndJd = dateToJD(new Date(2026, 3, 1));
+    const realWindows = [];
+    let cursor = monthStartJd - 11;
+    for (let i = 0; i < 6; i++) {
+      const w = nextFullCoherenceWindows(cursor, 1, "B")[0];
+      if (!w || w.openJd >= monthEndJd) break;
+      if (w.openJd >= monthStartJd) realWindows.push(w);
+      cursor = w.closeJd + 0.01;
+    }
+    expect(realWindows.length).toBeGreaterThanOrEqual(1);
+    const marked = march.days.filter(dm => dm.fractalAlignment);
+    expect(marked).toHaveLength(realWindows.length);
+    marked.forEach(dm => {
+      const w = realWindows.find(rw => new Date((rw.openJd - 2440587.5) * 86400000).toDateString() === dm.fractalAlignment.at.toDateString());
+      expect(w, `day ${dm.day}`).toBeTruthy();
+      expect(dm.fractalAlignment.decanIdx).toBe(w.decanIdx);
+    });
+  });
+  it("mode A and mode B can mark different days for the same month", () => {
+    const modelA = buildMonthModel({ year: 2026, month: 2, location: LONDON, fractalMode: "A" });
+    const daysA = modelA.days.filter(d => d.fractalAlignment).map(d => d.day);
+    const daysB = march.days.filter(d => d.fractalAlignment).map(d => d.day);
+    // Both modes place exactly one alignment per decan, so counts should
+    // roughly match, but modes needn't land on identical days.
+    expect(Math.abs(daysA.length - daysB.length)).toBeLessThanOrEqual(1);
   });
 });
 

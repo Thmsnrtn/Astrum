@@ -9,7 +9,8 @@
 // deliver them per platform. iOS caps ~64 pending local notifications, so
 // each plan carries a priority (lower = more important).
 
-import { getPlanetaryHour, getPlanetaryHourUnequal, checkVoC, dateToJD, inExaltationDegree } from "../engine/astro.js";
+import { getPlanetaryHour, getPlanetaryHourUnequal, checkVoC, dateToJD, inExaltationDegree, nextFullCoherenceWindows } from "../engine/astro.js";
+import { DECANS } from "../data/decans.js";
 import { getVoCMode } from "./prefs.js";
 import { P } from "../data/planets.js";
 import { getMansion } from "../data/mansions.js";
@@ -23,6 +24,16 @@ export const DEFAULT_NOTIFY_PREFS = {
   hourPlanets: ["jupiter", "venus"],
   briefingTime: "07:30",
   horizonDays: 3,
+};
+
+// Lead-time cascades per election grade. Most committed windows run hours
+// to days long, so T-24h/T-1h gives real preparation time. A fractal
+// full-coherence window runs ~18.79 seconds — an hour's notice is as good
+// as none, so it gets its own short-lead cascade ending seconds before open.
+const ELECTION_LEAD_TIMES = {
+  default: [[24 * 3600000, "opens in 24 hours"], [3600000, "opens in one hour — prepare"]],
+  fractal: [[24 * 3600000, "opens in 24 hours"], [3600000, "opens in one hour — prepare"],
+    [2 * 60000, "opens in 2 minutes — take your place"], [10000, "opens in 10 seconds — one breath"]],
 };
 
 export function loadNotifyPrefs() {
@@ -72,17 +83,26 @@ export function planUpcoming({ now, location, prefs, castings = [], athanor = []
     }
   }
 
-  // ── Committed election windows (T-24h and T-1h) ──
+  // ── Committed election windows (T-24h and T-1h; a few kinds are far
+  //    shorter than an hour and need their own lead-time cascade — a
+  //    ~19-second fractal alignment is meaningless with only an hour's
+  //    warning) ──
   if (prefs.kinds.elections) {
     castings.filter(c => c.kind === "election" && c.status === "open" && c.links?.electionWindow?.start).forEach(c => {
       const start = new Date(c.links.electionWindow.start);
       if (isNaN(start.getTime()) || start <= now) return;
-      [[24 * 3600000, "opens in 24 hours"], [3600000, "opens in one hour — prepare"]].forEach(([lead, phrase], i) => {
+      const grade = c.links.electionWindow.grade;
+      const leads = ELECTION_LEAD_TIMES[grade] || ELECTION_LEAD_TIMES.default;
+      leads.forEach(([lead, phrase], i) => {
         const at = new Date(start.getTime() - lead);
         if (at > now && at < end) {
           const ew = c.links.electionWindow;
+          const detail = ew.grade === "mansion" ? `Mansion window (${ew.score}).`
+            : ew.grade === "fractal" ? "All four fractal levels align — the rarest window this system offers."
+            : ew.grade === "behenian" ? "Behenian star window."
+            : `Score ${ew.score}.`;
           plans.push({ id: `elect_${c.id}_${i}`, at, kind: "election", priority: 1,
-            title: `◈ ${c.title}`, body: `Your elected window ${phrase}. ${ew.grade === "mansion" ? `Mansion window (${ew.score}).` : `Score ${ew.score}.`}` });
+            title: `◈ ${c.title}`, body: `Your elected window ${phrase}. ${detail}` });
         }
       });
     });
@@ -132,7 +152,7 @@ function briefingBodyFor(at, location) {
 }
 
 // Full live briefing for the SkyScreen card.
-export function composeBriefing({ now, eph, hour, castings = [], athanor = [], observances = [] }) {
+export function composeBriefing({ now, eph, hour, castings = [], athanor = [], observances = [], fractalMode = "B" }) {
   const lines = [];
   lines.push(`Day of ${cap(hour.dayRuler)}, hour of ${cap(hour.planet)}${hour.isDayHour === false ? " (night)" : ""}.`);
   const moon = eph?.pos?.moon;
@@ -147,6 +167,19 @@ export function composeBriefing({ now, eph, hour, castings = [], athanor = [], o
     if (pp?.lon != null && inExaltationDegree(pk, pp.lon))
       lines.push(`✦ ${cap(pk)} stands on the very degree of its exaltation — the throne. A rare fortification for works of ${cap(pk)}.`);
   }
+  // Full fractal coherence — all four nested levels aligned — is rare
+  // (~one ~19-second window per decan, ~36/year); worth a heads-up when
+  // one falls within the day the briefing covers.
+  try {
+    const w = nextFullCoherenceWindows(dateToJD(now), 1, fractalMode)[0];
+    if (w) {
+      const openAt = new Date((w.openJd - 2440587.5) * 86400000);
+      if (openAt - now < 86400000) {
+        const dec = DECANS[w.decanIdx];
+        lines.push(`◎ Full fractal alignment today at ${openAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} — all four levels in ${dec.name}, ~19 seconds.`);
+      }
+    }
+  } catch {}
   if (eph?.pos?.sun && moon) {
     const season = alchemicalSeason(eph.pos.sun.lon);
     const moonOp = moonSignOperation(moon.lon);

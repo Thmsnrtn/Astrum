@@ -365,7 +365,7 @@ export function getPlanetaryHourUnequal(now,lat,lon){
 
 export const YEAR_SEC = 31557600;
 export const L_DUR = [YEAR_SEC/36,YEAR_SEC/1296,YEAR_SEC/46656,YEAR_SEC/1679616];
-export function calcFractal(date,mode){
+export function calcFractal(date,mode="B"){
   const jd=dateToJD(date),sunL=sunLon(jd);
   const l1Idx=Math.floor(sunL/10)%36,degIn=sunL%10,secInL1=(degIn/10)*L_DUR[0];
   const l2Slot=Math.floor((secInL1/L_DUR[1])%36),secInL2=secInL1%L_DUR[1];
@@ -381,6 +381,73 @@ export function calcFractal(date,mode){
     {level:4,idx:l4Idx,decan:DECANS[l4Idx],pos:secInL4/L_DUR[3],secIn:secInL4,dur:L_DUR[3]},
   ];
   return{levels,cosmicCoherence:levels.filter(l=>l.idx===l1Idx).length,secToThreshold:L_DUR[0]-secInL1,l1Idx,sunL};
+}
+
+// ── Full-coherence (Assiah/quaternary) alignment windows ────────────────
+// calcFractal's four nested levels collapse into "full coherence"
+// (cosmicCoherence===4 — every level shows the same decan as L1) for an
+// exact, closed-form, once-per-decan window ~L_DUR[3] (≈18.79s) long:
+//   mode "B" (offset/telescoping, the app default): the window opens at
+//     the INSTANT of decan ingress itself — degIn=0.
+//   mode "A" (independent-restart): the window opens partway through the
+//     decan, at the point proportional to that decan's own zodiacal
+//     index l1Idx — decan 0 (Aries I) aligns at its own start, decan 35
+//     (Pisces III) aligns ~19s before its own end, every decan in
+//     between at a proportionally advancing point through its span.
+// (Proven by direct simulation of calcFractal's modular arithmetic —
+// see src/engine/fractal.test.js.)
+// The open instant is found by BISECTING THE REAL SUN'S ECLIPTIC
+// LONGITUDE for the target degree — not by adding L_DUR seconds to a
+// clock. The Sun's real angular speed varies through the year (orbital
+// eccentricity ≈0.0167, measured range 0.953–1.019°/day vs the
+// 0.9856°/day mean baked into L_DUR), so for mode A's within-decan
+// offset — which can be nearly the whole ~10.14-day decan for late
+// decans — linear time-stepping from L_DUR alone could drift by hours.
+// Bisecting the real ephemeris (same technique as nextIngress) is exact
+// regardless, to ephemeris precision.
+function fullCoherenceTargetLon(l1Idx,mode){
+  const startLon=norm(l1Idx*10);
+  if(mode==="A"){
+    const tSec=l1Idx*(L_DUR[1]+L_DUR[2]+L_DUR[3]);
+    return norm(startLon+(tSec/L_DUR[0])*10);
+  }
+  return startLon; // mode B: opens exactly at ingress
+}
+// Next real moment the Sun's ecliptic longitude reaches targetLon, at or
+// after jd. Bracketed by the Sun's real angular-speed range (0.94–1.03
+// deg/day, safety-padded around the measured 0.953–1.019 extremes).
+export function nextSunLonCrossing(targetLon,jd){
+  const gap0=norm(targetLon-sunLon(jd));
+  let lo=jd+gap0/1.03,hi=jd+gap0/0.94+0.05;
+  for(let i=0;i<40;i++){
+    const mid=(lo+hi)/2;
+    const g=norm(targetLon-sunLon(mid));
+    if(g>180)hi=mid;else lo=mid;
+  }
+  return(lo+hi)/2;
+}
+// The next n full-coherence windows at or after jd, each exact to
+// ephemeris precision: {openJd, closeJd, decanIdx}. If the practitioner
+// is inside a window at the instant jd is evaluated, that window is
+// treated as already under way and the search starts from the next
+// decan (the live cosmicCoherence===4 check from calcFractal is the
+// right tool for "is it happening right now"; this forecaster answers
+// "what's coming up").
+export function nextFullCoherenceWindows(jd,n,mode){
+  let decan=Math.floor(norm(sunLon(jd))/10)%36;
+  const aheadDeg=norm(fullCoherenceTargetLon(decan,mode)-norm(sunLon(jd)));
+  if(aheadDeg>10)decan=(decan+1)%36; // this decan's window already opened (or is under way) — skip to the next
+  const out=[];
+  let searchJd=jd;
+  for(let k=0;k<n;k++){
+    const targetLon=fullCoherenceTargetLon(decan,mode);
+    const openJd=nextSunLonCrossing(targetLon,searchJd);
+    const closeJd=openJd+L_DUR[3]/86400;
+    out.push({openJd,closeJd,decanIdx:decan});
+    searchJd=closeJd+0.0001;
+    decan=(decan+1)%36;
+  }
+  return out;
 }
 
 export function fmtTime(s){

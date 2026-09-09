@@ -392,7 +392,7 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                     </div>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
                       <span style={{fontFamily:F,fontSize:8,color:dc,letterSpacing:1}}>{np.dignity.toUpperCase()}</span>
-                      {fractalActive&&<span style={{fontFamily:F,fontSize:8,color:GOLD,letterSpacing:1}}>FRACTAL ✦</span>}
+                      {fractalActive&&<span title="Active at one of the four nested fractal levels right now" style={{fontFamily:F,fontSize:8,color:GOLD,letterSpacing:1}}>FRACTAL ✦</span>}
                       {transitIn&&<span style={{fontFamily:F,fontSize:8,color:"#5CA85C",letterSpacing:1}}>TRANSIT IN</span>}
                       {np.isRetro&&<span style={{fontFamily:F,fontSize:8,color:"#9B4040"}}>RETRO</span>}
                     </div>

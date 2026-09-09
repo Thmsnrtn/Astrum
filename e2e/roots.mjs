@@ -59,6 +59,14 @@ const star = await p.evaluate(() => { const t = document.body.innerText; return 
   thebit: /Thebit's Window/i.test(t), commit: /as an Election/i.test(t) }; });
 console.log('thebit window:', JSON.stringify(star));
 
+// 2d) Fractal: upcoming full-coherence alignments are forecast and committable
+await goRoom('Nested time');
+const fractal = await p.evaluate(() => { const t = document.body.innerText; return {
+  upcoming: /Upcoming Full Alignments/i.test(t),
+  commit: /Commit the Next Alignment/i.test(t),
+  rateNote: /perihelion/i.test(t) }; });
+console.log('fractal alignments:', JSON.stringify(fractal));
+
 // 3) Learn: the daily card runs over the grown deck without error
 await goRoom('AI magical education');
 const learn = await p.evaluate(() => /Daily Card|canon rests/i.test(document.body.innerText));
@@ -74,7 +82,7 @@ await p.reload({ waitUntil: 'load' }); await p.waitForTimeout(2400);
 const mode2 = await p.evaluate(() => JSON.parse(localStorage.getItem('astrum_practice_prefs') || '{}').vocMode);
 console.log('doctrine card:', doct, '· after click:', mode1, '· after reload:', mode2);
 
-const ok = Object.values(mans).every(Boolean) && Object.values(dec).every(Boolean) && learn && alm && Object.values(star).every(Boolean)
+const ok = Object.values(mans).every(Boolean) && Object.values(dec).every(Boolean) && learn && alm && Object.values(star).every(Boolean) && Object.values(fractal).every(Boolean)
   && doct && mode1 === 'hellenistic' && mode2 === 'hellenistic' && errs.length === 0;
 console.log(ok ? '✓ ROOTS E2E PASS' : '✗ ROOTS E2E FAIL');
 console.log('errors:', errs.length ? JSON.stringify([...new Set(errs)]) : 'none');

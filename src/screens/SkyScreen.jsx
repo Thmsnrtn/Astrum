@@ -95,14 +95,14 @@ function HourRing({hour,now}){
   );
 }
 
-function BriefingCard({now,eph,hour,profile}){
+function BriefingCard({now,eph,hour,profile,fractalMode}){
   const [open,setOpen]=useState(false);
   const [gloss,setGloss]=useState(null);
   const [glossing,setGlossing]=useState(false);
   const text=useMemo(()=>{
-    try{const ds=new Date(now);ds.setHours(0,0,0,0);return composeBriefing({now,eph,hour,castings:loadCastings(),athanor:loadJSON("astrum_athanor",[]),observances:upcomingObservances(loadSpirits(),ds,1)});}catch{return "";}
+    try{const ds=new Date(now);ds.setHours(0,0,0,0);return composeBriefing({now,eph,hour,castings:loadCastings(),athanor:loadJSON("astrum_athanor",[]),observances:upcomingObservances(loadSpirits(),ds,1),fractalMode});}catch{return "";}
     // eslint-disable-next-line
-  },[Math.floor(now.getTime()/60000),open]);
+  },[Math.floor(now.getTime()/60000),open,fractalMode]);
   const getGloss=async()=>{
     setGlossing(true);setGloss(null);
     try{
@@ -128,7 +128,7 @@ function BriefingCard({now,eph,hour,profile}){
   );
 }
 
-export default function SkyScreen({now,hour,eph,fractal,natalPos,onWork,profile}){
+export default function SkyScreen({now,hour,eph,natalPos,onWork,profile,fractalMode}){
   const voc=eph.voc;
   return (
     <div style={{flex:1,overflowY:"auto",paddingBottom:20}}>
@@ -141,7 +141,7 @@ export default function SkyScreen({now,hour,eph,fractal,natalPos,onWork,profile}
           {voc?.isVoC && <div style={{fontFamily:F,fontSize:9,color:"#E09060",marginTop:2}}>⚠ Void of Course</div>}
         </div>
       </div>
-      <BriefingCard now={now} eph={eph} hour={hour} profile={profile}/>
+      <BriefingCard now={now} eph={eph} hour={hour} profile={profile} fractalMode={fractalMode}/>
       {voc?.isVoC && (
         <div style={{margin:"0 14px 10px",padding:"10px 14px",borderRadius:12,background:"rgba(180,100,50,0.12)",border:"1px solid rgba(200,120,60,0.3)"}}>
           <div style={L("#E09060",8)}>⚠ Moon Void of Course</div>

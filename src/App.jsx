@@ -151,6 +151,7 @@ function CommandPalette({open,onClose,setTab,natalPos,eph,onOracle}){
     {id:"elect",label:"Electional Search",desc:"Find auspicious windows",icon:"◈",screen:"elect"},
     {id:"sigil",label:"New Sigil",desc:"Create a sigil in the workshop",icon:"⟁",screen:"sigils"},
     {id:"mansion",label:"Current Lunar Mansion",desc:"The Moon's station and next entries",icon:"☾",screen:"mansions"},
+    {id:"fractal-alignment",label:"Next Fractal Alignment",desc:"When all four nested levels next align — commit it as an election",icon:"◎",screen:"fractal"},
     {id:"lots",label:"The Hermetic Lots",desc:"Fortune, Spirit, and the five sect-aware lots",icon:"⊗",screen:"lots"},
     {id:"lunar",label:"Lunar Cycle",desc:"Phase, the coming turns, and this lunation's intention",icon:"☾",screen:"lunar"},
     {id:"rite",label:"Begin a Rite",desc:"Step through a working under the planetary hour",icon:"✧",screen:"rite"},
@@ -803,10 +804,10 @@ export default function App(){
         <ScreenBoundary tab={tab}>
         <Suspense fallback={<ScreenLoading/>}>
         <div key={tab} style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden",overflowY:"auto",animation:"slide-screen 0.2s cubic-bezier(0.25,0.46,0.45,0.94)"}}>
-          {tab==="sky"     &&<SkyScreen     now={now} hour={hour} eph={eph} fractal={fractal} natalPos={natalPos} onWork={openWork} profile={profile}/>}
+          {tab==="sky"     &&<SkyScreen     now={now} hour={hour} eph={eph} natalPos={natalPos} onWork={openWork} profile={profile} fractalMode={fractalMode}/>}
           {tab==="aspects" &&<AspectsScreen eph={eph}/>}
-          {tab==="decans"  &&<DecansScreen  eph={eph} fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode}/>}
-          {tab==="fractal" &&<FractalScreen fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode} now={now}/>}
+          {tab==="decans"  &&<DecansScreen  eph={eph} fractal={fractal} natalPos={natalPos}/>}
+          {tab==="fractal" &&<FractalScreen fractal={fractal} natalPos={natalPos} mode={fractalMode} setMode={setFractalMode} now={now} profile={profile}/>}
           {tab==="planets" &&<PlanetsScreen eph={eph} natalPos={natalPos} now={now}/>}
           {tab==="stars"   &&<StarsScreen   eph={eph} natalPos={natalPos} profile={profile}/>}
           {tab==="natal"   &&<NatalScreen   natalData={natalData} setNatalData={setNatalData} eph={eph} fractal={fractal} natalPos={natalPos} profile={profile}/>}
@@ -827,7 +828,7 @@ export default function App(){
           {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
           {tab==="athanor" &&<AthanorScreen  profile={profile} natalPos={natalPos} eph={eph} now={now}/>}
           {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}
-          {tab==="almanac" &&<AlmanacScreen  now={now} profile={profile}/>}
+          {tab==="almanac" &&<AlmanacScreen  now={now} profile={profile} fractalMode={fractalMode}/>}
           {tab==="journal" &&<JournalScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile} natalPos={natalPos}/>}
           {tab==="grimoire"&&<GrimoireScreen profile={profile}/>}

@@ -11,6 +11,7 @@
 import { useState, useMemo } from "react";
 import { F, L, T, GOLD } from "../ui/theme.js";
 import { P } from "../data/planets.js";
+import { DECANS } from "../data/decans.js";
 import { buildMonthModel, dayHours, EVENT_GLYPH } from "../lib/almanac.js";
 import { loadFeed, FEED_KIND_META } from "../lib/intake.js";
 import { loadCastings } from "../lib/castings.js";
@@ -19,7 +20,7 @@ import { downloadText, shareOnNative } from "../lib/backup.js";
 
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-export default function AlmanacScreen({ now, profile }) {
+export default function AlmanacScreen({ now, profile, fractalMode }) {
   const [offset, setOffset] = useState(0);
   const [selDay, setSelDay] = useState(null);
   const [exportMsg, setExportMsg] = useState("");
@@ -29,7 +30,7 @@ export default function AlmanacScreen({ now, profile }) {
   const base = new Date(now.getFullYear(), now.getMonth() + offset, 1);
   const year = base.getFullYear(), month = base.getMonth();
 
-  const model = useMemo(() => buildMonthModel({ year, month, location }), [year, month, location?.lat, location?.lon]);
+  const model = useMemo(() => buildMonthModel({ year, month, location, fractalMode }), [year, month, location?.lat, location?.lon, fractalMode]);
 
   // Overlays: ingested feed events + committed elections, mapped by date
   const overlays = useMemo(() => {
@@ -66,7 +67,7 @@ export default function AlmanacScreen({ now, profile }) {
       const sections = [];
       for (let i = 0; i < nMonths; i++) {
         const b = new Date(year, month + i, 1);
-        const m = buildMonthModel({ year: b.getFullYear(), month: b.getMonth(), location });
+        const m = buildMonthModel({ year: b.getFullYear(), month: b.getMonth(), location, fractalMode });
         sections.push(monthSectionHTML(m, ov, `${MONTHS[b.getMonth()]} ${b.getFullYear()}`));
       }
       const first = new Date(year, month, 1), last = new Date(year, month + nMonths - 1, 1);
@@ -140,6 +141,7 @@ export default function AlmanacScreen({ now, profile }) {
               <div style={{ fontFamily: F, fontSize: 6, color: "rgba(var(--tint-rgb),0.4)", marginTop: 1 }}>{dm.moon.signSym}{dm.voc ? "∅" : ""}</div>
               <div style={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "center", marginTop: "auto", minHeight: 8 }}>
                 {bigEvents.slice(0, 2).map((e, i) => <span key={i} style={{ fontSize: 6.5, color: e.kind === "station" ? "#C878A8" : e.kind === "lunation" ? "#C8DDED" : "#7CB8E0" }}>{EVENT_GLYPH[e.kind]}</span>)}
+                {dm.fractalAlignment && <span title="Full fractal alignment today" style={{ fontSize: 6.5, color: "#A08CDC" }}>◎</span>}
                 {elect.length > 0 && <span style={{ fontSize: 6.5, color: "#5CA85C" }}>◈</span>}
                 {feed.slice(0, 3).map((e, i) => <span key={"f" + i} style={{ width: 3, height: 3, borderRadius: 2, background: FEED_KIND_META[e.kind]?.col || GOLD, display: "inline-block" }} />)}
               </div>
@@ -181,6 +183,11 @@ function DayDetail({ dm, year, month, location, feed, elect }) {
         <div style={{ fontFamily: F, fontSize: 10.5, color: "#C8DDED" }}>{dm.moon.phaseGlyph} {dm.moon.phaseName} Moon in {dm.moon.sign} {dm.moon.signSym}{dm.voc ? " — Void of Course" : ""}</div>
         <div style={{ fontFamily: F, fontSize: 9.5, color: "rgba(var(--tint-rgb),0.6)", marginTop: 3 }}>Mansion {dm.mansion.n} · {dm.mansion.name} ({dm.mansion.nature})</div>
         <div style={{ fontFamily: F, fontSize: 9.5, color: "rgba(var(--tint-rgb),0.6)", marginTop: 2 }}>Sun in decan {dm.sunDecan.idx + 1} — {dm.sunDecan.name} ({dm.sunDecan.ruler ? P[dm.sunDecan.ruler]?.name : ""})</div>
+        {dm.fractalAlignment && (
+          <div style={{ marginTop: 7, padding: "7px 9px", borderRadius: 9, background: "rgba(160,140,220,0.08)", border: "1px solid rgba(160,140,220,0.25)" }}>
+            <div style={{ fontFamily: F, fontSize: 9.5, color: "#A08CDC" }}>◎ Full fractal alignment at {dm.fractalAlignment.at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} — ~19 seconds, all four levels in {DECANS[dm.fractalAlignment.decanIdx]?.name}.</div>
+          </div>
+        )}
         {(() => {
           // What could be made today — the mansion's Picatrix IV.9 talisman
           const tal = talismanForMansion(dm.mansion.n);
@@ -256,6 +263,7 @@ function monthSectionHTML(model, overlays, label) {
     const events = dm.events.filter(e => e.kind !== "moon-ingress").map(e => e.text);
     const notes = [
       ...events,
+      ...(dm.fractalAlignment ? [`◎ Full fractal alignment ${dm.fractalAlignment.at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`] : []),
       ...elect.map(c => `◈ Election: ${c.title} (${c.links.electionWindow.score})`),
       ...feed.map(e => `✦ ${e.source}: ${e.title}`),
     ];

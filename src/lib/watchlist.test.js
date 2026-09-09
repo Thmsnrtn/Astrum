@@ -69,5 +69,30 @@ describe("refreshWatch (scanFn receives the whole watch)", () => {
     const r2 = loadWatchlist().find(w => w.id === w2.id);
     expect(r2.nextWindow.grade).toBe("mansion");        // no numeric threshold applied
     expect(r2.nextWindow.score).toBe("clean");
+
+    const w3 = createWatch({ label: "alignment", planet: null, fractal: { mode: "B" }, minScore: 80 });
+    refreshWatch(w3, NOW, () => [{ date: later, assess: { score: "aligned", grade: "fractal" } }]);
+    const r3 = loadWatchlist().find(w => w.id === w3.id);
+    expect(r3.nextWindow.grade).toBe("fractal");        // fractal watches also skip the numeric threshold
+    expect(r3.nextWindow.score).toBe("aligned");
+  });
+});
+
+describe("fractal watch short-lead cascade", () => {
+  const end = new Date("2026-07-20T12:00:10Z");
+  it("a fractal-grade window gets T-24h/T-1h/T-2min/T-10s, not just the two long leads", () => {
+    const w = { id: "fw1", active: true, label: "Next alignment", nextWindow: { date: "2026-07-20T12:00:00Z", score: "aligned", grade: "fractal" } };
+    const plans = watchPlans([w], NOW, end);
+    expect(plans.map(p => p.at.toISOString())).toEqual([
+      "2026-07-19T12:00:00.000Z", // T-24h
+      "2026-07-20T11:00:00.000Z", // T-1h
+      "2026-07-20T11:58:00.000Z", // T-2min
+      "2026-07-20T11:59:50.000Z", // T-10s
+    ]);
+    expect(plans.every(p => /aligned|align/.test(p.body) || /fractal/i.test(p.body))).toBe(true);
+  });
+  it("a non-fractal window still gets only the two long leads", () => {
+    const w = { id: "pw1", active: true, label: "Jupiter", nextWindow: { date: "2026-07-20T12:00:00Z", score: 82, grade: "Excellent" } };
+    expect(watchPlans([w], NOW, end)).toHaveLength(2);
   });
 });

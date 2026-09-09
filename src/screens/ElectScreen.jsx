@@ -6,8 +6,9 @@ import { INTENTS } from "../data/intents.js";
 import { PICATRIX_ELECTIONS, PICATRIX_PRECONDITIONS } from "../data/picatrixElections.js";
 import { P } from "../data/planets.js";
 import { TRADITIONS } from "../data/traditions.js";
-import { DAY_NAMES, OUTER_EPOCHS, dateToJD, fmtTime, outerPlanetLon } from "../engine/astro.js";
+import { DAY_NAMES, OUTER_EPOCHS, dateToJD, fmtTime, outerPlanetLon, nextFullCoherenceWindows } from "../engine/astro.js";
 import { MANSIONS } from "../data/mansions.js";
+import { DECANS } from "../data/decans.js";
 import { getVoCMode } from "../lib/prefs.js";
 import { conditionsFromProfile } from "../engine/chart.js";
 import { profection } from "../engine/profections.js";
@@ -99,12 +100,16 @@ export default function ElectScreen({now,natalPos,eph,profile}){
   const TABS=[{id:"live",label:"Live"},{id:"scan",label:"Scan"},{id:"vigil",label:"Vigil"},{id:"intents",label:"Intents"},{id:"season",label:"Season"},{id:"theory",label:"Theory"}];
   // ── The Vigil: standing intentions the app keeps watch for ──
   const [watches,setWatches]=useState(loadWatchlist);
-  const [vigilForm,setVigilForm]=useState({label:"",planet:"jupiter",minScore:70,mansion:null});
+  const [vigilForm,setVigilForm]=useState({label:"",planet:"jupiter",minScore:70,mansion:null,fractal:null});
   const refreshVigil=()=>{setWatches(loadWatchlist());};
   const vigilScan=(w,days)=>{
     if(w.mansion){
       const r=nextCleanMansionWindow(w.mansion,dateToJD(new Date(now)),days,getVoCMode());
       return r?[{date:new Date((r.cleanJd-2440587.5)*86400000),assess:{score:"clean",grade:"mansion"}}]:[];
+    }
+    if(w.fractal){
+      const win=nextFullCoherenceWindows(dateToJD(new Date(now)),1,w.fractal.mode||"B")[0];
+      return win?[{date:new Date((win.openJd-2440587.5)*86400000),assess:{score:"aligned",grade:"fractal"}}]:[];
     }
     return scanElections(new Date(now),days,w.planet,natalPos,elLoc);
   };
@@ -213,30 +218,32 @@ export default function ElectScreen({now,natalPos,eph,profile}){
           {elections.length===0&&!scanning&&<div style={{textAlign:"center",padding:"30px 20px",fontFamily:F,fontSize:11,color:"#5A4020",fontStyle:"italic",lineHeight:1.8}}>Configure intent and planet, then scan. Only elections passing all 5 critical criteria shown.</div>}
         </>}
         {view==="vigil"&&<>
-          <div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",lineHeight:1.7,margin:"2px 4px 9px"}}>Standing intentions the app keeps watch for — each caches its next qualifying window and warns you at T−24h and T−1h.</div>
+          <div style={{fontFamily:F,fontSize:10,color:"#5A4020",fontStyle:"italic",lineHeight:1.7,margin:"2px 4px 9px"}}>Standing intentions the app keeps watch for — each caches its next qualifying window and warns you ahead of it, down to the final seconds for the shortest windows.</div>
           <div style={{padding:"12px 14px",borderRadius:13,background:"rgba(8,5,22,0.65)",border:"1px solid rgba(var(--tint-rgb),0.1)",marginBottom:9}}>
             <input value={vigilForm.label} onChange={e=>setVigilForm(f=>({...f,label:e.target.value}))} placeholder="The intention — 'Jupiter working for the business'…" style={{width:"100%",background:"rgba(0,0,0,0.45)",border:"1px solid rgba(var(--tint-rgb),0.18)",borderRadius:10,color:"#C4A870",fontFamily:F,outline:"none",padding:"9px 11px",fontSize:12,boxSizing:"border-box",marginBottom:7}}/>
-            <div style={{display:"flex",gap:4,marginBottom:7}}>{Object.keys(P).map(pk=>{const a=vigilForm.planet===pk&&!vigilForm.mansion;return<button key={pk} onClick={()=>setVigilForm(f=>({...f,planet:pk,mansion:null}))} style={{flex:1,padding:"6px 2px",borderRadius:8,background:a?P[pk].col+"16":"rgba(8,5,22,0.5)",border:"1px solid "+(a?P[pk].col+"45":"rgba(var(--tint-rgb),0.09)"),cursor:"pointer"}}><div style={{fontSize:13,textAlign:"center",color:P[pk].col}}>{P[pk].sym}</div></button>;})}</div>
-            <select value={vigilForm.mansion||""} onChange={e=>setVigilForm(f=>({...f,mansion:e.target.value?parseInt(e.target.value,10):null}))} style={{width:"100%",marginBottom:7,background:"rgba(0,0,0,0.45)",border:"1px solid "+(vigilForm.mansion?"rgba(200,221,237,0.35)":"rgba(var(--tint-rgb),0.18)"),borderRadius:10,color:vigilForm.mansion?"#C8DDED":"#8A7050",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:10.5,boxSizing:"border-box"}}>
+            <div style={{display:"flex",gap:4,marginBottom:7}}>{Object.keys(P).map(pk=>{const a=vigilForm.planet===pk&&!vigilForm.mansion&&!vigilForm.fractal;return<button key={pk} onClick={()=>setVigilForm(f=>({...f,planet:pk,mansion:null,fractal:null}))} style={{flex:1,padding:"6px 2px",borderRadius:8,background:a?P[pk].col+"16":"rgba(8,5,22,0.5)",border:"1px solid "+(a?P[pk].col+"45":"rgba(var(--tint-rgb),0.09)"),cursor:"pointer"}}><div style={{fontSize:13,textAlign:"center",color:P[pk].col}}>{P[pk].sym}</div></button>;})}</div>
+            <select value={vigilForm.mansion||""} onChange={e=>setVigilForm(f=>({...f,mansion:e.target.value?parseInt(e.target.value,10):null,fractal:null}))} style={{width:"100%",marginBottom:7,background:"rgba(0,0,0,0.45)",border:"1px solid "+(vigilForm.mansion?"rgba(200,221,237,0.35)":"rgba(var(--tint-rgb),0.18)"),borderRadius:10,color:vigilForm.mansion?"#C8DDED":"#8A7050",fontFamily:F,outline:"none",padding:"8px 10px",fontSize:10.5,boxSizing:"border-box"}}>
               <option value="">— or watch a mansion's next clean window —</option>
               {MANSIONS.map(m=><option key={m.n} value={m.n}>☾ Mansion {m.n} · {m.arabic} — {m.translation}</option>)}
             </select>
-            {!vigilForm.mansion&&<div style={{display:"flex",gap:5,marginBottom:8}}>{[60,70,80,90].map(s=><button key={s} onClick={()=>setVigilForm(f=>({...f,minScore:s}))} style={{flex:1,padding:"6px 0",borderRadius:8,background:vigilForm.minScore===s?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(vigilForm.minScore===s?"rgba(var(--tint-rgb),0.35)":"rgba(var(--tint-rgb),0.12)"),fontFamily:F,fontSize:8,color:vigilForm.minScore===s?GOLD:"#6A5030",letterSpacing:1,cursor:"pointer"}}>≥{s}</button>)}</div>}
+            <button onClick={()=>setVigilForm(f=>({...f,fractal:f.fractal?null:{mode:"B"},mansion:null}))} style={{width:"100%",marginBottom:7,padding:"8px 10px",borderRadius:10,textAlign:"left",background:vigilForm.fractal?"rgba(160,140,220,0.14)":"rgba(0,0,0,0.3)",border:"1px solid "+(vigilForm.fractal?"rgba(160,140,220,0.45)":"rgba(var(--tint-rgb),0.12)"),fontFamily:F,fontSize:10.5,color:vigilForm.fractal?"#A08CDC":"#8A7050",cursor:"pointer"}}>◎ {vigilForm.fractal?"✓ ":""}Watch for the next full fractal alignment</button>
+            {!vigilForm.mansion&&!vigilForm.fractal&&<div style={{display:"flex",gap:5,marginBottom:8}}>{[60,70,80,90].map(s=><button key={s} onClick={()=>setVigilForm(f=>({...f,minScore:s}))} style={{flex:1,padding:"6px 0",borderRadius:8,background:vigilForm.minScore===s?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(vigilForm.minScore===s?"rgba(var(--tint-rgb),0.35)":"rgba(var(--tint-rgb),0.12)"),fontFamily:F,fontSize:8,color:vigilForm.minScore===s?GOLD:"#6A5030",letterSpacing:1,cursor:"pointer"}}>≥{s}</button>)}</div>}
+            {vigilForm.fractal&&<div style={{fontFamily:F,fontSize:9,color:"rgba(160,140,220,0.6)",fontStyle:"italic",marginBottom:8,lineHeight:1.6}}>Watches for the instant all four fractal levels align — ~19 seconds, once per decan. You'll be warned at T−24h, T−1h, T−2min, and T−10s.</div>}
             {vigilForm.mansion&&<div style={{fontFamily:F,fontSize:9,color:"rgba(200,221,237,0.55)",fontStyle:"italic",marginBottom:8,lineHeight:1.6}}>Watches for the first moment the Moon occupies this mansion while not void, waxing, and unbesieged.</div>}
-            <button onClick={()=>{if(!vigilForm.label.trim())return;createWatch(vigilForm);setVigilForm({label:"",planet:"jupiter",minScore:70,mansion:null});refreshWatchWindows();}} disabled={!vigilForm.label.trim()} style={{width:"100%",padding:"11px 0",borderRadius:10,background:vigilForm.label.trim()?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(vigilForm.label.trim()?"rgba(var(--tint-rgb),0.35)":"rgba(var(--tint-rgb),0.1)"),fontFamily:F,fontSize:9.5,color:vigilForm.label.trim()?GOLD:"#5A4020",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>👁 Keep Watch</button>
+            <button onClick={()=>{if(!vigilForm.label.trim())return;createWatch(vigilForm);setVigilForm({label:"",planet:"jupiter",minScore:70,mansion:null,fractal:null});refreshWatchWindows();}} disabled={!vigilForm.label.trim()} style={{width:"100%",padding:"11px 0",borderRadius:10,background:vigilForm.label.trim()?"rgba(var(--tint-rgb),0.12)":"rgba(0,0,0,0.3)",border:"1px solid "+(vigilForm.label.trim()?"rgba(var(--tint-rgb),0.35)":"rgba(var(--tint-rgb),0.1)"),fontFamily:F,fontSize:9.5,color:vigilForm.label.trim()?GOLD:"#5A4020",letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>👁 Keep Watch</button>
           </div>
           {watches.map(w=>{const win=w.nextWindow;return(
             <div key={w.id} style={{marginBottom:8,padding:"11px 13px",borderRadius:12,background:"rgba(8,5,22,0.6)",border:"1px solid "+(win?"rgba(92,168,92,0.3)":"rgba(var(--tint-rgb),0.1)"),opacity:w.active?1:0.5}}>
               <div style={{display:"flex",alignItems:"center",gap:9}}>
-                <span style={{fontSize:16,color:w.mansion?"#C8DDED":P[w.planet]?.col}}>{w.mansion?"☾":P[w.planet]?.sym}</span>
+                <span style={{fontSize:16,color:w.fractal?"#A08CDC":w.mansion?"#C8DDED":P[w.planet]?.col}}>{w.fractal?"◎":w.mansion?"☾":P[w.planet]?.sym}</span>
                 <div style={{flex:1}}>
                   <div style={{fontFamily:F,fontSize:12,color:"#D4C098"}}>{w.label}</div>
-                  <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.45)",marginTop:1}}>{w.mansion?`Mansion ${w.mansion} · ${MANSIONS[w.mansion-1]?.arabic} · clean window`:`${P[w.planet]?.name} · score ≥${w.minScore}`}</div>
+                  <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.45)",marginTop:1}}>{w.fractal?"Next full fractal alignment":w.mansion?`Mansion ${w.mansion} · ${MANSIONS[w.mansion-1]?.arabic} · clean window`:`${P[w.planet]?.name} · score ≥${w.minScore}`}</div>
                 </div>
                 <button onClick={()=>{updateWatch(w.id,{active:!w.active});refreshVigil();}} style={{background:"none",border:"1px solid rgba(var(--tint-rgb),0.2)",borderRadius:7,color:"#8A7050",fontFamily:F,fontSize:8,padding:"3px 8px",cursor:"pointer"}}>{w.active?"pause":"resume"}</button>
                 <button onClick={()=>{deleteWatch(w.id);refreshVigil();}} style={{background:"none",border:"none",color:"rgba(var(--tint-rgb),0.3)",fontSize:12,cursor:"pointer"}}>✕</button>
               </div>
-              {win?<div style={{fontFamily:F,fontSize:10.5,color:"#7AB07A",marginTop:6}}>Next window: {fmtD(new Date(win.date))} — {win.grade==="mansion"?"clean mansion window":`score ${win.score} (${win.grade})`}</div>
+              {win?<div style={{fontFamily:F,fontSize:10.5,color:"#7AB07A",marginTop:6}}>Next window: {fmtD(new Date(win.date))} — {win.grade==="mansion"?"clean mansion window":win.grade==="fractal"?"full alignment, ~19s":`score ${win.score} (${win.grade})`}</div>
                 :<div style={{fontFamily:F,fontSize:9.5,color:"#8A7050",fontStyle:"italic",marginTop:6}}>{w.computedAt?"No qualifying window in the horizon — the vigil continues.":"Watching…"}</div>}
             </div>);})}
           {watches.length===0&&<div style={{textAlign:"center",padding:"22px 16px",fontFamily:F,fontSize:10.5,color:"#5A4020",fontStyle:"italic",lineHeight:1.8}}>No vigils yet. Name an intention and the app will keep watch for its window.</div>}

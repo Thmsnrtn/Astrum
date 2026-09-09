@@ -1,13 +1,17 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
-import { ROMAN, L_META, VOWEL_SOUNDS } from "../data/uiTables.jsx";
+import { ROMAN, L_META, VOWEL_SOUNDS, fmtT } from "../data/uiTables.jsx";
 import { useState, useMemo, Fragment } from "react";
 import { DECANS } from "../data/decans.js";
 import { P } from "../data/planets.js";
-import { calcFractal, calcL2Forecast, calcWindowBounds, fmtTime, fmtWindowTime } from "../engine/astro.js";
+import { calcFractal, calcL2Forecast, calcWindowBounds, dateToJD, fmtTime, fmtWindowTime, nextFullCoherenceWindows } from "../engine/astro.js";
+import { conditionsFromProfile } from "../engine/chart.js";
+import { createCasting } from "../lib/castings.js";
 import { useClock } from "../ui/clock.jsx";
 import { B, F, L, T, GOLD } from "../ui/theme.js";
 
-export default function FractalScreen({fractal:fractalProp,natalPos,mode,setMode,now:nowProp}){
+function jdToDateFractal(jd){ return new Date((jd-2440587.5)*86400000); }
+
+export default function FractalScreen({fractal:fractalProp,natalPos,mode,setMode,now:nowProp,profile}){
   // Fractal windows at L3/L4 turn in under a minute — this screen runs on
   // the 1 Hz wall clock locally (pure math, no WASM) instead of the 30 s
   // astro cadence the rest of the app breathes at.
@@ -21,6 +25,32 @@ export default function FractalScreen({fractal:fractalProp,natalPos,mode,setMode
   const forecast=useMemo(()=>now?calcL2Forecast(fractal,now,mode):[],[fractal,now,mode]);
   const isFullCoherence=cosmicCoherence===4;
 
+  // The Assiah/quaternary alignment forecast — exact real-ephemeris times,
+  // not a linear approximation (the Sun's true speed varies through the
+  // year). Recomputed once a minute is plenty for a list of upcoming events
+  // days apart; no need to chase the 1 Hz clock here.
+  const [committed,setCommitted]=useState(false);
+  const coherenceWindows=useMemo(()=>{
+    try{return nextFullCoherenceWindows(dateToJD(now),6,mode);}catch{return[];}
+    // eslint-disable-next-line
+  },[Math.floor(now.getTime()/60000),mode]);
+  const nextWindow=coherenceWindows[0]||null;
+  const commitAlignment=()=>{
+    if(!nextWindow)return;
+    try{
+      const start=jdToDateFractal(nextWindow.openJd),end=jdToDateFractal(nextWindow.closeJd);
+      const dec=DECANS[nextWindow.decanIdx];
+      createCasting({
+        kind:"election",
+        title:`Full-coherence alignment — ${dec.name}`,
+        intent:`All four fractal levels align in ${dec.name} (${dec.sign}, ruler ${dec.ruler}) for one breath — the rarest working window this system offers.`,
+        conditions:conditionsFromProfile(start,profile,natalPos,null,true),
+        links:{electionWindow:{start:start.toISOString(),end:end.toISOString(),score:"aligned",grade:"fractal"}},
+      });
+      setCommitted(true);setTimeout(()=>setCommitted(false),3000);
+    }catch{}
+  };
+
   return (
     <div style={{flex:1,overflowY:"auto",paddingBottom:32}}>
 
@@ -30,6 +60,7 @@ export default function FractalScreen({fractal:fractalProp,natalPos,mode,setMode
         <div style={T(20)}>Nested Decan Windows</div>
         <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.3)",fontStyle:"italic",marginTop:3,letterSpacing:0.5}}>36⁴ = 1,679,616 divisions of the tropical year</div>
         <div style={{fontFamily:F,fontSize:8,color:"rgba(160,140,220,0.45)",fontStyle:"italic",marginTop:4,lineHeight:1.5}}>A modern synthesis original to this app — decanic self-similarity crossed with the four-worlds ladder. Not a classical technique; the classical layers (decans, firdaria, profections) live on their own screens.</div>
+        <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.25)",fontStyle:"italic",marginTop:4,lineHeight:1.5}}>The countdowns track the Sun's real position, not a metronome — the one-breath (Assiah) window runs a little short near the January perihelion and a little long near the July aphelion, by up to ~0.6s either way. The upcoming-alignment times below are exact regardless.</div>
       </div>
 
       {/* Mode Toggle */}
@@ -176,6 +207,40 @@ export default function FractalScreen({fractal:fractalProp,natalPos,mode,setMode
             <div style={{fontFamily:F,fontSize:10,color:P[levels[0].decan.ruler].col,marginTop:2}}>{levels[0].decan.sym} {levels[0].decan.name}</div>
           </div>
         </div>
+      </div>
+
+      {/* Upcoming full-coherence (Assiah/quaternary) alignments — exact
+          real-ephemeris times, plannable and committable like the app's
+          other timing windows (mansions, Behenian stars). Full coherence
+          is rare — one ~18.8-second window per decan, ~36/year — so this
+          list can span weeks between entries. */}
+      <div style={{margin:"0 14px 10px",borderRadius:14,background:isFullCoherence?"rgba(var(--tint-rgb),0.06)":"rgba(8,5,22,0.7)",border:`1px solid ${isFullCoherence?"rgba(var(--tint-rgb),0.3)":"rgba(var(--tint-rgb),0.14)"}`,padding:"13px 14px"}}>
+        <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.5)",letterSpacing:3,textTransform:"uppercase",marginBottom:2}}>Upcoming Full Alignments</div>
+        <div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.35)",fontStyle:"italic",marginBottom:9}}>The instant all four levels show the same face — one breath, once per decan.</div>
+        {isFullCoherence&&(
+          <div style={{padding:"8px 10px",borderRadius:9,background:"rgba(var(--tint-rgb),0.12)",border:"1px solid rgba(var(--tint-rgb),0.3)",marginBottom:9,fontFamily:F,fontSize:10,color:GOLD,textAlign:"center"}}>
+            ✦ FULL COHERENCE IS OPEN RIGHT NOW — {fmtTime(levels[3].dur-levels[3].secIn)} remaining
+          </div>
+        )}
+        {coherenceWindows.map((w,i)=>{
+          const dec=DECANS[w.decanIdx],col=P[dec.ruler].col,start=jdToDateFractal(w.openJd);
+          return(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:9,padding:"7px 0",borderBottom:i<coherenceWindows.length-1?"1px solid rgba(var(--tint-rgb),0.05)":"none"}}>
+              <span style={{fontSize:13,color:col,flexShrink:0}}>{P[dec.ruler].sym}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:F,fontSize:9.5,color:i===0?GOLD:"#C4A870",fontStyle:"italic"}}>{dec.name}</div>
+                <div style={{fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.35)"}}>{dec.sym} {dec.sign}</div>
+              </div>
+              <div style={{fontFamily:F,fontSize:9,color:i===0?"#C8DDED":"rgba(var(--tint-rgb),0.5)",fontVariantNumeric:"tabular-nums",textAlign:"right"}}>{fmtT(start)}</div>
+            </div>
+          );
+        })}
+        {coherenceWindows.length===0&&<div style={{fontFamily:F,fontSize:9.5,color:"#5A4020",fontStyle:"italic",textAlign:"center",padding:"6px 0"}}>Calculating…</div>}
+        {nextWindow&&(
+          <button onClick={commitAlignment} style={{width:"100%",marginTop:9,padding:"10px 0",borderRadius:10,background:committed?"rgba(92,168,92,0.15)":"rgba(var(--tint-rgb),0.1)",border:`1px solid ${committed?"rgba(92,168,92,0.4)":"rgba(var(--tint-rgb),0.3)"}`,fontFamily:F,fontSize:9,color:committed?"#7AB07A":GOLD,letterSpacing:2,textTransform:"uppercase",cursor:"pointer"}}>
+            {committed?"✓ Committed — you will be reminded":"◈ Commit the Next Alignment as an Election"}
+          </button>
+        )}
       </div>
 
       {/* L2 Forecast — Today's Windows */}

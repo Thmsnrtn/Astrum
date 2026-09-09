@@ -2,7 +2,8 @@
 // against the app's own planetary-hour engine.
 import { describe, it, expect, beforeAll } from "vitest";
 import { initSweph } from "../engine/sweph.js";
-import { planUpcoming, DEFAULT_NOTIFY_PREFS } from "./scheduler.js";
+import { planUpcoming, DEFAULT_NOTIFY_PREFS, composeBriefing } from "./scheduler.js";
+import { nextFullCoherenceWindows, dateToJD } from "../engine/astro.js";
 import { getPlanetaryHourUnequal } from "../engine/astro.js";
 
 const LONDON = { lat: 51.5, lon: -0.12 };
@@ -54,6 +55,18 @@ describe("planUpcoming", () => {
     expect(Math.abs(p[1].at.getTime() - (start.getTime() - 3600000))).toBeLessThan(1000);
   });
 
+  it("a fractal-grade election gets the short-lead cascade (24h/1h/2min/10s), not just the two long leads", () => {
+    const start = new Date(NOW.getTime() + 25 * 3600000);
+    const castings = [{ id: "c2", kind: "election", status: "open", title: "Full-coherence alignment",
+      links: { electionWindow: { start: start.toISOString(), score: "aligned", grade: "fractal" } } }];
+    const p = planUpcoming({ now: NOW, location: LONDON, prefs, castings, athanor: [] })
+      .filter(x => x.kind === "election");
+    expect(p).toHaveLength(4);
+    const expected = [24 * 3600000, 3600000, 2 * 60000, 10000];
+    p.forEach((plan, i) => expect(Math.abs(plan.at.getTime() - (start.getTime() - expected[i]))).toBeLessThan(1000));
+    expect(p.some(x => /fractal levels align/i.test(x.body))).toBe(true);
+  });
+
   it("athanor step due-times become plans", () => {
     const due = new Date(NOW.getTime() + 5 * 3600000);
     const athanor = [{ id: "op1", name: "Mars Tincture", status: "active",
@@ -67,5 +80,41 @@ describe("planUpcoming", () => {
   it("disabled kinds produce no plans", () => {
     const quiet = { ...prefs, kinds: { hourChange: false, voc: false, elections: false, briefing: false, athanor: false } };
     expect(planUpcoming({ now: NOW, location: LONDON, prefs: quiet, castings: [], athanor: [] })).toHaveLength(0);
+  });
+});
+
+describe("composeBriefing", () => {
+  const hour = { dayRuler: "jupiter", planet: "venus", isDayHour: true };
+  const eph = { pos: { sun: { lon: 113, zodiac: {} }, moon: { lon: 40, zodiac: { name: "Taurus" } } }, moonPhase: "Waxing Gibbous", moonPhaseDeg: 100, voc: { isVoC: false } };
+
+  it("always opens with the day/hour line", () => {
+    const text = composeBriefing({ now: NOW, eph, hour });
+    expect(text).toMatch(/Day of Jupiter, hour of Venus/);
+  });
+  it("announces a full fractal alignment when one falls within the next 24 hours, and cites the real decan", () => {
+    const w = nextFullCoherenceWindows(dateToJD(NOW), 1, "B")[0];
+    const openAt = new Date((w.openJd - 2440587.5) * 86400000);
+    const closeEnough = openAt - NOW < 86400000;
+    const text = composeBriefing({ now: NOW, eph, hour, fractalMode: "B" });
+    expect(/Full fractal alignment today/.test(text)).toBe(closeEnough);
+  });
+  it("actually renders the announcement text when a window is a known few hours away", () => {
+    // Force the true branch deliberately, rather than leaving it to chance:
+    // "now" set to 3 hours before a real, freshly-found window opens.
+    const w = nextFullCoherenceWindows(dateToJD(NOW), 1, "B")[0];
+    const openAt = new Date((w.openJd - 2440587.5) * 86400000);
+    const shortlyBefore = new Date(openAt.getTime() - 3 * 3600000);
+    const text = composeBriefing({ now: shortlyBefore, eph, hour, fractalMode: "B" });
+    expect(text).toMatch(/Full fractal alignment today at \d{1,2}:\d{2}/);
+  });
+  it("says nothing about fractal alignment when the next window is more than a day out", () => {
+    // 2026-07-15 is very unlikely to be within 24h of a decan ingress for
+    // every mode, but assert the CONTRACT directly rather than hope: build
+    // a synthetic "now" exactly 2 days after the next mode-B window opens,
+    // so the FOLLOWING window is guaranteed >24h away (~10 days per decan).
+    const w = nextFullCoherenceWindows(dateToJD(NOW), 1, "B")[0];
+    const justAfter = new Date((w.openJd - 2440587.5) * 86400000 + 2 * 86400000);
+    const text = composeBriefing({ now: justAfter, eph, hour, fractalMode: "B" });
+    expect(text).not.toMatch(/Full fractal alignment today/);
   });
 });

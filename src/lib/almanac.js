@@ -9,7 +9,7 @@
 // and offline — no storage, no network — so it runs on a wifi-less iPad and
 // is unit-testable in Node.
 
-import { dateToJD, planetLon, dailyMotion, checkVoC, getPlanetaryHour, getPlanetaryHourUnequal } from "../engine/astro.js";
+import { dateToJD, planetLon, dailyMotion, checkVoC, getPlanetaryHour, getPlanetaryHourUnequal, nextFullCoherenceWindows } from "../engine/astro.js";
 import { getVoCMode } from "./prefs.js";
 import { DECANS } from "../data/decans.js";
 import { getMansion } from "../data/mansions.js";
@@ -69,9 +69,25 @@ function eventsForDay(jd0, jd1) {
 
 function cap(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
 
-export function buildMonthModel({ year, month, location }) {
+export function buildMonthModel({ year, month, location, fractalMode = "B" }) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDow = new Date(year, month, 1).getDay();
+  // Full fractal-coherence windows recur roughly once per decan (~10 real
+  // days); collect every one landing in this month up front rather than
+  // re-searching per day — cheap (a decan holds ~3 per month at most) and
+  // avoids a redundant bisection on every one of up to 31 days.
+  const monthStartJd = dateToJD(new Date(year, month, 1, 0, 0, 0));
+  const monthEndJd = dateToJD(new Date(year, month, daysInMonth + 1, 0, 0, 0));
+  const alignments = [];
+  try {
+    let cursorJd = monthStartJd - 11; // safely before the month, so a window opening right at day 1 isn't missed
+    for (let i = 0; i < 6; i++) { // a month spans at most ~4 decans
+      const w = nextFullCoherenceWindows(cursorJd, 1, fractalMode)[0];
+      if (!w || w.openJd >= monthEndJd) break;
+      if (w.openJd >= monthStartJd) alignments.push(w);
+      cursorJd = w.closeJd + 0.01;
+    }
+  } catch {}
   const days = [];
   for (let d = 1; d <= daysInMonth; d++) {
     const noon = new Date(year, month, d, 12, 0, 0);
@@ -84,6 +100,7 @@ export function buildMonthModel({ year, month, location }) {
     const decanIdx = Math.min(35, Math.floor(sunLon / 10));
     const voc = checkVoC(jdNoon, getVoCMode());
     const dow = new Date(year, month, d).getDay();
+    const alignment = alignments.find(w => w.openJd >= jd0 && w.openJd < jd1);
     days.push({
       day: d,
       dateStr: iso(year, month, d),
@@ -93,6 +110,7 @@ export function buildMonthModel({ year, month, location }) {
       mansion: { n: mansion.index, name: mansion.arabic, nature: mansion.nature },
       sunDecan: { idx: decanIdx, ...(DECANS[decanIdx] || {}) },
       voc: !!voc.isVoC,
+      fractalAlignment: alignment ? { at: new Date((alignment.openJd - 2440587.5) * 86400000), decanIdx: alignment.decanIdx } : null,
       events: eventsForDay(jd0, jd1),
     });
   }

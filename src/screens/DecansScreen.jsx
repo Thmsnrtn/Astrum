@@ -7,7 +7,7 @@ import { P } from "../data/planets.js";
 import { fmtTime } from "../engine/astro.js";
 import { DIGNITY_COL, DIGNITY_LBL, F, L, T, GOLD } from "../ui/theme.js";
 
-export default function DecansScreen({eph,fractal,natalPos,mode,setMode}){
+export default function DecansScreen({eph,fractal,natalPos}){
   const [sel,setSel]=useState(eph.decanIdx);
   const d=DECANS[sel],col=P[d.ruler].col;
   const isCurrentSolar=sel===eph.decanIdx;
@@ -28,7 +28,7 @@ export default function DecansScreen({eph,fractal,natalPos,mode,setMode}){
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
             {isCurrentSolar&&<span className="chip" style={{color:GOLD,borderColor:"rgba(var(--tint-rgb),0.3)"}}>Solar Now</span>}
-            {isFractalActive&&<span className="chip" style={{color:GOLD,borderColor:"rgba(var(--tint-rgb),0.3)"}}>Fractal Active</span>}
+            {isFractalActive&&<span className="chip" title="This face is showing at one of the four nested fractal levels right now — not necessarily aligned with the current solar decan (see the Fractal screen's COHERENT badge for that)." style={{color:GOLD,borderColor:"rgba(var(--tint-rgb),0.3)"}}>Fractal Active</span>}
             {isNatal&&<span className="chip" style={{color:"#FFD700",borderColor:"rgba(255,215,0,0.3)"}}>In Natal</span>}
           </div>
         </div>
