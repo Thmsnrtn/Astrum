@@ -7,6 +7,39 @@
     "core:default",
     "shell:allow-open",
     "notification:default",
-    "store:default"
+    "store:default",
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        { "path": "$HOME/Documents/AstrumSync" },
+        { "path": "$HOME/Documents/AstrumSync/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [
+        { "path": "$HOME/Documents/AstrumSync" },
+        { "path": "$HOME/Documents/AstrumSync/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-dir",
+      "allow": [
+        { "path": "$HOME/Documents/AstrumSync" },
+        { "path": "$HOME/Documents/AstrumSync/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [{ "path": "$HOME/Documents/AstrumSync/**" }]
+    },
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "$HOME/Documents/AstrumSync/**" }]
+    },
+    {
+      "identifier": "fs:allow-rename",
+      "allow": [{ "path": "$HOME/Documents/AstrumSync/**" }]
+    }
   ]
 }

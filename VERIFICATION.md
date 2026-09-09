@@ -86,12 +86,73 @@ Checklist for a physical-device pass, in order:
    the app's Documents after backgrounding; camera capture lands in the
    photo vault; the drum and hour bell sound; wake lock holds the screen
    in Altar Mode and a running Rite; the Sync card shows "iCloud (this
-   iPad)" and a record created on the iPad appears on the Mac (Tauri
-   build with `tauri-plugin-fs` + `$HOME/Library/Mobile Documents/**`
-   scope, or a Chromium browser pointed at the iCloud folder).
+   iPad)".
 6. **Corruption drill on device**: truncate one peer file in
    Files → Astrum → astrum-sync; the next sync must report the skip and
    leave local data intact.
 
 Photos do not sync in this phase (deliberate; the Sync card says so) —
 move them with Export or capture per device.
+
+**iPad ↔ Mac desktop sync — the honest boundary within the boundary**: the
+iPad build's iCloud container (`iCloud.com.astrum.app`, above) and the Mac
+desktop build's sync folder (`~/Documents/AstrumSync`, below) are two
+different, non-overlapping locations. A true per-app iCloud container is
+provisioned by iCloud only for an app entitled and signed under a *paid*
+Apple Developer account — an unsigned/ad-hoc-signed local Tauri build
+cannot join that container (it could create a folder with the same name,
+but iCloud would never recognize or sync it, which is worse than not
+trying — it would look like syncing while silently doing nothing). Until
+that account exists, bridge the two manually: turn on System Settings →
+Apple ID → iCloud → iCloud Drive → "Desktop & Documents Folders" on the
+Mac so `~/Documents/AstrumSync` itself becomes iCloud-synced (an OS-level
+feature, unrelated to per-app containers, needing no entitlement) — the
+iPad side still needs its own manual export/import bridge into that same
+iCloud Drive location, since its container is separate. Real automatic
+parity between the two needs a paid account to entitle both builds under
+one container ID; that is out of scope until the practitioner decides
+it's worth the cost.
+
+## Desktop (Mac mini / macOS), the honest boundary
+
+Also feature-detected/build-time-only and unverifiable from this
+repository's CI (Linux, no webkit2gtk, no macOS). Checklist for the first
+build on the Mac mini, in order:
+
+1. **Prerequisites** (once): Xcode Command Line Tools (`xcode-select
+   --install` — full Xcode is only needed for iOS, not this desktop
+   build), Rust via rustup (`curl --proto '=https' --tlsv1.2 -sSf
+   https://sh.rustup.rs | sh`, then open a new shell), Node LTS. No
+   Homebrew packages are needed — macOS already ships the WKWebView
+   Tauri embeds, unlike Linux.
+2. **Build**: `npm install && npm run tauri:build`. Output lands at
+   `src-tauri/target/release/bundle/macos/Astrum.app` and
+   `.../bundle/dmg/Astrum_<version>_aarch64.dmg`. Builds Apple-Silicon-only
+   by default (every Mac mini since Nov 2020) — add `-- --target
+   universal-apple-darwin` only if an Intel Mac ever needs the same build.
+3. **First launch**: double-click `Astrum.app` from Finder. A build made
+   directly on this machine carries no Gatekeeper quarantine flag (that
+   attribute is only set by apps that fetch files from outside the
+   machine — a browser download, AirDrop, Mail), so no "unidentified
+   developer" dialog is expected. `tauri.conf.json`'s
+   `bundle.macOS.signingIdentity: "-"` makes the bundle itself ad-hoc
+   signed (Tauri runs `codesign -s -`) — Apple Silicon refuses to execute
+   *any* unsigned binary, and this satisfies that with no paid account.
+   If Gatekeeper does intervene (e.g. after the .app crosses machines and
+   picks up a quarantine flag): right-click → Open → Open in the
+   confirmation dialog (this single flow has covered the full override
+   since Ventura); `xattr -cr Astrum.app` in Terminal is the fallback.
+4. **Notifications**: only test against the built `.app` (`npm run
+   tauri:dev`'s bare unbundled binary does not reliably post/attribute
+   them) — first use triggers the native "Astrum Would Like to Send You
+   Notifications" prompt; if missed or denied, System Settings →
+   Notifications → Astrum → toggle on.
+5. **Sync folder**: Profile → Sync should show the `tauri-fs` transport
+   available and create `~/Documents/AstrumSync` on first use. Verify a
+   casting recorded in the app produces a JSON envelope there.
+6. **Window**: confirm the 1280×860 default window looks right — the
+   phone-shaped content column is fixed at ~430px and centers itself in
+   any wider window (verified visually before shipping this config); the
+   custom header's `Overlay`/`hiddenTitle` traffic-light area sits over
+   empty background at that width, not over the header, so no visual
+   collision is expected, but confirm on the real window manager.

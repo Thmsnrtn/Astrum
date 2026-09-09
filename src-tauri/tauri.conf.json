@@ -14,11 +14,12 @@
     "windows": [
       {
         "title": "Astrum",
-        "width": 420,
+        "width": 1280,
         "height": 860,
-        "minWidth": 360,
+        "minWidth": 480,
         "minHeight": 600,
         "resizable": true,
+        "center": true,
         "fullscreen": false,
         "decorations": true,
         "transparent": false,
@@ -40,6 +41,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "category": "public.app-category.utilities",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -52,8 +54,7 @@
       "exceptionDomain": "",
       "frameworks": [],
       "providerShortName": null,
-      "signingIdentity": null,
-      "category": "public.app-category.utilities"
+      "signingIdentity": "-"
     }
   }
 }

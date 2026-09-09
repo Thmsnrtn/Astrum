@@ -52,6 +52,34 @@ The Swiss Ephemeris binaries (~12.6 MB wasm + data) are copied from
 `node_modules/swisseph-wasm` into `public/wasm/` by a pre-build hook — they
 are not committed. Swiss Ephemeris is AGPL; this repo stays public.
 
+## Desktop (Mac mini / macOS)
+
+A real, locally-installed app — no App Store, no Apple Developer account,
+no notarization. On the Mac mini:
+
+```bash
+xcode-select --install                                          # once
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # once — Rust
+npm install
+npm run tauri:build
+```
+
+The finished app is `src-tauri/target/release/bundle/macos/Astrum.app`
+(and a `.dmg` beside it) — drag it to `/Applications`, or run it in place.
+A build made directly on the Mac mini carries no Gatekeeper quarantine
+flag, so it should open with a normal double-click; the bundle is
+ad-hoc signed at build time (`signingIdentity: "-"` in
+`src-tauri/tauri.conf.json`) since Apple Silicon refuses to run anything
+completely unsigned. If macOS ever does object: right-click → Open →
+Open.
+
+Sync uses an ordinary folder, `~/Documents/AstrumSync` — not the iPad
+build's iCloud container, which needs a paid Apple Developer account to
+provision. Point that folder at Dropbox, or turn on iCloud Drive's
+"Desktop & Documents Folders" in System Settings, for automatic
+cross-device sync. Full detail, including the honest iPad↔Mac boundary
+and the first-build checklist, is in `VERIFICATION.md`.
+
 ## Per-phase smoke checklist
 
 After touching a subsystem, verify on the web build at minimum:
