@@ -3,9 +3,11 @@ import { KAMEA, ROSE_CROSS_LETTERS, roseCrossXY } from "../data/uiTables.jsx";
 import { useState, useEffect } from "react";
 import { P } from "../data/planets.js";
 import { assessElection } from "../engine/scan.js";
+import { placeFrom } from "../engine/astro.js";
 import { B, F, L, T, GOLD } from "../ui/theme.js";
 
-export default function CalendarScreen({now,natalPos}){
+export default function CalendarScreen({now,natalPos,profile}){
+  const place=placeFrom(profile?.natal);
   const [planet,setPlanet]=useState("jupiter");
   const [monthOffset,setMonthOffset]=useState(0);
   const [dayData,setDayData]=useState({});
@@ -27,7 +29,7 @@ export default function CalendarScreen({now,natalPos}){
         let best=null;
         [10,14,19].forEach(h=>{
           const dt=new Date(date);dt.setHours(h,0,0,0);
-          const assess=assessElection(dt,planet,natalPos);
+          const assess=assessElection(dt,planet,natalPos,place);
           if(!best||assess.score>best.score)best={score:assess.score,grade:assess.grade,critFail:assess.critFail};
         });
         dd[d]=best;

@@ -44,6 +44,12 @@ export function transitsToNatal(pos, natalPos) {
   return hits.sort((a, b) => a.orb - b.orb).slice(0, 8);
 }
 
+// Which planetary-hour model produced hourPlanet/dayRuler. 2 = sunrise-based
+// unequal hours at the place's own day (06:00 equal hours without a place).
+// Records without it came from the midnight-anchored / UTC-date models and
+// are re-derived when grouped (castings.js hourKey), never rewritten.
+export const HOUR_MODEL = 2;
+
 export function captureConditions({ now, eph, hour, location, natalPos, election, approximate = false }) {
   const planets = {};
   Object.entries(eph?.pos || {}).forEach(([pk, p]) => {
@@ -64,6 +70,7 @@ export function captureConditions({ now, eph, hour, location, natalPos, election
     location: location ? { lat: location.lat, lon: location.lon } : null,
     dayRuler: hour?.dayRuler ?? null,
     hourPlanet: hour?.planet ?? null,
+    hourModel: HOUR_MODEL,
     hourNum: hour?.hourNum ?? null,
     isDayHour: hour?.isDayHour ?? null,
     planets,

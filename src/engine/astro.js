@@ -259,13 +259,18 @@ export const DAY_NAMES=["Sunday","Monday","Tuesday","Wednesday","Thursday","Frid
 // begins at that sunrise (so 00:00–06:00 is the previous day's night) and
 // the day's own ruler takes its first hour, exactly as with true sunrises.
 // hourNum counts 1–24 like getPlanetaryHourUnequal; `equal` marks it as the
-// approximation so no surface labels it as true unequal hours.
+// approximation so no surface labels it as true unequal hours. The day runs
+// from one 06:00 to the next on the device clock, so across a DST change it
+// is 23 or 25 hours long and its 24 hours stretch to fit — fixed 60-minute
+// hours left a negative countdown (and a notification flood) or a lost hour.
 export function getPlanetaryHour(date){
   const start=new Date(date);start.setHours(6,0,0,0);
-  if(date<start)start.setDate(start.getDate()-1);
+  if(date<start){start.setDate(start.getDate()-1);start.setHours(6,0,0,0);}
+  const end=new Date(start);end.setDate(end.getDate()+1);end.setHours(6,0,0,0);
+  const len=(end-start)/24;
   const dr=DAY_RULERS[start.getDay()],ri=HOUR_ORDER.indexOf(dr);
-  const hn=Math.max(0,Math.min(23,Math.floor((date-start)/3600000))),pi=(ri+hn)%7;
-  return{planet:HOUR_ORDER[pi],hourNum:hn+1,msRemaining:start.getTime()+(hn+1)*3600000-date,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:dr,isDayHour:hn<12,equal:true,lenMs:3600000};
+  const hn=Math.max(0,Math.min(23,Math.floor((date-start)/len))),pi=(ri+hn)%7;
+  return{planet:HOUR_ORDER[pi],hourNum:hn+1,msRemaining:start.getTime()+(hn+1)*len-date,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:dr,isDayHour:hn<12,equal:true,lenMs:len};
 }
 // Precess a J2000.0 star longitude to current epoch (~50.29"/year = 1.3969°/century)
 export function precessStar(lon0,jd){return norm(lon0+1.396971*(jd-2451545)/36525);}
@@ -283,12 +288,45 @@ export function meanNode(jd){const T=(jd-2451545)/36525;return norm(125.04452-19
 // by longitude/15 h). Taking the UTC calendar date instead handed the
 // Americas tomorrow's sunrise every evening and Asia yesterday's every
 // morning, which flipped the planetary hour, its ruler, and the sect.
-// Sunrise sits near 06:00 mean solar time everywhere sunrise exists, so the
-// weekday of a planetary day (which begins at sunrise) is unambiguous here
-// even where civil time is offset from solar time by hours.
+// Read at the day's midpoint (near mean solar noon), the mean-solar weekday
+// is the place's civil weekday wherever civil time is offset by hours —
+// except across the bent date line, where it is a whole day off; see
+// placeWeekday.
 const MS_DAY=86400000;
 function solarDate(date,lon){const s=new Date(date.getTime()+lon/15*3600000);return{y:s.getUTCFullYear(),m:s.getUTCMonth(),d:s.getUTCDate(),weekday:s.getUTCDay()};}
 export function solarWeekday(date,lon){return solarDate(date,lon).weekday;}
+// Where the date line bends around a place, its calendar belongs to the far
+// side of 180°: Samoa, Tokelau, Tonga, Wallis, eastern Fiji, Chatham and the
+// Kermadecs, Kiribati's Phoenix and Line Islands and Chukotka east of 180°
+// keep the western (Asian) date; the western Aleutians keep the American one.
+// There, and only there, the weekday comes from the place's real zone, whose
+// history Intl also knows (Kiribati moved in 1995, Samoa and Tokelau at the
+// end of 2011). American Samoa (Pago Pago) lies outside every box.
+const DATELINE_ZONES=[ // [latMin, latMax, lonMin, lonMax, IANA zone]
+  [64,90,-180,-169,"Asia/Anadyr"],
+  [-6,5.5,-162,-150,"Pacific/Kiritimati"],[-12,-9.5,-153,-150,"Pacific/Kiritimati"],
+  [-5,-2.5,-175,-170.5,"Pacific/Kanton"],
+  [-10,-8,-172.6,-171.1,"Pacific/Fakaofo"],
+  [-14.5,-13,-173,-171.2,"Pacific/Apia"],
+  [-14.5,-13,-178.5,-175.5,"Pacific/Wallis"],
+  [-23,-15,-176.5,-173.4,"Pacific/Tongatapu"],
+  [-21,-15,-180,-178,"Pacific/Fiji"],
+  [-45,-29,-180,-175,"Pacific/Chatham"],
+  [51,53.5,172,180,"America/Adak"],
+];
+const WEEKDAY_INDEX={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+export function placeWeekday(date,lat,lon){
+  const z=DATELINE_ZONES.find(([a,b,c,d])=>lat>=a&&lat<=b&&lon>=c&&lon<=d);
+  if(z){try{return WEEKDAY_INDEX[new Intl.DateTimeFormat("en-US",{timeZone:z[4],weekday:"short"}).format(date)];}catch{}}
+  return solarWeekday(date,lon);
+}
+// One test for "a place is known", shared by every engine and screen, so a
+// latitude or longitude of exactly 0 counts as a place everywhere.
+export function placeFrom(o){
+  if(o==null||o.lat==null||o.lon==null||o.lat===""||o.lon==="")return null;
+  const lat=+o.lat,lon=+o.lon;
+  return Number.isFinite(lat)&&Number.isFinite(lon)?{lat,lon}:null;
+}
 // The Sun's altitude in degrees (center, no refraction) at a place and
 // moment. Sect needs nothing more: a chart is diurnal when the Sun stands
 // above the horizon — the same test as the Sun's house in the chart.
@@ -370,6 +408,18 @@ export function calcMC(jd,lon){
 export function calcPOF(asc,moonL,sunL,isDayChart){return norm(isDayChart?asc+moonL-sunL:asc+sunL-moonL);}
 // Part of Spirit: day chart = ASC + Sun - Moon; night chart = ASC + Moon - Sun
 export function calcPOS(asc,moonL,sunL,isDayChart){return norm(isDayChart?asc+sunL-moonL:asc+moonL-sunL);}
+// Polar day or night: no sunrise to count from, so twenty-four equal hours
+// from 06:00 mean solar time AT THE PLACE (not the device clock, which may be
+// on another continent), named by the place's weekday. `polar` lets surfaces
+// say why the hours are equal instead of asking for a place already given.
+function polarHours(now,lat,lon){
+  const off=lon/15*3600000,s=new Date(now.getTime()+off);
+  let start=Date.UTC(s.getUTCFullYear(),s.getUTCMonth(),s.getUTCDate(),6)-off;
+  if(now.getTime()<start)start-=MS_DAY;
+  const dr=DAY_RULERS[placeWeekday(new Date(start+6*3600000),lat,lon)],ri=HOUR_ORDER.indexOf(dr);
+  const len=3600000,hn=Math.max(0,Math.min(23,Math.floor((now-start)/len))),pi=(ri+hn)%7;
+  return{planet:HOUR_ORDER[pi],hourNum:hn+1,msRemaining:start+(hn+1)*len-now,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:dr,isDayHour:hn<12,equal:true,polar:true,lenMs:len};
+}
 // True unequal planetary hours from the place's own sunrises and sunsets.
 // The planetary day begins at sunrise: before today's sunrise it is still
 // the night of the previous day, under the previous day's ruler. The ruler
@@ -377,16 +427,18 @@ export function calcPOS(asc,moonL,sunL,isDayChart){return norm(isDayChart?asc+su
 // device's local weekday, which can be a day off from the place.
 export function getPlanetaryHourUnequal(now,lat,lon){
   const today=sunriseSetUTC(now,lat,lon);
-  if(!today)return getPlanetaryHour(now); // polar day or night: no sunrise to count from
+  if(!today)return polarHours(now,lat,lon);
   let rise=today.rise,set=today.set,nextRise=null;
   if(now<today.rise){
     const prev=sunriseSetUTC(new Date(now.getTime()-MS_DAY),lat,lon);
-    if(!prev)return getPlanetaryHour(now);
+    if(!prev)return polarHours(now,lat,lon);
     rise=prev.rise;set=prev.set;nextRise=today.rise;
   }else if(now>=today.set){
     nextRise=sunriseSetUTC(new Date(now.getTime()+MS_DAY),lat,lon)?.rise||new Date(today.rise.getTime()+MS_DAY);
   }
-  const dr=DAY_RULERS[solarWeekday(rise,lon)],ri=HOUR_ORDER.indexOf(dr);
+  // Named at the day's midpoint: near-midnight sunrises at high latitude
+  // would otherwise tip the weekday back a day.
+  const dr=DAY_RULERS[placeWeekday(new Date((rise.getTime()+set.getTime())/2),lat,lon)],ri=HOUR_ORDER.indexOf(dr);
   const isDay=now<set;
   const start=isDay?rise:set,len=((isDay?set:nextRise)-start)/12;
   const hn=Math.max(0,Math.min(11,Math.floor((now-start)/len)));

@@ -2,7 +2,7 @@
 // SCAN — timing scanners + the election engine (extracted from App.jsx)
 // ═══════════════════════════════════════════════════════════════════════
 import { DIGNITY_LBL, GOLD } from "../ui/theme.js";
-import { D2R, R2D, norm, dateToJD, sunLon, moonLon, planetLon, dailyMotion, SIGNS, lonToZodiac, getDignity, getCombustion, checkVoC, getPlanetaryHour, getPlanetaryHourUnequal, starLonAt, obliquity, calcASC, calcMC, fmtTime } from "./astro.js";
+import { D2R, R2D, norm, dateToJD, sunLon, moonLon, planetLon, dailyMotion, SIGNS, lonToZodiac, getDignity, getCombustion, checkVoC, getPlanetaryHour, getPlanetaryHourUnequal, placeFrom, sunAltitude, starLonAt, obliquity, calcASC, calcMC, fmtTime } from "./astro.js";
 import { P } from "../data/planets.js";
 import { FIXED_STARS } from "../data/fixedStars.js";
 import { getMansion } from "../data/mansions.js";
@@ -393,8 +393,7 @@ export function electionBandKey(score){return score==null?null:score>=90?"90+ Ta
 // The hour comes from the same model the castings recorded it with
 // (conditionsFromProfile: true unequal hours when a place is known), or the
 // candidate is compared against a different hour than the record holds.
-const hourAtPlace=(date,location)=>location?.lat!=null&&location?.lon!=null
-  ?getPlanetaryHourUnequal(date,location.lat,location.lon):getPlanetaryHour(date);
+const hourAtPlace=(date,location)=>{const pl=placeFrom(location);return pl?getPlanetaryHourUnequal(date,pl.lat,pl.lon):getPlanetaryHour(date);};
 export function electionFactors(date,pk,score,location=null){
   const jd=dateToJD(date);
   const hour=hourAtPlace(date,location);
@@ -441,14 +440,18 @@ export function assessElection(date,pk,natalPos,location=null){
     {id:"phase",w:9,label:"Moon Waxing",critical:false,pass:isWax,note:isWax?"Waxing — increasing light":"Waning (a standard corruption for works of increase)"},
     {id:"timing",w:6,label:"Day or Hour Aligned",critical:false,pass:dayMatch||hourMatch,note:dayMatch&&hourMatch?"Day + Hour":dayMatch?"Day":hourMatch?"Hour":"Neither"},
     // Weighted minor dignities: bound/triplicity/face now count toward the election.
-    (()=>{const isDay=hour.isDayHour;const ed=essentialDignity(pk,wPos.lon,isDay);
+    // Triplicity follows the chart's sect — the Sun above the horizon, as in
+    // computeEphemeris — not the hour's day/night, which turns at the visible
+    // sunrise (−0.833°) and is only approximate without a place.
+    (()=>{const pl=placeFrom(location);const isDay=pl?sunAltitude(jd,pl.lat,pl.lon)>0:hour.isDayHour;const ed=essentialDignity(pk,wPos.lon,isDay);
       const minors=ed.parts.filter(x=>["bound","triplicity","face"].includes(x));
       return{id:"minor",w:8,label:"Minor Dignities",critical:false,pass:minors.length>0,
         note:minors.length?`+${minors.map(m2=>m2==="bound"?"bound (+2)":m2==="triplicity"?"triplicity (+3)":"face (+1)").join(", ")}`:"None (bound/triplicity/face)"};})(),
     // ── Chart-based criteria (Dorotheus V, Sahl §9, Ramesey) — only when a
     //    place is known to raise the Ascendant ──
-    ...(location?.lat!=null?(()=>{
-      const asc=calcASC(jd,location.lat,location.lon);
+    ...(placeFrom(location)?(()=>{
+      const pl=placeFrom(location);
+      const asc=calcASC(jd,pl.lat,pl.lon);
       const ascSign=Math.floor(asc/30);
       const ascLord=SIGN_RULERS_EL[ascSign];
       const lordPos=positions[ascLord];

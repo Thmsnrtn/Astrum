@@ -7,7 +7,7 @@
 // times up as reminders.
 
 import { loadJSON, saveJSON } from "./storage.js";
-import { getPlanetaryHour, getPlanetaryHourUnequal, planetLon, dateToJD } from "../engine/astro.js";
+import { getPlanetaryHour, getPlanetaryHourUnequal, planetLon, dateToJD, HOUR_ORDER } from "../engine/astro.js";
 import { OPERATION_TEMPLATES } from "../data/operations.js";
 
 export function loadAthanor() { return loadJSON("astrum_athanor", []); }
@@ -48,7 +48,11 @@ export function resolveDueRule(rule, after, location, planet) {
     }
     const h = hourAt(d);
     if (rule.planetHour && h.planet !== planet) continue;
-    if (rule.planetDay && h.dayRuler !== planet) continue;
+    // Pre-dawn hours (22–24) are the last of the planetary day that is ending;
+    // "dawn of the ruler's day" means the day they lead into, whose ruler is
+    // three places on in the Chaldean order (Sun → Moon → Mars …).
+    const dayRuler = rule.preDawn ? HOUR_ORDER[(HOUR_ORDER.indexOf(h.dayRuler) + 3) % 7] : h.dayRuler;
+    if (rule.planetDay && dayRuler !== planet) continue;
     if (rule.preDawn && !(h.isDayHour === false && h.hourNum >= 22)) continue;
     if (rule.moonPhase) {
       const phase = moonPhaseKind(d);

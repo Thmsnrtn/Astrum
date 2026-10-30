@@ -10,7 +10,7 @@
 
 import { describe, it, expect } from "vitest";
 import { getPlanetaryHourUnequal, getPlanetaryHour, sunAltitude, nextIngress, planetLon, dateToJD, HOUR_ORDER, DAY_RULERS, norm } from "./astro.js";
-import { computeEphemeris, calcNatal } from "./chart.js";
+import { computeEphemeris, calcNatal, conditionsFromProfile } from "./chart.js";
 import { assessElection, electionFactors } from "./scan.js";
 import { essentialDignity } from "./reception.js";
 
@@ -23,6 +23,16 @@ const PLACES = [
   { name: "Kolkata", lat: 22.57, lon: 88.36, tz: "Asia/Kolkata" },
   { name: "Tokyo", lat: 35.68, lon: 139.69, tz: "Asia/Tokyo" },
   { name: "Sydney", lat: -33.87, lon: 151.21, tz: "Australia/Sydney" },
+  // Where the date line bends: the civil calendar is a whole day off the
+  // place's mean-solar date. American Samoa is the control that must not shift.
+  { name: "Apia", lat: -13.83, lon: -171.76, tz: "Pacific/Apia" },
+  { name: "Nuku'alofa", lat: -21.14, lon: -175.2, tz: "Pacific/Tongatapu" },
+  { name: "Kiritimati", lat: 1.87, lon: -157.43, tz: "Pacific/Kiritimati" },
+  { name: "Chatham", lat: -43.95, lon: -176.56, tz: "Pacific/Chatham" },
+  { name: "Lakeba", lat: -18.2, lon: -178.8, tz: "Pacific/Fiji" },
+  { name: "Suva", lat: -18.14, lon: 178.44, tz: "Pacific/Fiji" },
+  { name: "Attu", lat: 52.84, lon: 173.18, tz: "America/Adak" },
+  { name: "Pago Pago", lat: -14.28, lon: -170.7, tz: "Pacific/Pago_Pago" },
 ];
 const LA = PLACES[0], TOKYO = PLACES[6];
 const RISE_ALT = -0.833; // the standard visible-sunrise altitude the engine uses
@@ -68,7 +78,7 @@ function oracleHour(t, p) {
   const nearBoundary = Math.min((t - start) % len, len - ((t - start) % len)) < 3 * MIN
     || Math.abs(t - set) < 3 * MIN || Math.abs(t - rise) < 3 * MIN || Math.abs(t - nextRise) < 3 * MIN;
   const planet = HOUR_ORDER[(HOUR_ORDER.indexOf(dayRuler) + (isDay ? 0 : 12) + idx) % 7];
-  return { dayRuler, isDay, planet, hourNum: idx + (isDay ? 1 : 13), nearBoundary };
+  return { dayRuler, isDay, planet, hourNum: idx + (isDay ? 1 : 13), nearBoundary, len, end: start + (idx + 1) * len };
 }
 
 // Deterministic instants spread over 2026 and over every hour of the day.
@@ -94,6 +104,9 @@ describe("unequal planetary hours agree with an independent oracle, everywhere",
         expect(h.hourNum, where).toBe(o.hourNum);
         expect(h.msRemaining, where).toBeGreaterThan(0);
         expect(h.msRemaining, where).toBeLessThanOrEqual(h.lenMs);
+        // The ring and the countdown: hour length and end within a minute of the oracle's.
+        expect(Math.abs(h.lenMs - o.len), where).toBeLessThan(MIN);
+        expect(Math.abs(t + h.msRemaining - o.end), where).toBeLessThan(2 * MIN);
         checked++;
       }
       expect(checked).toBeGreaterThan(30);
@@ -130,6 +143,41 @@ describe("unequal planetary hours agree with an independent oracle, everywhere",
   });
 });
 
+describe("polar day and night: equal hours anchored at the place, not the device", () => {
+  const TROMSO = { lat: 69.65, lon: 18.96, tz: "Europe/Oslo" };
+  it("midsummer and midwinter fall back to equal hours from 06:00 mean solar time, named by the place's weekday", () => {
+    for (const iso of ["2026-06-21T10:00:00Z", "2026-12-21T10:00:00Z"]) {
+      const t = new Date(iso);
+      const h = getPlanetaryHourUnequal(t, TROMSO.lat, TROMSO.lon);
+      expect(h.polar, iso).toBe(true);
+      expect(h.equal, iso).toBe(true);
+      expect(h.dayRuler, iso).toBe(DAY_RULERS[weekdayIn(t, TROMSO.tz)]);
+      // 06:00 mean solar time at 18.96°E is 04:44:10 UTC: the day's first hour.
+      const first = new Date(Date.parse(iso.slice(0, 10) + "T04:44:10Z") + 30 * MIN);
+      const h1 = getPlanetaryHourUnequal(first, TROMSO.lat, TROMSO.lon);
+      expect(h1.hourNum, iso).toBe(1);
+      expect(h1.planet, iso).toBe(h1.dayRuler);
+    }
+  });
+  it("polar hours chain without gaps through a polar day", () => {
+    let t = Date.UTC(2026, 5, 20, 0), prev = getPlanetaryHourUnequal(new Date(t), TROMSO.lat, TROMSO.lon);
+    for (let i = 0; i < 48; i++) {
+      t += prev.msRemaining + 1000;
+      const h = getPlanetaryHourUnequal(new Date(t), TROMSO.lat, TROMSO.lon);
+      expect(h.planet, `step ${i}`).toBe(prev.nextPlanet);
+      prev = h;
+    }
+  });
+});
+
+describe("pre-2011 Samoa kept the American date — the zone's history is honoured", () => {
+  it("2010 in Apia names the day by the calendar Apia used then", () => {
+    const t = new Date("2010-06-15T23:00:00Z"); // midday in Apia, then UTC−11
+    const h = getPlanetaryHourUnequal(t, -13.83, -171.76);
+    expect(h.dayRuler).toBe(DAY_RULERS[weekdayIn(t, "Pacific/Apia")]);
+  });
+});
+
 describe("the no-place fallback keeps the traditional order", () => {
   it("06:00 opens the day with its own ruler's hour; 05:00 is still the previous night", () => {
     const fri6 = getPlanetaryHour(new Date(2026, 9, 30, 6, 0, 1)); // Friday 30 Oct 2026, device clock
@@ -143,6 +191,36 @@ describe("the no-place fallback keeps the traditional order", () => {
     expect(fri5.hourNum).toBe(24);
     expect(fri5.isDayHour).toBe(false);
     expect(fri5.nextPlanet).toBe("venus"); // Friday's first hour follows
+  });
+  it("chains through a whole year on the device clock — across DST changes when the clock has them", () => {
+    // CI reruns this suite with TZ=America/Los_Angeles, where the planetary
+    // days containing 8 Mar and 1 Nov 2026 run 23 and 25 hours.
+    let t = new Date(2026, 0, 1, 7).getTime(), prev = getPlanetaryHour(new Date(t));
+    let lengths = new Set();
+    for (let i = 0; i < 366 * 24; i++) {
+      expect(prev.msRemaining, new Date(t).toString()).toBeGreaterThan(0);
+      expect(prev.msRemaining).toBeLessThanOrEqual(prev.lenMs + 1);
+      t += prev.msRemaining + 1;
+      const h = getPlanetaryHour(new Date(t));
+      expect(h.planet, new Date(t).toString()).toBe(prev.nextPlanet);
+      expect(h.hourNum).toBe(prev.hourNum === 24 ? 1 : prev.hourNum + 1);
+      lengths.add(Math.round(h.lenMs / 1000));
+      prev = h;
+    }
+    const hasDST = new Date(2026, 0, 1).getTimezoneOffset() !== new Date(2026, 6, 1).getTimezoneOffset();
+    expect(lengths.size).toBe(hasDST ? 3 : 1); // 3600 s, plus 23/24 h and 25/24 h hours on DST days
+  });
+});
+
+describe("a latitude or longitude of exactly 0 is a place", () => {
+  it("Greenwich (lon 0) gets true unequal hours in the record and in the election engine alike", () => {
+    const d = new Date("2026-06-01T22:30:00Z"), g = { lat: 51.48, lon: 0 };
+    const cond = conditionsFromProfile(d, { natal: g });
+    expect(cond.location).toEqual(g);
+    expect(cond.hourModel).toBe(2);
+    const truth = getPlanetaryHourUnequal(d, g.lat, g.lon);
+    expect(cond.hourPlanet).toBe(truth.planet);
+    expect(electionFactors(d, "jupiter", 70, g).hourPlanet).toBe(truth.planet);
   });
 });
 
@@ -200,6 +278,17 @@ describe("the election engine reads time the same way the record does", () => {
         expect(f.hourPlanet).toBe(h.planet);
         expect(f.dayRuler).toBe(h.dayRuler);
       }
+    }
+  });
+  it("minor dignities follow the chart's sect even in the twilight band where the hours already say day", () => {
+    const rise = getPlanetaryHourUnequal(new Date("2026-06-21T13:00:00Z"), LA.lat, LA.lon).rise; // ~05:42 PDT
+    const twilight = new Date(rise.getTime() + MIN); // visible sunrise passed, Sun's centre still below 0°
+    expect(getPlanetaryHourUnequal(twilight, LA.lat, LA.lon).isDayHour).toBe(true);
+    expect(sunAltitude(dateToJD(twilight), LA.lat, LA.lon)).toBeLessThan(0);
+    for (const pk of PLANETS) {
+      const a = assessElection(twilight, pk, null, LA);
+      const parts = essentialDignity(pk, a.positions[pk].lon, false).parts.filter(x => ["bound", "triplicity", "face"].includes(x));
+      expect(a.criteria.find(c => c.id === "minor").pass).toBe(parts.length > 0);
     }
   });
   it("minor dignities use the night triplicity ruler at night", () => {

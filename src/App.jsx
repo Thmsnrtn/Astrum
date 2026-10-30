@@ -90,7 +90,7 @@ async function triggerHaptic(style="medium"){
 // ENGINE — moved to src/engine/{astro,chart,scan}.js (de-cycling).
 // Imports below; App.jsx is now leaf-only (nothing imports from it).
 // ═══════════════════════════════════════════════════════════════════════
-import { D2R, norm, dateToJD, sunLon, moonLon, EL, equationOfCenter, planetLon, dailyMotion, SIGNS, lonToZodiac, DOMICILE, EXALT, inExaltationDegree, getDignity, dignityScore, getCombustion, BOUNDS, getBound, antiscionOf, contraAntiscionOf, getAntisciaAspects, getPlanetPhase, checkVoC, nextIngress, HOUR_ORDER, DAY_RULERS, DAY_NAMES, getPlanetaryHour, precessStar, starLonAt, meanNode, sunriseSetUTC, gstDeg, lstDeg, obliquity, calcASC, calcMC, calcPOF, calcPOS, getPlanetaryHourUnequal, YEAR_SEC, L_DUR, calcFractal, fmtTime, fmtWindowTime, calcWindowBounds, calcL2Forecast, OUTER_EPOCHS, J2000_MS, outerPlanetLon, JS_CONJUNCTIONS, DECADE_FORECAST, getAspectsAll, meanLilith, chironLon, trueNode, TRIPLICITIES, ELEMENT_BY_SIGN, getTriplicity, calcHouses, getHouseNum, HOUSE_NAMES, HOUSE_MEANINGS } from "./engine/astro.js";
+import { D2R, norm, dateToJD, sunLon, moonLon, EL, equationOfCenter, planetLon, dailyMotion, SIGNS, lonToZodiac, DOMICILE, EXALT, inExaltationDegree, getDignity, dignityScore, getCombustion, BOUNDS, getBound, antiscionOf, contraAntiscionOf, getAntisciaAspects, getPlanetPhase, checkVoC, nextIngress, HOUR_ORDER, DAY_RULERS, DAY_NAMES, getPlanetaryHour, precessStar, starLonAt, meanNode, sunriseSetUTC, gstDeg, lstDeg, obliquity, calcASC, calcMC, calcPOF, calcPOS, getPlanetaryHourUnequal, YEAR_SEC, L_DUR, calcFractal, fmtTime, fmtWindowTime, calcWindowBounds, calcL2Forecast, OUTER_EPOCHS, J2000_MS, outerPlanetLon, JS_CONJUNCTIONS, DECADE_FORECAST, getAspectsAll, meanLilith, chironLon, trueNode, TRIPLICITIES, ELEMENT_BY_SIGN, getTriplicity, calcHouses, getHouseNum, HOUSE_NAMES, HOUSE_MEANINGS, placeFrom } from "./engine/astro.js";
 import { calcNatal, conditionsFromProfile } from "./engine/chart.js";
 import { ClockProvider, useClock, useAstroNow } from "./ui/clock.jsx";
 import { calcProgressions, calcSolarArc, TRANSIT_ASPECTS, scanTransits, FIRDARIA_DAY, FIRDARIA_NIGHT, FIRDARIA_YRS, calcFirdaria, calcSolarReturn, calcLunarReturn, scanIngresses, scanStations, scanEclipses, lonToDecl, getDeclAspects, getMidpoints, calcAllLots, checkViaCombusta, checkBesiegement, getMoonAspects, checkMaleficAffliction, getMoonSignRelation, checkTranslation, checkProhibition, getStarConj, getMoonSpeed, MOON_PHASE_NAMES, electionBandKey, electionFactors, assessElection, scanElections } from "./engine/scan.js";
@@ -710,7 +710,7 @@ export default function App(){
     return()=>window.removeEventListener("keydown",handler);
   },[]);
 
-  const location=profile?.natal?.lat&&profile?.natal?.lon?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
+  const location=useMemo(()=>placeFrom(profile?.natal),[profile?.natal?.lat,profile?.natal?.lon]);
   // Two-cadence time: astronomy at 30 s buckets (stable identities), wall
   // clock at 1 Hz only in the leaves that render seconds.
   const {now,eph,hour,fractal}=useAstroNow(location,fractalMode);
@@ -828,7 +828,7 @@ export default function App(){
           {tab==="geomancy"&&<GeomancyScreen profile={profile} natalPos={natalPos}/>}
           {tab==="talisman"&&<TalismanScreen eph={eph} natalPos={natalPos} profile={profile} now={now}/>}
           {tab==="athanor" &&<AthanorScreen  profile={profile} natalPos={natalPos} eph={eph} now={now}/>}
-          {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos}/>}
+          {tab==="calendar"&&<CalendarScreen now={now} natalPos={natalPos} profile={profile}/>}
           {tab==="almanac" &&<AlmanacScreen  now={now} profile={profile} fractalMode={fractalMode}/>}
           {tab==="journal" &&<JournalScreen  profile={profile} natalPos={natalPos}/>}
           {tab==="sigils"  &&<SigilScreen    eph={eph} profile={profile} natalPos={natalPos}/>}

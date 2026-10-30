@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 // CHART — full-moment and natal chart computation (extracted from App.jsx)
 // ═══════════════════════════════════════════════════════════════════════
-import { norm, dateToJD, planetLon, dailyMotion, lonToZodiac, getDignity, dignityScore, getCombustion, getBound, getAntisciaAspects, getPlanetPhase, checkVoC, getPlanetaryHour, starLonAt, meanNode, sunAltitude, calcASC, calcMC, calcPOF, getPlanetaryHourUnequal, getAspectsAll, meanLilith, chironLon, trueNode, getTriplicity } from "./astro.js";
+import { norm, dateToJD, planetLon, dailyMotion, lonToZodiac, getDignity, dignityScore, getCombustion, getBound, getAntisciaAspects, getPlanetPhase, checkVoC, getPlanetaryHour, starLonAt, meanNode, sunAltitude, calcASC, calcMC, calcPOF, getPlanetaryHourUnequal, getAspectsAll, meanLilith, chironLon, trueNode, getTriplicity, placeFrom } from "./astro.js";
 import { P } from "../data/planets.js";
 import { essentialScore, essentialDignity } from "./reception.js";
 import { DECANS } from "../data/decans.js";
@@ -9,7 +9,8 @@ import { FIXED_STARS } from "../data/fixedStars.js";
 import { computeLots } from "./lots.js";
 import { captureConditions } from "./snapshot.js";
 
-export function computeEphemeris(date,location,opts={}){
+export function computeEphemeris(date,locationIn,opts={}){
+  const location=placeFrom(locationIn);
   const jd=dateToJD(date);
   const pos={};
   const sunLon0=planetLon("sun",jd);
@@ -39,7 +40,7 @@ export function computeEphemeris(date,location,opts={}){
   const antiscia=getAntisciaAspects(pos);
   // Location-based additions (Phase 1c)
   let asc=null,mc=null,pof=null,pos2=null,isDayChart=null,lots=null,lotEros=null,lotNecessity=null,lotCourage=null;
-  if(location?.lat&&location?.lon){
+  if(location){
     asc=calcASC(jd,location.lat,location.lon);
     mc=calcMC(jd,location.lon);
     isDayChart=sunAltitude(jd,location.lat,location.lon)>0;
@@ -58,7 +59,8 @@ export function computeEphemeris(date,location,opts={}){
   return{pos,jd,moonPhase:phases[Math.floor(mpDeg/45)],moonPhaseDeg:mpDeg,voc,decanIdx,nearStars,aspects,antiscia,northNode,southNode,asc,mc,pof,pos2,isDayChart,lots,lotEros,lotNecessity,lotCourage};
 }
 
-export function calcNatal(bd,location){
+export function calcNatal(bd,locationIn){
+  const location=placeFrom(locationIn);
   const jd=dateToJD(bd);const pos={};
   ["sun","moon","mercury","venus","mars","jupiter","saturn"].forEach(pk=>{
     const lon=planetLon(pk,jd),dm=dailyMotion(pk,jd);
@@ -75,7 +77,7 @@ export function calcNatal(bd,location){
   // Location-based natal points
   let asc=null,mc=null,pof=null,isDayChart=null,northNode=null,southNode=null;
   northNode=trueNode(jd);southNode=norm(northNode+180);
-  if(location?.lat&&location?.lon){
+  if(location){
     asc=calcASC(jd,location.lat,location.lon);
     mc=calcMC(jd,location.lon);
     // Sect from the Sun's altitude at birth: diurnal when it stands above
@@ -98,7 +100,7 @@ export function calcNatal(bd,location){
 // computeEphemeris is pure (renamed from the misleading useEphemeris), so it is
 // safe to call from event handlers and migrations.
 export function conditionsFromProfile(date,profile,natalPos,election=null,approximate=false){
-  const location=profile?.natal?.lat&&profile?.natal?.lon?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
+  const location=placeFrom(profile?.natal);
   const eph=computeEphemeris(date,location);
   const hour=location?getPlanetaryHourUnequal(date,location.lat,location.lon):getPlanetaryHour(date);
   return captureConditions({now:date,eph,hour,location,natalPos,election,approximate});

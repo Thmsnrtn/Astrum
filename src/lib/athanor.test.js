@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import { initSweph } from "../engine/sweph.js";
 import { resolveDueRule } from "./athanor.js";
-import { getPlanetaryHourUnequal, planetLon, dateToJD } from "../engine/astro.js";
+import { getPlanetaryHourUnequal, getPlanetaryHour, planetLon, dateToJD } from "../engine/astro.js";
 
 const LONDON = { lat: 51.5, lon: -0.12 };
 const NOW = new Date("2026-07-15T10:00:00Z");
@@ -50,4 +50,28 @@ describe("resolveDueRule", () => {
     expect(elong).toBeGreaterThan(29); // waxing includes full band
     expect(elong).toBeLessThan(211);
   });
+});
+
+describe("'dawn of the ruler's day' lands before the sunrise that opens that day", () => {
+  // Hours 22-24 belong to the planetary day that is ending; the sunrise they
+  // lead into opens the ruler's own day. Walk forward to that sunrise and ask
+  // whose day it begins.
+  const dayDawnedInto = (d, hourAt) => {
+    let t = d.getTime(), h = hourAt(new Date(t));
+    for (let i = 0; i < 6 && h.isDayHour === false; i++) { t += h.msRemaining + 1000; h = hourAt(new Date(t)); }
+    return h.dayRuler;
+  };
+  for (const [label, loc] of [["with a place", { lat: 34.05, lon: -118.24 }], ["without a place", null]]) {
+    it(label, () => {
+      const hourAt = t => loc ? getPlanetaryHourUnequal(t, loc.lat, loc.lon) : getPlanetaryHour(t);
+      for (const planet of ["mars", "venus", "saturn"]) {
+        const d = resolveDueRule({ planetDay: true, preDawn: true }, NOW, loc, planet);
+        expect(d, planet).toBeTruthy();
+        const h = hourAt(d);
+        expect(h.isDayHour, planet).toBe(false);
+        expect(h.hourNum, planet).toBeGreaterThanOrEqual(22);
+        expect(dayDawnedInto(d, hourAt), planet).toBe(planet);
+      }
+    });
+  }
 });

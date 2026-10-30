@@ -99,8 +99,11 @@ describe("zrCurrent — the live chain", () => {
 
 describe("profections", () => {
   it("age counts completed years, turning on the birthday", () => {
-    expect(ageAt(BIRTH, new Date("2026-06-14T12:00:00Z"))).toBe(35);
-    expect(ageAt(BIRTH, new Date("2026-06-15T12:00:00Z"))).toBe(36);
+    // The birthday turns on the local calendar, so build the probes there:
+    // a UTC instant can already be the next calendar day on a UTC+13 clock.
+    const b = new Date(BIRTH);
+    expect(ageAt(BIRTH, new Date(b.getFullYear() + 36, b.getMonth(), b.getDate() - 1, 12))).toBe(35);
+    expect(ageAt(BIRTH, new Date(b.getFullYear() + 36, b.getMonth(), b.getDate(), 12))).toBe(36);
   });
   it("age 0 is the 1st house in the Ascendant's sign", () => {
     const p = profection(BIRTH, new Date("1990-08-01"), 5 /* Virgo Asc */);

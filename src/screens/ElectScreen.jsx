@@ -6,7 +6,7 @@ import { INTENTS } from "../data/intents.js";
 import { PICATRIX_ELECTIONS, PICATRIX_PRECONDITIONS } from "../data/picatrixElections.js";
 import { P } from "../data/planets.js";
 import { TRADITIONS } from "../data/traditions.js";
-import { DAY_NAMES, OUTER_EPOCHS, dateToJD, fmtTime, outerPlanetLon, nextFullCoherenceWindows } from "../engine/astro.js";
+import { DAY_NAMES, OUTER_EPOCHS, dateToJD, fmtTime, outerPlanetLon, nextFullCoherenceWindows, placeFrom } from "../engine/astro.js";
 import { MANSIONS } from "../data/mansions.js";
 import { DECANS } from "../data/decans.js";
 import { getVoCMode } from "../lib/prefs.js";
@@ -36,11 +36,11 @@ export default function ElectScreen({now,natalPos,eph,profile}){
   const meta=INTENTS[ik]||INTENTS.money;
   const [committed,setCommitted]=useState(null);
   useEffect(()=>{setPlanet(meta.planet);setElections([]);setSelIdx(null);},[ik]);
-  const elLoc=profile?.natal?.lat!=null&&profile?.natal?.lon!=null?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
+  const elLoc=useMemo(()=>placeFrom(profile?.natal),[profile?.natal?.lat,profile?.natal?.lon]);
   const live=assessElection(now,planet,natalPos,elLoc);
   // Elective memory: how conditions like these have fared in your own record.
   const memStats=useMemo(()=>computeStats(loadCastings()),[committed]);
-  const mem=useMemo(()=>electiveMemory(memStats,electionFactors(now,planet,live.score,elLoc)),[memStats,planet,live.score,now,elLoc?.lat,elLoc?.lon]);
+  const mem=useMemo(()=>electiveMemory(memStats,electionFactors(now,planet,live.score,elLoc)),[memStats,planet,live.score,now,elLoc]);
   const adjusted=mem.available?Math.max(0,Math.min(100,live.score+mem.adjustment)):null;
   // Lord of the Year (annual profection) — a standing weight on this year's elections
   const yearLord=useMemo(()=>{

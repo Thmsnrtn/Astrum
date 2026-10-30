@@ -7,7 +7,7 @@ and fail-safe so the app degrades gracefully wherever they are absent.
 
 ## Tier 1 — unit & property tests (`npx vitest run`)
 
-~470 tests across 38 files, run twice in CI — once on the runner's UTC
+~490 tests across 38 files, run twice in CI — once on the runner's UTC
 clock and once with `TZ=America/Los_Angeles`. The load-bearing ones:
 
 - **Timekeeping** (`src/engine/timekeeping.test.js`): planetary hours, the
@@ -18,7 +18,12 @@ clock and once with `TZ=America/Los_Angeles`. The load-bearing ones:
   fix for hours and sect that were a day off wherever the place's date
   differed from the UTC date, a Moon ingress a month late, and a phantom
   Saturn ingress at 60 days; also that the election scorer reads the same
-  true unequal hour and sunrise-based day ruler the castings record.
+  true unequal hour and sunrise-based day ruler the castings record. Also
+  covers the bent date line (Samoa, Tonga, Kiribati, Chatham, eastern Fiji,
+  the western Aleutians — American Samoa as the control, and Samoa's pre-2011
+  calendar), polar day/night (equal hours from the place's own 06:00), the
+  no-place fallback across DST changes, a latitude or longitude of exactly 0,
+  and castings recorded under the old hour models being re-derived on read.
 
 - **Engines**: ephemeris vs Swiss Ephemeris; Hermetic Lots (sect reversal,
   Fortune+Spirit=2·Asc, Paulus/Valens); zodiacal releasing (Valens table

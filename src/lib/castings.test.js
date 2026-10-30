@@ -3,7 +3,8 @@
 // nudge that precedes the 60-day staleOpen threshold) and
 // mostFrequentCorrespondence (the "stalker card" style callout).
 import { describe, it, expect } from "vitest";
-import { dueCheckIns, CHECKIN_DAYS, mostFrequentCorrespondence } from "./castings.js";
+import { dueCheckIns, CHECKIN_DAYS, mostFrequentCorrespondence, recordedTimeLords, hourKey, computeStats } from "./castings.js";
+import { getPlanetaryHourUnequal, getPlanetaryHour } from "../engine/astro.js";
 
 const NOW = new Date("2026-07-15T10:00:00Z");
 const daysAgo = n => new Date(NOW.getTime() - n * 86400000).toISOString();
@@ -62,5 +63,29 @@ describe("mostFrequentCorrespondence", () => {
     ];
     const r = mostFrequentCorrespondence(list);
     expect(r).toEqual({ kind: "ally", key: "Raziel", n: 3, pct: 60 });
+  });
+});
+
+describe("records made under the old hour models are read in the current one", () => {
+  const LA = { lat: 34.05, lon: -118.24 };
+  const at = "2026-06-21T02:00:00Z"; // a California evening the old engine got wrong
+  const truth = getPlanetaryHourUnequal(new Date(at), LA.lat, LA.lon);
+  it("an unversioned record is re-derived from its own moment and place", () => {
+    const cond = { at, location: LA, hourPlanet: "stale", dayRuler: "stale" };
+    expect(recordedTimeLords(cond)).toEqual({ hourPlanet: truth.planet, dayRuler: truth.dayRuler });
+    expect(hourKey(cond)).toBe(truth.planet);
+  });
+  it("an unversioned record without a place uses the current no-place model", () => {
+    const cond = { at, location: null, hourPlanet: "stale" };
+    expect(hourKey(cond)).toBe(getPlanetaryHour(new Date(at)).planet);
+  });
+  it("a current-model record is taken as stored, never recomputed", () => {
+    expect(hourKey({ at, location: LA, hourPlanet: "venus", hourModel: 2 })).toBe("venus");
+  });
+  it("statistics group old records under their re-derived hour", () => {
+    const list = [0, 1, 2].map(i => ({ id: "c" + i, kind: "working", status: "closed", planet: "jupiter",
+      conditions: { at, location: LA, hourPlanet: "stale" }, outcomes: [{ verdict: "hit", date: at }] }));
+    const row = computeStats(list).byHourRuler;
+    expect(row.map(r => r.key)).toEqual([truth.planet]);
   });
 });

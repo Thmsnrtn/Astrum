@@ -1,4 +1,5 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
+import { placeFrom } from "../engine/astro.js";
 import { KAMEA, kamea_xy, KameaPreview, kamea_letterNum, kamea_reduce, fmtD } from "../data/uiTables.jsx";
 import { useState } from "react";
 import { memo as React_memo } from "react";
@@ -12,7 +13,7 @@ import { loadJSON, saveJSON } from "../lib/storage.js";
 import { F, GOLD, L, T } from "../ui/theme.js";
 
 export default function TalismanScreen({eph,natalPos,profile,now}){
-  const talLoc=profile?.natal?.lat!=null&&profile?.natal?.lon!=null?{lat:profile.natal.lat,lon:profile.natal.lon}:null;
+  const talLoc=placeFrom(profile?.natal);
   const [step,setStep]=useState(0);
   const [intent,setIntent]=useState("");
   const [planet,setPlanet]=useState("jupiter");

@@ -6,7 +6,7 @@
 // statistics, chosen grimoire entries, and the omen record, composed as a
 // printable annual. Pure composer: takes the data, returns the document.
 
-import { effectiveVerdict, computeStats } from "./castings.js";
+import { effectiveVerdict, computeStats, hourKey } from "./castings.js";
 
 const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const fmtD = d => new Date(d).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -26,7 +26,7 @@ export function composeBook({ from, to, castings = [], grimoire = [], omens = []
   const castingBlocks = cs.map(c => {
     const v = effectiveVerdict(c);
     const notes = (c.outcomes || []).filter(o => o.note).map(o => `<div class="note">${fmtD(o.date)} — ${esc(o.note)}</div>`).join("");
-    const cond = c.conditions ? [c.conditions.moonPhase, c.conditions.mansion && `mansion ${c.conditions.mansion.n}`, c.conditions.hourPlanet && `hour of ${c.conditions.hourPlanet}`, c.conditions.voc?.isVoC && "VoC"].filter(Boolean).join(" · ") : "";
+    const cond = c.conditions ? [c.conditions.moonPhase, c.conditions.mansion && `mansion ${c.conditions.mansion.n}`, hourKey(c.conditions) && `hour of ${hourKey(c.conditions)}`, c.conditions.voc?.isVoC && "VoC"].filter(Boolean).join(" · ") : "";
     return `<div class="casting">
       <div class="chead"><span class="kind">${esc(c.kind)}</span> <strong>${esc(c.title)}</strong>
         <span class="verdict">${v ? VERDICT_LABEL[v] || v : c.status === "open" ? "…open" : ""}</span></div>
