@@ -87,7 +87,7 @@ function HourRing({hour,now}){
         </div>
         {hour.isDayHour!=null&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.25)",marginTop:4,letterSpacing:1}}>{hour.isDayHour?"DAY HOUR":"NIGHT HOUR"} · {hour.polar?"NO SUNRISE OR SUNSET TODAY — EQUAL HOURS":hour.equal?"APPROXIMATE — SET YOUR PLACE":"TRUE UNEQUAL"}</div>}
         {hour.isDayHour!=null&&hour.rise&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.2)",letterSpacing:0.5,marginTop:1}}>
-          ☀ {hour.rise.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",timeZone:"UTC"})} — {hour.set?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",timeZone:"UTC"})} UTC
+          Sunrise {hour.rise.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})} · Sunset {hour.set?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}
         </div>}
       </div>
     </div>
