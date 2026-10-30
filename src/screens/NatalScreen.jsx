@@ -598,7 +598,7 @@ export default function NatalScreen({natalData,setNatalData,eph,fractal,natalPos
                     {/* Their lots and profection (needs their birth time+place for an Asc) */}
                     {(()=>{try{
                       const theirLots=computeLots(chartFromPositions(synPerson.pos));
-                      const theirProf=synPerson.date&&synPerson.pos.asc!=null?calcProfection(new Date(synPerson.date+"T"+(synPerson.time||"12:00")),new Date(),Math.floor(synPerson.pos.asc/30)):null;
+                      const theirProf=synPerson.date&&synPerson.pos.asc!=null?profection(new Date(synPerson.date+"T"+(synPerson.time||"12:00")),new Date(),Math.floor(synPerson.pos.asc/30)):null;
                       if(!theirLots&&!theirProf)return null;
                       return(<div className="card" style={{margin:"0 14px 8px"}}>
                         <div style={L()}>{synPerson.name}'s Lots & Year</div>

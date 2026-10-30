@@ -24,4 +24,5 @@ node e2e/offline.mjs
 node e2e/sync.mjs
 node e2e/ux.mjs
 node e2e/roots.mjs
+node e2e/oracle.mjs
 echo "ALL E2E SUITES PASSED"

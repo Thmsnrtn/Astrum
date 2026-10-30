@@ -29,7 +29,7 @@ export default function TalismanScreen({eph,natalPos,profile,now}){
   const wordPts=()=>{const letters=[...word.toUpperCase().replace(/[^A-Z]/g,"")];if(letters.length<2)return null;return letters.map(l=>{let n=kamea_letterNum(l);n=kamea_reduce(n,km.size);return kamea_xy(n<1?1:n,planet);}).filter(Boolean);};
   const designPts=design==="word"?wordPts():sealPts(design);
   const designName=design==="word"?word.toUpperCase():getSeal(planet,design)?.name;
-  const runScan=()=>{setScanning(true);setElections(null);setTimeout(()=>{setElections(scanElections(new Date(now),30,planet,natalPos));setScanning(false);},250);};
+  const runScan=()=>{setScanning(true);setElections(null);setTimeout(()=>{setElections(scanElections(new Date(now),30,planet,natalPos,talLoc));setScanning(false);},250);};
   const fmtD=d=>d.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})+" "+d.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
   const saveTalisman=async()=>{
     if(saved)return;

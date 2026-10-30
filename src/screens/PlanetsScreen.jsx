@@ -1,5 +1,5 @@
 // Extracted from App.jsx (P1 screen decomposition). Verbatim body; generated imports.
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { P } from "../data/planets.js";
 import { dateToJD, fmtTime, nextIngress } from "../engine/astro.js";
 import { DIGNITY_COL, DIGNITY_LBL, F, L, T, VOWELS } from "../ui/theme.js";
@@ -9,8 +9,10 @@ export default function PlanetsScreen({eph,natalPos,now}){
   const [tab,setTab]=useState("overview");
   const pl=P[sel],pos=eph.pos[sel],natal=natalPos?.[sel];
   const dc=DIGNITY_COL[pos.dignity];
-  const ingress=nextIngress(sel,dateToJD(now));
-  const ingressDays=((ingress.jd-dateToJD(now))*24);
+  // The ingress search walks the ephemeris, so recompute per minute, not per tick.
+  const minute=Math.floor(now.getTime()/60000);
+  const ingress=useMemo(()=>nextIngress(sel,dateToJD(new Date(minute*60000))),[sel,minute]);
+  const ingressHours=ingress?(ingress.jd-dateToJD(now))*24:null;
   return (
     <div style={{flex:1,display:"flex",flexDirection:"column",paddingBottom:20}}>
       <div style={{padding:"12px 14px",display:"flex",gap:5}}>
@@ -59,7 +61,7 @@ export default function PlanetsScreen({eph,natalPos,now}){
             <div className="card">
               <div style={L()}>Ingress Countdown</div>
               <div style={{fontFamily:F,fontSize:11,color:"#C4A870",marginTop:6,fontStyle:"italic"}}>
-                {pl.name} enters {ingress.sign.sym} {ingress.sign.name} in {fmtTime(ingressDays*3600)} · This is {pos.dignity==="peregrine"||pos.dignity==="detriment"||pos.dignity==="fall"?"a potential improvement":"a transition to watch"}
+                {ingress?<>{pl.name} enters {ingress.sign.sym} {ingress.sign.name} in {fmtTime(ingressHours*3600)}</>:<>{pl.name} stays in its sign beyond the search horizon</>} · This is {pos.dignity==="peregrine"||pos.dignity==="detriment"||pos.dignity==="fall"?"a potential improvement":"a transition to watch"}
               </div>
             </div>
             {natal&&(

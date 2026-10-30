@@ -7,7 +7,18 @@ and fail-safe so the app degrades gracefully wherever they are absent.
 
 ## Tier 1 — unit & property tests (`npx vitest run`)
 
-~385 tests across 33 files. The load-bearing ones:
+~470 tests across 38 files, run twice in CI — once on the runner's UTC
+clock and once with `TZ=America/Los_Angeles`. The load-bearing ones:
+
+- **Timekeeping** (`src/engine/timekeeping.test.js`): planetary hours, the
+  day ruler, sect, and next ingresses checked in eight cities (Los Angeles
+  to Sydney, Reykjavik for high latitude) against an oracle that shares
+  none of the engine's day-selection logic — sunrises found by scanning the
+  Sun's altitude, the weekday read from each city's IANA time zone. Pins the
+  fix for hours and sect that were a day off wherever the place's date
+  differed from the UTC date, a Moon ingress a month late, and a phantom
+  Saturn ingress at 60 days; also that the election scorer reads the same
+  true unequal hour and sunrise-based day ruler the castings record.
 
 - **Engines**: ephemeris vs Swiss Ephemeris; Hermetic Lots (sect reversal,
   Fortune+Spirit=2·Asc, Paulus/Valens); zodiacal releasing (Valens table
@@ -125,7 +136,11 @@ build on the Mac mini, in order:
    https://sh.rustup.rs | sh`, then open a new shell), Node LTS. No
    Homebrew packages are needed — macOS already ships the WKWebView
    Tauri embeds, unlike Linux.
-2. **Build**: `npm install && npm run tauri:build`. Output lands at
+2. **Build**: `npm install && npm run tauri:build`. `src-tauri/Cargo.lock`
+   is committed and the `@tauri-apps/*` npm packages are pinned (`~`) to the
+   same minor as their crates — `tauri build` refuses a major/minor
+   mismatch, and without the lockfile a fresh build resolves the newest
+   crates against older npm packages. Bump both sides together. Output lands at
    `src-tauri/target/release/bundle/macos/Astrum.app` and
    `.../bundle/dmg/Astrum_<version>_aarch64.dmg`. Builds Apple-Silicon-only
    by default (every Mac mini since Nov 2020) — add `-- --target

@@ -2,7 +2,7 @@
 // SCAN — timing scanners + the election engine (extracted from App.jsx)
 // ═══════════════════════════════════════════════════════════════════════
 import { DIGNITY_LBL, GOLD } from "../ui/theme.js";
-import { D2R, norm, dateToJD, sunLon, moonLon, planetLon, dailyMotion, SIGNS, lonToZodiac, getDignity, getCombustion, checkVoC, DAY_RULERS, getPlanetaryHour, starLonAt, obliquity, calcASC, calcMC, fmtTime } from "./astro.js";
+import { D2R, R2D, norm, dateToJD, sunLon, moonLon, planetLon, dailyMotion, SIGNS, lonToZodiac, getDignity, getCombustion, checkVoC, getPlanetaryHour, getPlanetaryHourUnequal, starLonAt, obliquity, calcASC, calcMC, fmtTime } from "./astro.js";
 import { P } from "../data/planets.js";
 import { FIXED_STARS } from "../data/fixedStars.js";
 import { getMansion } from "../data/mansions.js";
@@ -390,9 +390,14 @@ export const MOON_PHASE_NAMES=["New","Waxing Crescent","First Quarter","Waxing G
 export function electionBandKey(score){return score==null?null:score>=90?"90+ Talismanic":score>=75?"75–89 Excellent":score>=60?"60–74 Good":score>=45?"45–59 Acceptable":"< 45 Marginal";}
 // Resolve a candidate election's condition-factors into the exact key strings
 // castings.computeStats() groups on, so electiveMemory can match your history.
-export function electionFactors(date,pk,score){
+// The hour comes from the same model the castings recorded it with
+// (conditionsFromProfile: true unequal hours when a place is known), or the
+// candidate is compared against a different hour than the record holds.
+const hourAtPlace=(date,location)=>location?.lat!=null&&location?.lon!=null
+  ?getPlanetaryHourUnequal(date,location.lat,location.lon):getPlanetaryHour(date);
+export function electionFactors(date,pk,score,location=null){
   const jd=dateToJD(date);
-  const hour=getPlanetaryHour(date);
+  const hour=hourAtPlace(date,location);
   const ml=moonLon(jd),sl=sunLon(jd);
   const phase=MOON_PHASE_NAMES[Math.floor(norm(ml-sl)/45)];
   const mans=getMansion(ml);
@@ -415,7 +420,9 @@ export function assessElection(date,pk,natalPos,location=null){
   const mApplyGood=moonAsp.applying.find(a=>a.planet===pk&&["Conjunction","Trine","Sextile"].includes(a.aspect));
   const mApplyBad=moonAsp.applying.find(a=>["mars","saturn"].includes(a.planet)&&["Square","Opposition"].includes(a.aspect));
   const moonPh=norm(mPos.lon-positions.sun.lon),isWax=moonPh<180;
-  const hour=getPlanetaryHour(date),dayMatch=DAY_RULERS[date.getDay()]===pk,hourMatch=hour.planet===pk;
+  // True unequal hours and the sunrise-based day ruler when a place is known;
+  // the day/night of the hour also decides the triplicity ruler below.
+  const hour=hourAtPlace(date,location),dayMatch=hour.dayRuler===pk,hourMatch=hour.planet===pk;
   const stars=getStarConj(wPos.lon,jd);
   const trans=checkTranslation(jd),prohib=checkProhibition(jd,pk);
   const moonRel=getMoonSignRelation(pk,mPos.zodiac.signIndex);
@@ -434,7 +441,7 @@ export function assessElection(date,pk,natalPos,location=null){
     {id:"phase",w:9,label:"Moon Waxing",critical:false,pass:isWax,note:isWax?"Waxing — increasing light":"Waning (a standard corruption for works of increase)"},
     {id:"timing",w:6,label:"Day or Hour Aligned",critical:false,pass:dayMatch||hourMatch,note:dayMatch&&hourMatch?"Day + Hour":dayMatch?"Day":hourMatch?"Hour":"Neither"},
     // Weighted minor dignities: bound/triplicity/face now count toward the election.
-    (()=>{const isDay=hour.isDayHour!==false;const ed=essentialDignity(pk,wPos.lon,isDay);
+    (()=>{const isDay=hour.isDayHour;const ed=essentialDignity(pk,wPos.lon,isDay);
       const minors=ed.parts.filter(x=>["bound","triplicity","face"].includes(x));
       return{id:"minor",w:8,label:"Minor Dignities",critical:false,pass:minors.length>0,
         note:minors.length?`+${minors.map(m2=>m2==="bound"?"bound (+2)":m2==="triplicity"?"triplicity (+3)":"face (+1)").join(", ")}`:"None (bound/triplicity/face)"};})(),
@@ -463,7 +470,7 @@ export function assessElection(date,pk,natalPos,location=null){
       ];
     })():[]),
     // Reception: the day or hour ruler receiving the working planet is an alliance.
-    (()=>{const dr=DAY_RULERS[date.getDay()];const hr=hour.planet;
+    (()=>{const dr=hour.dayRuler;const hr=hour.planet;
       const recBy=[dr!==pk&&receives(dr,wPos.lon)?dr:null,hr!==pk&&hr!==dr&&receives(hr,wPos.lon)?hr:null].filter(Boolean);
       return{id:"reception",w:8,label:"Received by the Time-Lords",critical:false,pass:recBy.length>0,
         note:recBy.length?`Received by ${recBy.join(" & ")} (${recBy.map(r=>receives(r,wPos.lon)).join(", ")})`:"No reception from day/hour ruler"};})(),

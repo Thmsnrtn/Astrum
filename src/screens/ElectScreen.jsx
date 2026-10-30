@@ -40,14 +40,14 @@ export default function ElectScreen({now,natalPos,eph,profile}){
   const live=assessElection(now,planet,natalPos,elLoc);
   // Elective memory: how conditions like these have fared in your own record.
   const memStats=useMemo(()=>computeStats(loadCastings()),[committed]);
-  const mem=useMemo(()=>electiveMemory(memStats,electionFactors(now,planet,live.score)),[memStats,planet,live.score,now]);
+  const mem=useMemo(()=>electiveMemory(memStats,electionFactors(now,planet,live.score,elLoc)),[memStats,planet,live.score,now,elLoc?.lat,elLoc?.lon]);
   const adjusted=mem.available?Math.max(0,Math.min(100,live.score+mem.adjustment)):null;
   // Lord of the Year (annual profection) — a standing weight on this year's elections
   const yearLord=useMemo(()=>{
     try{
       if(!profile?.natal?.date||natalPos?.asc==null)return null;
       const bd=new Date(`${profile.natal.date}T${profile.natal.time||"12:00"}:00`);
-      return calcProfection(bd,now,Math.floor(natalPos.asc/30));
+      return profection(bd,now,Math.floor(natalPos.asc/30));
     }catch{return null;}
   },[profile,natalPos,now]);
   // Operator's Loop: committing an election creates a casting record
@@ -67,7 +67,7 @@ export default function ElectScreen({now,natalPos,eph,profile}){
   const runScan=()=>{setScanning(true);setElections([]);setSelIdx(null);const snap=new Date(now);setTimeout(()=>{
     const raw=scanElections(snap,days,planet,natalPos,elLoc);
     // Decorate each window with elective memory so your record can rank them.
-    const decorated=raw.map(r=>{const m=electiveMemory(memStats,electionFactors(r.date,planet,r.assess.score));return{...r,mem:m,adjusted:m.available?Math.max(0,Math.min(100,r.assess.score+m.adjustment)):r.assess.score};});
+    const decorated=raw.map(r=>{const m=electiveMemory(memStats,electionFactors(r.date,planet,r.assess.score,elLoc));return{...r,mem:m,adjusted:m.available?Math.max(0,Math.min(100,r.assess.score+m.adjustment)):r.assess.score};});
     setElections(decorated);setScanning(false);
   },300);};
   const SEASON_DOMAINS=[

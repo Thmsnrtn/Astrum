@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 // CHART — full-moment and natal chart computation (extracted from App.jsx)
 // ═══════════════════════════════════════════════════════════════════════
-import { norm, dateToJD, planetLon, dailyMotion, lonToZodiac, getDignity, dignityScore, getCombustion, getBound, getAntisciaAspects, getPlanetPhase, checkVoC, getPlanetaryHour, starLonAt, meanNode, sunriseSetUTC, calcASC, calcMC, calcPOF, getPlanetaryHourUnequal, getAspectsAll, meanLilith, chironLon, trueNode, getTriplicity } from "./astro.js";
+import { norm, dateToJD, planetLon, dailyMotion, lonToZodiac, getDignity, dignityScore, getCombustion, getBound, getAntisciaAspects, getPlanetPhase, checkVoC, getPlanetaryHour, starLonAt, meanNode, sunAltitude, calcASC, calcMC, calcPOF, getPlanetaryHourUnequal, getAspectsAll, meanLilith, chironLon, trueNode, getTriplicity } from "./astro.js";
 import { P } from "../data/planets.js";
 import { essentialScore, essentialDignity } from "./reception.js";
 import { DECANS } from "../data/decans.js";
@@ -42,8 +42,7 @@ export function computeEphemeris(date,location,opts={}){
   if(location?.lat&&location?.lon){
     asc=calcASC(jd,location.lat,location.lon);
     mc=calcMC(jd,location.lon);
-    const ss=sunriseSetUTC(date,location.lat,location.lon);
-    isDayChart=ss?date>=ss.rise&&date<ss.set:pos.sun.lon>=0&&pos.sun.lon<=180;
+    isDayChart=sunAltitude(jd,location.lat,location.lon)>0;
     // All seven Hermetic Lots from the verified sect-aware engine (Paulus).
     lots=computeLots({asc,isDayChart,sun:pos.sun.lon,moon:pos.moon.lon,mercury:pos.mercury.lon,venus:pos.venus.lon,mars:pos.mars.lon,jupiter:pos.jupiter.lon,saturn:pos.saturn.lon});
     // Sect known → upgrade every planet to the weighted Ptolemaic essential
@@ -79,8 +78,9 @@ export function calcNatal(bd,location){
   if(location?.lat&&location?.lon){
     asc=calcASC(jd,location.lat,location.lon);
     mc=calcMC(jd,location.lon);
-    const ss=sunriseSetUTC(bd,location.lat,location.lon);
-    isDayChart=ss?bd>=ss.rise&&bd<ss.set:pos.sun.lon>=0&&pos.sun.lon<=180;
+    // Sect from the Sun's altitude at birth: diurnal when it stands above
+    // the horizon, at any latitude, independent of any sunrise table.
+    isDayChart=sunAltitude(jd,location.lat,location.lon)>0;
     pof=calcPOF(asc,pos.moon.lon,pos.sun.lon,isDayChart);
   }
   // Triplicities for each planet

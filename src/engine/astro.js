@@ -228,26 +228,44 @@ export function checkVoC(jd,mode="lilly"){
   return{isVoC:!hasApplyingAspect,hoursToIngress,nextSign:SIGNS[(moonSign+1)%12],mode};
 }
 
+// The next sign change in either direction (a retrograde planet re-enters
+// the sign behind it). Walks forward at a stride too short for any body to
+// enter and leave a sign within one step, then bisects that step. A single
+// bisection over a fixed window cannot work: the Moon changes sign ~26 times
+// in 60 days and Saturn not at all, so it returned the wrong crossing for
+// the one and an ingress that does not exist for the other.
+const INGRESS_STEP={moon:0.1,sun:0.5,mercury:0.25,venus:0.5,mars:0.5,jupiter:2,saturn:2};
+const INGRESS_HORIZON={moon:4,sun:33,mercury:120,venus:180,mars:280,jupiter:450,saturn:1200};
 export function nextIngress(planet,jd){
-  const currentSign=Math.floor(planetLon(planet,jd)/30);
-  const targetSign=(currentSign+1)%12;
-  let lo=jd,hi=jd+60;
-  for(let i=0;i<40;i++){
-    const mid=(lo+hi)/2;
-    const s=Math.floor(planetLon(planet,mid)/30);
-    if(s===targetSign)hi=mid;else lo=mid;
+  const signAt=t=>Math.floor(norm(planetLon(planet,t))/30);
+  const start=signAt(jd),step=INGRESS_STEP[planet]??0.5,horizon=INGRESS_HORIZON[planet]??450;
+  let lo=jd;
+  for(let t=jd+step;t<=jd+horizon;t+=step){
+    if(signAt(t)!==start){
+      let hi=t;
+      for(let i=0;i<40;i++){const mid=(lo+hi)/2;if(signAt(mid)===start)lo=mid;else hi=mid;}
+      return{jd:hi,sign:SIGNS[signAt(hi)]};
+    }
+    lo=t;
   }
-  return{jd:(lo+hi)/2,sign:SIGNS[targetSign]};
+  return null;
 }
 
 export const HOUR_ORDER=["saturn","jupiter","mars","sun","venus","mercury","moon"];
 export const DAY_RULERS={0:"sun",1:"moon",2:"mars",3:"mercury",4:"jupiter",5:"venus",6:"saturn"};
 export const DAY_NAMES=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+// No place known: the classical approximation — sunrise taken as 06:00 on
+// the device clock and twenty-four equal hours. The planetary day still
+// begins at that sunrise (so 00:00–06:00 is the previous day's night) and
+// the day's own ruler takes its first hour, exactly as with true sunrises.
+// hourNum counts 1–24 like getPlanetaryHourUnequal; `equal` marks it as the
+// approximation so no surface labels it as true unequal hours.
 export function getPlanetaryHour(date){
-  const dow=date.getDay(),dr=DAY_RULERS[dow],ri=HOUR_ORDER.indexOf(dr);
-  const mn=new Date(date);mn.setHours(0,0,0,0);
-  const hn=Math.floor((date-mn)/3600000)%24,pi=(ri+hn)%7;
-  return{planet:HOUR_ORDER[pi],hourNum:hn,msRemaining:new Date(mn.getTime()+(hn+1)*3600000)-date,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:dr};
+  const start=new Date(date);start.setHours(6,0,0,0);
+  if(date<start)start.setDate(start.getDate()-1);
+  const dr=DAY_RULERS[start.getDay()],ri=HOUR_ORDER.indexOf(dr);
+  const hn=Math.max(0,Math.min(23,Math.floor((date-start)/3600000))),pi=(ri+hn)%7;
+  return{planet:HOUR_ORDER[pi],hourNum:hn+1,msRemaining:start.getTime()+(hn+1)*3600000-date,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:dr,isDayHour:hn<12,equal:true,lenMs:3600000};
 }
 // Precess a J2000.0 star longitude to current epoch (~50.29"/year = 1.3969°/century)
 export function precessStar(lon0,jd){return norm(lon0+1.396971*(jd-2451545)/36525);}
@@ -259,7 +277,28 @@ export function meanNode(jd){const T=(jd-2451545)/36525;return norm(125.04452-19
 // ═══════════════════════════════════════════════════════════════════════
 // LOCATION-BASED ASTRONOMY (Phase 1c)
 // ═══════════════════════════════════════════════════════════════════════
-// Sunrise/Sunset in UTC — USNO algorithm, ~5 min accuracy for 0°-60° lat
+// ── The place's own day ─────────────────────────────────────────────────
+// Which day it is at a place depends on the place, not on the device's time
+// zone or on UTC, so days are counted in local mean solar time (UTC shifted
+// by longitude/15 h). Taking the UTC calendar date instead handed the
+// Americas tomorrow's sunrise every evening and Asia yesterday's every
+// morning, which flipped the planetary hour, its ruler, and the sect.
+// Sunrise sits near 06:00 mean solar time everywhere sunrise exists, so the
+// weekday of a planetary day (which begins at sunrise) is unambiguous here
+// even where civil time is offset from solar time by hours.
+const MS_DAY=86400000;
+function solarDate(date,lon){const s=new Date(date.getTime()+lon/15*3600000);return{y:s.getUTCFullYear(),m:s.getUTCMonth(),d:s.getUTCDate(),weekday:s.getUTCDay()};}
+export function solarWeekday(date,lon){return solarDate(date,lon).weekday;}
+// The Sun's altitude in degrees (center, no refraction) at a place and
+// moment. Sect needs nothing more: a chart is diurnal when the Sun stands
+// above the horizon — the same test as the Sun's house in the chart.
+export function sunAltitude(jd,lat,lon){
+  const l=sunLon(jd)*D2R,e=obliquity(jd)*D2R;
+  const ra=Math.atan2(Math.sin(l)*Math.cos(e),Math.cos(l))*R2D;
+  const dec=Math.asin(Math.sin(e)*Math.sin(l)),phi=lat*D2R,H=(gstDeg(jd)+lon-ra)*D2R;
+  return Math.asin(Math.sin(phi)*Math.sin(dec)+Math.cos(phi)*Math.cos(dec)*Math.cos(H))*R2D;
+}
+// Sunrise/Sunset (as UTC instants) of the place's solar day containing `date`.
 export function sunriseSetUTC(date,lat,lon){
   // Real-sun computation (roots audit): the previous cosine-toy declination
   // and EoT-free noon left London's solstice day ~25 min short and moved
@@ -268,7 +307,10 @@ export function sunriseSetUTC(date,lat,lon){
   // declination from the actual solar longitude, standard −0.833° altitude
   // (refraction + semidiameter), one refinement pass. Agrees with NOAA to
   // about a minute; upgrades further when the Swiss Ephemeris is loaded.
-  const jd0=dateToJD(new Date(Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),date.getUTCDate(),12,0,0)));
+  // Start from local mean noon of the place's solar day, so the noon solve
+  // below (within ~16 min of it, the equation of time) lands on that day.
+  const sd=solarDate(date,lon);
+  const jd0=dateToJD(new Date(Date.UTC(sd.y,sd.m,sd.d,12,0,0)-lon/15*3600000));
   const sunEq=jd=>{
     const l=sunLon(jd)*D2R,e=obliquity(jd)*D2R;
     return{ra:norm(Math.atan2(Math.sin(l)*Math.cos(e),Math.cos(l))*R2D),dec:Math.asin(Math.sin(e)*Math.sin(l))*R2D};
@@ -328,39 +370,28 @@ export function calcMC(jd,lon){
 export function calcPOF(asc,moonL,sunL,isDayChart){return norm(isDayChart?asc+moonL-sunL:asc+sunL-moonL);}
 // Part of Spirit: day chart = ASC + Sun - Moon; night chart = ASC + Moon - Sun
 export function calcPOS(asc,moonL,sunL,isDayChart){return norm(isDayChart?asc+sunL-moonL:asc+moonL-sunL);}
-// True unequal planetary hours using local sunrise/sunset
+// True unequal planetary hours from the place's own sunrises and sunsets.
+// The planetary day begins at sunrise: before today's sunrise it is still
+// the night of the previous day, under the previous day's ruler. The ruler
+// is the weekday at the place of the sunrise that began the day — never the
+// device's local weekday, which can be a day off from the place.
 export function getPlanetaryHourUnequal(now,lat,lon){
-  const dow=now.getDay(),dr=DAY_RULERS[dow],ri=HOUR_ORDER.indexOf(dr);
-  const todaySS=sunriseSetUTC(now,lat,lon);
-  if(!todaySS)return getPlanetaryHour(now); // fallback for polar regions
-  const{rise,set}=todaySS;
-  const afterSunrise=now>=rise;
-  if(afterSunrise&&now<set){
-    // Day hour
-    const dayLen=(set-rise)/12;
-    const hn=Math.min(11,Math.floor((now-rise)/dayLen));
-    const pi=(ri+hn)%7;
-    return{planet:HOUR_ORDER[pi],hourNum:hn+1,msRemaining:dayLen-(now-rise)%dayLen,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:dr,isDayHour:true,rise,set};
-  } else if(afterSunrise){
-    // Night hour (after sunset, before midnight/next sunrise)
-    const tomorrow=new Date(now.getTime()+86400000);
-    const tomSS=sunriseSetUTC(tomorrow,lat,lon);
-    const nextRise=tomSS?.rise||new Date(rise.getTime()+86400000);
-    const nightLen=(nextRise-set)/12;
-    const hn=Math.min(11,Math.floor((now-set)/nightLen));
-    const pi=(ri+12+hn)%7;
-    return{planet:HOUR_ORDER[pi],hourNum:hn+13,msRemaining:nightLen-(now-set)%nightLen,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:dr,isDayHour:false,rise,set};
-  } else {
-    // Before sunrise — in previous astrological day's night hours
-    const yesterday=new Date(now.getTime()-86400000);
-    const ydSS=sunriseSetUTC(yesterday,lat,lon);
-    if(!ydSS)return getPlanetaryHour(now);
-    const ydDr=DAY_RULERS[yesterday.getDay()],ydRi=HOUR_ORDER.indexOf(ydDr);
-    const nightLen=(rise-ydSS.set)/12;
-    const hn=Math.min(11,Math.floor((now-ydSS.set)/nightLen));
-    const pi=(ydRi+12+hn)%7;
-    return{planet:HOUR_ORDER[pi],hourNum:hn+13,msRemaining:nightLen-(now-ydSS.set)%nightLen,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:ydDr,isDayHour:false,rise,set};
+  const today=sunriseSetUTC(now,lat,lon);
+  if(!today)return getPlanetaryHour(now); // polar day or night: no sunrise to count from
+  let rise=today.rise,set=today.set,nextRise=null;
+  if(now<today.rise){
+    const prev=sunriseSetUTC(new Date(now.getTime()-MS_DAY),lat,lon);
+    if(!prev)return getPlanetaryHour(now);
+    rise=prev.rise;set=prev.set;nextRise=today.rise;
+  }else if(now>=today.set){
+    nextRise=sunriseSetUTC(new Date(now.getTime()+MS_DAY),lat,lon)?.rise||new Date(today.rise.getTime()+MS_DAY);
   }
+  const dr=DAY_RULERS[solarWeekday(rise,lon)],ri=HOUR_ORDER.indexOf(dr);
+  const isDay=now<set;
+  const start=isDay?rise:set,len=((isDay?set:nextRise)-start)/12;
+  const hn=Math.max(0,Math.min(11,Math.floor((now-start)/len)));
+  const pi=(ri+(isDay?0:12)+hn)%7;
+  return{planet:HOUR_ORDER[pi],hourNum:hn+(isDay?1:13),msRemaining:start.getTime()+(hn+1)*len-now,nextPlanet:HOUR_ORDER[(pi+1)%7],dayRuler:dr,isDayHour:isDay,lenMs:len,rise:today.rise,set:today.set};
 }
 
 export const YEAR_SEC = 31557600;

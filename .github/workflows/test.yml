@@ -15,8 +15,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Undefined-identifier check
+        run: npm run lint
       - name: Unit + architecture tests (includes the import-cycle guard)
         run: npx vitest run
+      # Runners keep UTC, where the device's day, the UTC day, and London's
+      # day coincide — the case that hid wrong planetary hours and sect
+      # everywhere else. Re-run the suite on a clock far from Greenwich.
+      - name: Unit tests on a non-UTC device clock
+        run: TZ=America/Los_Angeles npx vitest run
       - name: Build
         run: npm run build
       - name: Install Playwright Chromium

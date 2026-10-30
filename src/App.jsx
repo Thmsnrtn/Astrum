@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, Fragment, lazy, Suspense, Component, memo as React_memo } from "react";
 import { askClaude, aiConfigured, aiUnconfiguredMessage, aiProviderInfo, resolveAIConfig, AI_PROVIDERS } from "./ai/client.js";
 import { WEBLLM_MODELS } from "./ai/webllm.js";
+import { buildOracleContext } from "./ai/oracleContext.js";
 import { loadJSON, saveJSON } from "./lib/storage.js";
 import { exportAll, importAll, markExported, lastExportedAt, backupFilename, downloadText, shareOnNative, copyToClipboard } from "./lib/backup.js";
 import { captureConditions, transitsToNatal } from "./engine/snapshot.js";

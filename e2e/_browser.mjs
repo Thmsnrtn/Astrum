@@ -1,8 +1,11 @@
 // Shared launcher: uses the environment's preinstalled Chromium when
-// present (dev container), falls back to Playwright's own (CI).
+// present (dev container), falls back to Playwright's own (CI). The stable
+// symlink comes first — the versioned directory behind it changes whenever
+// the container image is rebuilt.
 import { chromium } from 'playwright';
 import { existsSync } from 'node:fs';
-const PREINSTALLED = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+const PREINSTALLED = ['/opt/pw-browsers/chromium', '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'];
 export function launch() {
-  return chromium.launch(existsSync(PREINSTALLED) ? { executablePath: PREINSTALLED } : {});
+  const executablePath = PREINSTALLED.find(p => existsSync(p));
+  return chromium.launch(executablePath ? { executablePath } : {});
 }

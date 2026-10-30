@@ -54,8 +54,7 @@ function OrreryInner({eph,hour,natalPos,onPlanetClick}){
 
 function HourRing({hour,now}){
   const p=P[hour.planet],dr=P[hour.dayRuler];
-  // Use actual hour length for unequal hours, otherwise assume 60 min
-  const hourLenMs=hour.isDayHour!=null?(hour.isDayHour&&hour.rise&&hour.set?(hour.set-hour.rise)/12:(hour.rise&&hour.set?(86400000-(hour.set-hour.rise))/12:3600000)):3600000;
+  const hourLenMs=hour.lenMs||3600000;
   const prog=1-hour.msRemaining/hourLenMs;
   const mins=Math.floor(hour.msRemaining/60000),secs=Math.floor((hour.msRemaining%60000)/1000);
   const cx=60,cy=60,r=50,c=2*Math.PI*r;
@@ -74,7 +73,7 @@ function HourRing({hour,now}){
         <circle cx={cx} cy={cy} r={25} fill="rgba(4,4,16,0.9)" stroke="rgba(var(--tint-rgb),0.08)" strokeWidth={1}/>
         <text x={cx} y={cy-6} textAnchor="middle" fill={p.col} fontSize={16} fontFamily="serif">{p.sym}</text>
         <text x={cx} y={cy+8} textAnchor="middle" fill="rgba(var(--tint-rgb),0.7)" fontSize={9} fontFamily={F} letterSpacing={1}>{String(mins).padStart(2,"0")}:{String(secs).padStart(2,"0")}</text>
-        <text x={cx} y={cy+18} textAnchor="middle" fill="rgba(var(--tint-rgb),0.3)" fontSize={6} fontFamily={F} letterSpacing={2}>HR {hour.hourNum+1}</text>
+        <text x={cx} y={cy+18} textAnchor="middle" fill="rgba(var(--tint-rgb),0.3)" fontSize={6} fontFamily={F} letterSpacing={2}>HR {hour.hourNum}</text>
       </svg>
       <div>
         <div style={L(`${p.col}70`,8)}>Planetary Hour</div>
@@ -86,7 +85,7 @@ function HourRing({hour,now}){
         <div style={{fontFamily:F,fontSize:9,color:"rgba(var(--tint-rgb),0.35)",marginTop:2,fontStyle:"italic"}}>
           {hour.dayRuler===hour.planet?"Pure planetary · Day and hour aligned":`${P[hour.dayRuler].name} of ${P[hour.planet].name}`}
         </div>
-        {hour.isDayHour!=null&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.25)",marginTop:4,letterSpacing:1}}>{hour.isDayHour?"DAY HOUR":"NIGHT HOUR"} · TRUE UNEQUAL</div>}
+        {hour.isDayHour!=null&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.25)",marginTop:4,letterSpacing:1}}>{hour.isDayHour?"DAY HOUR":"NIGHT HOUR"} · {hour.equal?"APPROXIMATE — SET YOUR PLACE":"TRUE UNEQUAL"}</div>}
         {hour.isDayHour!=null&&hour.rise&&<div style={{fontFamily:F,fontSize:8.5,color:"rgba(var(--tint-rgb),0.2)",letterSpacing:0.5,marginTop:1}}>
           ☀ {hour.rise.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",timeZone:"UTC"})} — {hour.set?.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",timeZone:"UTC"})} UTC
         </div>}
@@ -212,7 +211,7 @@ export default function SkyScreen({now,hour,eph,natalPos,onWork,profile,fractalM
           )}
           {eph.isDayChart!=null&&(
             <div style={{gridColumn:"1/-1",borderTop:"1px solid rgba(var(--tint-rgb),0.04)",marginTop:4,paddingTop:4,fontFamily:F,fontSize:8,color:"rgba(var(--tint-rgb),0.3)",letterSpacing:1}}>
-              {eph.isDayChart?"☉ DAY CHART · Diurnal sect":"☽ NIGHT CHART · Nocturnal sect"} {hour.isDayHour!=null&&(hour.isDayHour?"· Unequal Hours":"· Unequal Hours")}
+              {eph.isDayChart?"☉ DAY CHART · Diurnal sect":"☽ NIGHT CHART · Nocturnal sect"} {!hour.equal&&"· Unequal Hours"}
             </div>
           )}
         </div>
