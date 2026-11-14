@@ -1,0 +1,400 @@
+/* ==========================================================================
+   Astrum — "Instrument & Edition" design tokens · revision 2 · 30 Oct 2026
+   --------------------------------------------------------------------------
+   • Web content layer only. Native chrome (toolbar, sidebar, inspector,
+     menus, popovers, sheets, Quick Capture, Rite transport, widgets,
+     controls) uses SYSTEM materials and follows Liquid Glass Clear/Tinted
+     (macOS 26.1+). Nothing below imitates glass: no backdrop-filter, ever.
+   • 1 CSS px = 1 pt in WKWebView on the Mac.
+   • Every colour is light-dark(LIGHT, DARK). The shell sets data-theme from
+     NSApp.effectiveAppearance; without it the page follows the system.
+   • The shell pushes: --system-accent-light, --system-accent-dark (both
+     appearances of controlAccentColor; unset when the accent is Multicolor),
+     --r-window, and the attributes data-increase-contrast,
+     data-reduce-transparency, data-reduce-motion,
+     data-differentiate-without-color, data-show-borders, data-presentation,
+     data-sky, data-hour, data-moon-void, data-legacy.
+   • Measured 2026-10-30 (WCAG 2 contrast; OKLab ΔE×100 with Machado CVD):
+     a CI gate re-measures every text token (≥4.5:1) and every non-text
+     token (≥3:1) on window, platter, raised, every wash keyframe and Night.
+   ========================================================================== */
+
+:root { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"]  { color-scheme: dark; }
+
+:root {
+  /* ---------- Families (system only; nothing bundled) ---------- */
+  --font-ui: system-ui, -apple-system, sans-serif;          /* SF Pro */
+  --font-display: system-ui, -apple-system, sans-serif;     /* SF Pro Display optical size */
+  --font-read: ui-serif, "New York", serif;                 /* reading, liturgy, canon, transcripts */
+  --font-mono: ui-monospace, "SF Mono", monospace;          /* ephemeris columns only */
+  --numeric-live: tabular-nums lining-nums;                 /* applied ONLY via .num */
+  --numeric-prose: oldstyle-nums proportional-nums;         /* New York prose */
+  --text-scale: 1;                                          /* Settings ▸ Text Size: .92 · 1 · 1.1 · 1.2 · 1.35 */
+  --floor-app: 10px;                                        /* never below, at any Text Size */
+  --floor-widget: 11px;                                     /* native; mirrored for parity */
+
+  /* ---------- Type scale (macOS text styles; use as `font: var(--type-body)`) ---------- */
+  --type-large-title: 700 calc(26px * var(--text-scale))/calc(32px * var(--text-scale)) var(--font-display);
+  --type-title-1:     400 calc(22px * var(--text-scale))/calc(26px * var(--text-scale)) var(--font-display);
+  --type-title-2:     400 calc(17px * var(--text-scale))/calc(22px * var(--text-scale)) var(--font-ui);
+  --type-title-3:     400 calc(15px * var(--text-scale))/calc(20px * var(--text-scale)) var(--font-ui);
+  --type-headline:    700 calc(13px * var(--text-scale))/calc(16px * var(--text-scale)) var(--font-ui);
+  --type-body:        400 calc(13px * var(--text-scale))/calc(16px * var(--text-scale)) var(--font-ui);
+  --type-body-emph:   600 calc(13px * var(--text-scale))/calc(16px * var(--text-scale)) var(--font-ui);
+  --type-callout:     400 max(var(--floor-app), calc(12px * var(--text-scale)))/max(13px, calc(15px * var(--text-scale))) var(--font-ui);
+  --type-subheadline: 400 max(var(--floor-app), calc(11px * var(--text-scale)))/max(13px, calc(14px * var(--text-scale))) var(--font-ui);
+  --type-footnote:    400 max(var(--floor-app), calc(10px * var(--text-scale)))/max(13px, calc(13px * var(--text-scale))) var(--font-ui);
+  --type-caption:     400 max(var(--floor-app), calc(10px * var(--text-scale)))/max(13px, calc(13px * var(--text-scale))) var(--font-ui);
+
+  /* Instrument numerals (pair with class .num). No Display XL: the Altar hero is the ruler, not a timer. */
+  --type-display-l: 500 64px/68px var(--font-display);   /* Altar: ruler glyph + "Hour of Venus" */
+  --type-display-m: 500 44px/48px var(--font-display);   /* Altar: remaining minutes · Today hour label */
+  --type-display-s: 500 28px/32px var(--font-display);   /* complication values */
+
+  /* Edition (New York) */
+  --type-read:        400 calc(17px * var(--text-scale))/calc(27px * var(--text-scale)) var(--font-read);  /* reader, 14–24 adjustable */
+  --type-read-title:  500 calc(34px * var(--text-scale))/calc(40px * var(--text-scale)) var(--font-read);
+  --type-transcript:  400 calc(15px * var(--text-scale))/calc(22px * var(--text-scale)) var(--font-read);
+  --type-card:        400 calc(15px * var(--text-scale))/calc(22px * var(--text-scale)) var(--font-read);
+  --type-liturgy:     400 calc(22px * var(--text-scale))/calc(34px * var(--text-scale)) var(--font-read);
+  --type-rubric:      italic 400 calc(15px * var(--text-scale))/calc(22px * var(--text-scale)) var(--font-read);  /* colour: --ink-2 */
+  --type-quote:       italic 400 calc(15px * var(--text-scale))/calc(23px * var(--text-scale)) var(--font-read);
+  --type-margin-note: italic 400 max(var(--floor-app), calc(12px * var(--text-scale)))/max(14px, calc(16px * var(--text-scale))) var(--font-read);
+  --type-mono:        400 calc(12px * var(--text-scale))/calc(16px * var(--text-scale)) var(--font-mono);
+
+  /* ---------- Materials (opaque; the web layer never draws translucency) ---------- */
+  --mat-window:   light-dark(#F6F4EF, #0B0D12);
+  --mat-platter:  light-dark(#FFFFFF, #141821);
+  --mat-raised:   light-dark(#FBFAF7, #1B2030);
+  --mat-sunken:   light-dark(#EFECE5, #07090D);
+  --mat-paper:    light-dark(#FBF8F1, #16140F);              /* reader, canon, transcript, liturgy */
+  --mat-chrome-fallback: light-dark(#F2F0EB, #12151C);       /* web/iPad without native chrome; solid */
+  /* Platter set over the Altar's full "Sky" background: opaque, tinted, no blur.
+     Measured: label-2 ≥ 4.83:1 (light) and ≥ 6.38:1 (dark) over all six stages. */
+  --mat-platter-on-sky: color-mix(in oklab, var(--mat-platter) 92%, var(--skyfull-bottom));
+  /* Separation is space and tone, never drawn edges. Borders exist only under
+     Increase Contrast / Show Borders (see below). */
+  --platter-border: 0 0 0 0 transparent;
+
+  /* ---------- Labels and ink (contrast on platter / window) ---------- */
+  --label:   light-dark(#1D1D1F, #EDEFF3);     /* 16.8 / 15.3 : 1 light · 15.4 : 1 dark */
+  --label-2: light-dark(#66666B, #A4A9B4);     /* light 5.7 platter · 5.2 window · 5.5 raised; dark 7.5 · 8.3 · 6.9 */
+  --label-3: light-dark(#7A7A80, #82889A);     /* light 4.3 platter · 3.9 window; dark 5.0 — placeholders & disabled ONLY */
+  --label-4: light-dark(#C7C7CC, #3A3F4C);     /* decorative ticks in figures, never text or meaning */
+  --ink:     light-dark(#23201B, #E8E2D4);     /* on --mat-paper: 15.3 / 14.3 : 1 */
+  --ink-2:   light-dark(#625A4E, #ABA393);     /* rubrics, running heads: 6.4 / 7.4 : 1 */
+  --hairline:         light-dark(rgb(0 0 0 / 0.08), rgb(255 255 255 / 0.08));   /* figures only */
+  --separator-strong: light-dark(rgb(0 0 0 / 0.20), rgb(255 255 255 / 0.20));   /* IC / Show Borders */
+  --fill:   light-dark(rgb(0 0 0 / 0.05), rgb(255 255 255 / 0.06));
+  --fill-2: light-dark(rgb(0 0 0 / 0.09), rgb(255 255 255 / 0.10));
+
+  /* ---------- Accent ---------- */
+  --accent-gilt: light-dark(#85651A, #E8CF98);  /* 5.4:1 white · 4.9:1 window / 11.7:1 platter; ≥ ΔE 5.0 (light) / 8.4 (dark) from every planet under CVD */
+  --accent: light-dark(var(--system-accent-light, #85651A), var(--system-accent-dark, #E8CF98));  /* native-style controls, text selection, focus outlines OUTSIDE figures */
+  --on-accent: light-dark(#FFFFFF, #1A1405);
+  --selection: color-mix(in oklab, var(--accent) 22%, transparent);
+  --focus-outline: 3px solid color-mix(in oklab, var(--accent) 55%, transparent);
+  --focus-offset: 1px;
+  /* Content-semantic colours are ALWAYS Gilt, whatever the system accent. */
+  --now-needle:  var(--accent-gilt);           /* never red (red reads as Mars) */
+  --window-open: var(--accent-gilt);
+  /* Selection & focus INSIDE figures: shape, never accent hue (accents collide with planets:
+     dark Blue–Jupiter ΔE 4.0, Red–Mars 4.9, Orange–Sun 5.6, Graphite–Saturn 3.4). */
+  --figure-ring-color: var(--label);
+  --figure-ring-width: 1.5px;
+  --figure-ring-gap: 2px;
+  --figure-selected-weight: 600;
+
+  /* ---------- Per-planet palette (atmosphere only; the glyph is identity; never text) ---------- */
+  --planet-saturn:  light-dark(#5C4A32, #9C9284);   /* umber / lead · light 8.5:1, ΔE 10.4 from label-2, 11.8 from Gilt */
+  --planet-jupiter: light-dark(#1D44A8, #4F7FF2);   /* sapphire */
+  --planet-mars:    light-dark(#A3241A, #EC5A3C);   /* iron */
+  --planet-sun:     light-dark(#B26F00, #FF9A2E);   /* saffron (graphics only in light: 4.1:1) */
+  --planet-venus:   light-dark(#0A7D6E, #35C2A0);   /* verdigris */
+  --planet-mercury: light-dark(#8A5CD0, #CBA8FF);   /* quicksilver violet */
+  --planet-moon:    light-dark(#2F5F84, #D3E0EC);   /* argent */
+  /* Opaque tints (ribbon & calendar cells). Not translucent, so Reduce Transparency leaves them alone.
+     Glyph on its own tinted cell ≥ 3.4:1 light, ≥ 4.0:1 dark. */
+  --tint-pct: 14%;
+  --tint-saturn:  color-mix(in oklab, var(--planet-saturn)  var(--tint-pct), var(--mat-platter));
+  --tint-jupiter: color-mix(in oklab, var(--planet-jupiter) var(--tint-pct), var(--mat-platter));
+  --tint-mars:    color-mix(in oklab, var(--planet-mars)    var(--tint-pct), var(--mat-platter));
+  --tint-sun:     color-mix(in oklab, var(--planet-sun)     var(--tint-pct), var(--mat-platter));
+  --tint-venus:   color-mix(in oklab, var(--planet-venus)   var(--tint-pct), var(--mat-platter));
+  --tint-mercury: color-mix(in oklab, var(--planet-mercury) var(--tint-pct), var(--mat-platter));
+  --tint-moon:    color-mix(in oklab, var(--planet-moon)    var(--tint-pct), var(--mat-platter));
+  --cell-outline-width: 0px;                          /* 1px under Increase Contrast, in the cell's planet hue */
+  --hour-hue: var(--planet-venus);                    /* set by [data-hour] */
+
+  /* ---------- Semantic states (shape first; luminance second; never hue for good/bad) ---------- */
+  --state-dignified:   var(--label);
+  --state-minor:       var(--label);
+  --state-debilitated: var(--label-2);               /* + 135° hatch, dignity scale only */
+  --state-peregrine:   var(--label-2);               /* open ring on the zero line */
+  --state-retro:       var(--label-2);               /* ℞ suffix, reversed arrow, dashed trail */
+  --state-sun-relation:var(--label-2);               /* cazimi disc · combust 3 rays · beams 1 ray — NO opacity */
+  --state-void:        light-dark(#7C7C82, #767C8C); /* stroke & dots only: light 3.8 window · 4.2 platter · 4.0 raised; dark 4.7 · 4.3 · 3.9; ≥3.3 on every wash keyframe */
+  --state-closed:      var(--label-3);               /* dashed outline, 3.9:1 light window */
+  --state-caution-ink: var(--label);                 /* exclamationmark.triangle + sentence; no fill */
+  --state-caution-fill: transparent;
+  --verdict-ink:       var(--label);                 /* ● ◐ ○ ◌ */
+  --provenance-fill:   var(--fill);
+  --provenance-ink:    var(--label-2);
+  --provenance-unsourced-ink: var(--label-2);        /* italic + dashed outline (label-3 is not information) */
+  --destructive: light-dark(#D70015, #FF453A);       /* native alerts & destructive menu items only; never in figures */
+
+  /* ---------- Textures: one per state, never shared ---------- */
+  --hatch-w: 1px;
+  --hatch-pitch: 4px;
+  --tex-debility: repeating-linear-gradient(135deg, var(--state-debilitated) 0 var(--hatch-w), transparent var(--hatch-w) var(--hatch-pitch));  /* dignity scale only */
+  --void-dot: 1px;
+  --void-pitch: 6px;
+  --tex-void: radial-gradient(circle, var(--state-void) 0 var(--void-dot), transparent calc(var(--void-dot) + 0.5px)) 0 0 / var(--void-pitch) var(--void-pitch);  /* + 1px hairline outline in --state-void */
+  --void-outline: 1px solid var(--state-void);
+  --closed-outline: 1px dashed var(--state-closed);  /* closed planetary season */
+  --break-gap: 3px;                                  /* broken testimony: true gap, square caps, struck end-cap */
+  --break-cap-width: 1.5px;
+  --show-state-labels: 0;                            /* 1 under Differentiate Without Color */
+
+  /* ---------- Sky wash keyframes (Today, Sky, Altar). OKLCH chroma ≤ 0.06.
+     Light floor L 0.935 → label-2 ≥ 4.61:1, void ≥ 3.35:1. Dark: label-2 ≥ 5.86:1. ---------- */
+  --sky-night-top:       light-dark(oklch(0.945 0.015 265), oklch(0.14 0.015 265));
+  --sky-night-bottom:    light-dark(oklch(0.935 0.020 265), oklch(0.17 0.020 265));
+  --sky-astro-top:       light-dark(oklch(0.945 0.020 265), oklch(0.15 0.025 265));
+  --sky-astro-bottom:    light-dark(oklch(0.935 0.025 268), oklch(0.19 0.035 268));
+  --sky-nautical-top:    light-dark(oklch(0.94  0.020 262), oklch(0.17 0.035 262));
+  --sky-nautical-bottom: light-dark(oklch(0.935 0.030 265), oklch(0.23 0.045 265));
+  --sky-civil-top:       light-dark(oklch(0.95  0.020 280), oklch(0.19 0.040 268));
+  --sky-civil-bottom:    light-dark(oklch(0.935 0.040 30),  oklch(0.27 0.050 35));
+  --sky-golden-top:      light-dark(oklch(0.97  0.020 240), oklch(0.22 0.045 250));
+  --sky-golden-bottom:   light-dark(oklch(0.94  0.045 70),  oklch(0.30 0.060 65));
+  --sky-day-top:         light-dark(oklch(0.97  0.020 235), oklch(0.21 0.040 245));
+  --sky-day-bottom:      light-dark(oklch(0.95  0.030 230), oklch(0.26 0.045 235));
+  --sky-top: var(--sky-day-top);                     /* set by [data-sky]; repaints on a 60 s tick and at hinges */
+  --sky-bottom: var(--sky-day-bottom);
+  /* Hour bloom: DARK appearance only (light would cost text contrast). */
+  /* light-dark() takes colours only, so the bloom is a colour, not an opacity. */
+  --wash-hour-bloom: light-dark(transparent, color-mix(in oklab, var(--hour-hue) 6%, transparent));
+  --wash-hour: radial-gradient(60% 50% at 18% 0%, var(--wash-hour-bloom), transparent 70%);
+  --wash: var(--wash-hour), linear-gradient(to bottom, var(--sky-top), var(--sky-bottom));
+  /* Full computed sky: ONLY inside the Horizon figure, or as the Altar/Rite "Sky" background,
+     where every text group sits on --mat-platter-on-sky. Appearance-independent. */
+  --skyfull-night-top: #05070F;    --skyfull-night-bottom: #0B1226;
+  --skyfull-astro-top: #070B1C;    --skyfull-astro-bottom: #15204A;
+  --skyfull-nautical-top: #0C1636; --skyfull-nautical-bottom: #2B3C78;
+  --skyfull-civil-top: #1B2B5E;    --skyfull-civil-bottom: #C46A4E;
+  --skyfull-golden-top: #3E6FB0;   --skyfull-golden-bottom: #F2B36B;
+  --skyfull-day-top: #2F78D0;      --skyfull-day-bottom: #A9CFF2;
+  --skyfull-top: var(--skyfull-day-top);             /* set by [data-sky] */
+  --skyfull-bottom: var(--skyfull-day-bottom);
+  --altar-clear-dim: 35%;                            /* the single Clear-glass instance (native) dims by this in daylight */
+
+  /* ---------- Spacing (4 pt base) ---------- */
+  --space-1: 2px;  --space-2: 4px;  --space-3: 8px;  --space-4: 12px; --space-5: 16px;
+  --space-6: 20px; --space-7: 24px; --space-8: 32px; --space-9: 40px; --space-10: 48px; --space-11: 64px;
+  --margin-content: 24px;  --gutter: 16px;  --pad-platter: 12px;
+  --row-h: 28px;  --row-h-upnext: 36px;  --row-h-2line: 44px;
+  --hit-min: 28px;  --hit-min-inspector: 24px;
+  --measure-read: 620px;           /* ≈ 68 characters of New York 17 */
+  --margin-column: 220px;          /* reading views; shown when content width ≥ 900px */
+  --margin-column-threshold: 900px;
+  --sidebar-w: 220px;  --inspector-w: 320px;  --toolbar-h: 52px;   /* native; mirrored for layout math */
+
+  /* ---------- Concentric radii: child radius = parent radius − actual inset ---------- */
+  --r-window: 16px;                /* the shell writes the real NSWindow radius */
+  --r-platter: 18px;
+  --r-tile: max(4px, calc(var(--r-platter) - var(--pad-platter)));   /* = 6px at the 12px inset */
+  --r-cell: var(--r-tile);         /* calendar & ribbon cells inside a platter */
+  --inset-floating: 12px;          /* Altar floating controls from the window edge */
+  --r-floating: max(6px, calc(var(--r-window) - var(--inset-floating)));
+  --r-control: 6px;  --r-control-sm: 5px;  --r-chip: 5px;
+  --r-capsule: 999px;              /* only: the one prominent action, the time control, the Rite transport */
+  /* Content never hugs the window corner: --margin-content (24px) > --r-window. */
+
+  /* ---------- Shadows (content is flat; no glows; no edge lines) ---------- */
+  --shadow-ink: light-dark(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.55));
+  --shadow-platter: var(--platter-border);
+  --shadow-lift: 0 8px 24px var(--shadow-ink);       /* while dragging only */
+  --shadow-none: none;
+
+  /* ---------- Motion (springs approximated with linear(); always interruptible) ---------- */
+  --ease-spring: linear(0, 0.087, 0.258, 0.433, 0.584, 0.703, 0.793, 0.857, 0.903, 0.935, 0.956, 0.971, 0.981, 0.988, 0.992, 0.995, 1);   /* bounce 0 */
+  --ease-spring-confirm: linear(0, 0.107, 0.315, 0.526, 0.698, 0.823, 0.906, 0.956, 0.985, 0.999, 1.005, 1.006, 1.006, 1.004, 1.003, 1.002, 1.001, 1.001, 1, 1, 1);   /* bounce 0.15 */
+  --ease-fade: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease-breath: cubic-bezier(0.37, 0, 0.63, 1);     /* repeating pacer cycle */
+  --ease-progress: linear;
+  --dur-fade: 200ms;
+  --dur-nav: 500ms;             /* 0.4 s perceptual */
+  --dur-confirm: 600ms;         /* 0.35 s perceptual, bounce 0.15 (Testimonies fill at Commit) */
+  --dur-hour-draw: 750ms;       /* ruler draws off/on at the hour (0.6 s perceptual) */
+  --dur-ribbon-advance: 600ms;  /* 0.5 s perceptual */
+  --dur-seal-draw: 750ms;       /* seal glyph draws on at Seal (0.6 s perceptual) */
+  --dur-judge: 450ms;           /* check draws on, row leaves (0.35 s perceptual) */
+  --dur-capture-close: 300ms;   /* 0.25 s perceptual */
+  --dur-lyric: 450ms;           /* Rite steps */
+  --dur-altar-return: 600ms;    /* idle return crossfade (on by default, after 2 min) */
+  --dur-void-fade: 1200ms;
+  --dur-wash: 90s;              /* hour-bloom crossfade (dark only) */
+  /* The stillness rule: minute precision everywhere. */
+  --tick-rest: 60s;             /* needle step, minute digits, terminator, wash repaint */
+  --tick-seconds-scope: "regulator, alignment-final-2min";   /* the only places seconds may tick (read by JS) */
+  --altar-idle-return: 120s;
+  --undo-window: 600s;          /* "Recorded Partial · Undo" */
+}
+
+/* ---------- Sky stage & hour ruler (set from skyTimeline) ---------- */
+:root[data-sky="night"]    { --sky-top: var(--sky-night-top);    --sky-bottom: var(--sky-night-bottom);    --skyfull-top: var(--skyfull-night-top);    --skyfull-bottom: var(--skyfull-night-bottom);    --wash-hour-bloom: light-dark(transparent, color-mix(in oklab, var(--hour-hue) 8%, transparent)); }
+:root[data-sky="astro"]    { --sky-top: var(--sky-astro-top);    --sky-bottom: var(--sky-astro-bottom);    --skyfull-top: var(--skyfull-astro-top);    --skyfull-bottom: var(--skyfull-astro-bottom);    --wash-hour-bloom: light-dark(transparent, color-mix(in oklab, var(--hour-hue) 8%, transparent)); }
+:root[data-sky="nautical"] { --sky-top: var(--sky-nautical-top); --sky-bottom: var(--sky-nautical-bottom); --skyfull-top: var(--skyfull-nautical-top); --skyfull-bottom: var(--skyfull-nautical-bottom); --wash-hour-bloom: light-dark(transparent, color-mix(in oklab, var(--hour-hue) 7%, transparent)); }
+:root[data-sky="civil"]    { --sky-top: var(--sky-civil-top);    --sky-bottom: var(--sky-civil-bottom);    --skyfull-top: var(--skyfull-civil-top);    --skyfull-bottom: var(--skyfull-civil-bottom); }
+:root[data-sky="golden"]   { --sky-top: var(--sky-golden-top);   --sky-bottom: var(--sky-golden-bottom);   --skyfull-top: var(--skyfull-golden-top);   --skyfull-bottom: var(--skyfull-golden-bottom); }
+:root[data-sky="day"]      { --sky-top: var(--sky-day-top);      --sky-bottom: var(--sky-day-bottom);      --skyfull-top: var(--skyfull-day-top);      --skyfull-bottom: var(--skyfull-day-bottom); }
+:root[data-hour="saturn"]  { --hour-hue: var(--planet-saturn); }
+:root[data-hour="jupiter"] { --hour-hue: var(--planet-jupiter); }
+:root[data-hour="mars"]    { --hour-hue: var(--planet-mars); }
+:root[data-hour="sun"]     { --hour-hue: var(--planet-sun); }
+:root[data-hour="venus"]   { --hour-hue: var(--planet-venus); }
+:root[data-hour="mercury"] { --hour-hue: var(--planet-mercury); }
+:root[data-hour="moon"]    { --hour-hue: var(--planet-moon); }
+:root[data-moon-void]      { --wash-hour-bloom: light-dark(transparent, color-mix(in oklab, var(--hour-hue) 3%, transparent)); }   /* the void halves the bloom */
+
+/* ---------- Night presentation (Altar & Rite after astronomical dusk; opt-in) ----------
+   Monochrome red on black, green/blue channels minimised. All text ≥ 4.5:1; hierarchy by weight. */
+:root[data-presentation="night"] {
+  color-scheme: dark;
+  --mat-window: #000000; --mat-platter: #000000; --mat-raised: #0A0101; --mat-paper: #000000;
+  --mat-platter-on-sky: #000000;
+  --label:   #FF2D1F;              /* 5.65 : 1 — set semibold */
+  --label-2: #E83020;              /* 4.87 : 1 — set regular */
+  --label-3: #E83020;              /* no dimmer text exists in Night */
+  --label-display-dim: #B02A1E;    /* 3.20 : 1 — display glyphs ≥ 24 pt only */
+  --night-weight-primary: 600;
+  --night-weight-secondary: 400;
+  --ink: #FF2D1F; --ink-2: #E83020;
+  --hairline: #5A1810;             /* decorative only */
+  --separator-strong: #7A2216;
+  --accent: #FF2D1F; --accent-gilt: #FF2D1F; --on-accent: #000000;
+  --now-needle: #FF2D1F; --window-open: #FF2D1F;
+  --figure-ring-color: #FF2D1F;
+  --planet-saturn: #FF2D1F; --planet-jupiter: #FF2D1F; --planet-mars: #FF2D1F; --planet-sun: #FF2D1F;
+  --planet-venus: #FF2D1F; --planet-mercury: #FF2D1F; --planet-moon: #FF2D1F;
+  --tint-pct: 0%;
+  --state-debilitated: #E83020; --state-retro: #E83020; --state-peregrine: #E83020; --state-sun-relation: #E83020;
+  --state-void: #B3261A;           /* 3.21 : 1 */
+  --state-closed: #B3261A;
+  --wash: #000000; --wash-hour-bloom: transparent;
+}
+
+/* ---------- Increase Contrast ---------- */
+:root[data-increase-contrast] {
+  --label-2: var(--label);
+  --hairline: light-dark(rgb(0 0 0 / 0.28), rgb(255 255 255 / 0.28));
+  --platter-border: 0 0 0 1px var(--separator-strong);
+  --hatch-w: 1.5px;
+  --void-dot: 1.5px;
+  --state-void: light-dark(#5E5E64, #9A9FAD);       /* 5.9 : 1 / 6.7 : 1 */
+  --state-closed: light-dark(#5E5E64, #9A9FAD);
+  --cell-outline-width: 1px;                        /* planet-hue outline on tinted cells */
+  --figure-ring-width: 2px;
+  --accent-gilt: light-dark(#5C4300, #F2DDAE);
+  --planet-saturn:  light-dark(#4A3B27, #B3AA9C);
+  --planet-jupiter: light-dark(#12307F, #7FA2FF);
+  --planet-mars:    light-dark(#7F1A12, #FF7A5E);
+  --planet-sun:     light-dark(#8A5600, #FFB25C);
+  --planet-venus:   light-dark(#065C51, #5ADBB8);
+  --planet-mercury: light-dark(#6A3FB0, #DCC2FF);
+  --planet-moon:    light-dark(#1F4466, #E6EEF6);
+  --wash-hour-bloom: transparent;
+}
+:root[data-show-borders] { --platter-border: 0 0 0 1px var(--separator-strong); }
+
+/* ---------- Reduce Transparency ----------
+   Tints are opaque colour-mixes, so they are untouched. Only the bloom goes. */
+:root[data-reduce-transparency] {
+  --wash-hour-bloom: transparent;
+  --selection: var(--fill-2);
+}
+
+/* ---------- Differentiate Without Color ---------- */
+:root[data-differentiate-without-color] { --show-state-labels: 1; }
+
+/* ---------- Reduce Motion: crossfades only ---------- */
+:root[data-reduce-motion] {
+  --ease-spring: var(--ease-fade); --ease-spring-confirm: var(--ease-fade);
+  --dur-nav: 200ms; --dur-confirm: 200ms; --dur-hour-draw: 200ms; --dur-ribbon-advance: 0ms;
+  --dur-seal-draw: 200ms; --dur-judge: 200ms; --dur-capture-close: 150ms; --dur-lyric: 0ms;
+  --dur-altar-return: 200ms; --dur-void-fade: 200ms; --dur-wash: 0s;
+}
+
+/* ---------- Base application ---------- */
+html {
+  background: var(--mat-window);
+  color: var(--label);
+  font: var(--type-body);
+  -webkit-font-smoothing: auto;
+}
+.num { font-variant-numeric: var(--numeric-live); }          /* live numbers only — never prose */
+::selection { background: var(--selection); }
+
+/* Focus: an outline that follows each element's own radius; never reshapes it,
+   never replaces its shadow or border. */
+:focus-visible { outline: var(--focus-outline); outline-offset: var(--focus-offset); }
+
+/* Inside figures (SVG instruments): shape-based focus & selection, never accent hue. */
+[data-figure] :focus-visible { outline: none; }
+[data-figure] .target:focus-visible .focus-ring,
+[data-figure] .target[aria-selected="true"] .focus-ring {
+  stroke: var(--figure-ring-color);
+  stroke-width: var(--figure-ring-width);
+  fill: none;
+}
+[data-figure] .target[aria-selected="true"] .glyph { font-weight: var(--figure-selected-weight); }
+
+/* Ribbon & calendar cells: opaque planet tint + optional IC outline. */
+.cell[data-planet="saturn"]  { background: var(--tint-saturn);  box-shadow: inset 0 0 0 var(--cell-outline-width) var(--planet-saturn); }
+.cell[data-planet="jupiter"] { background: var(--tint-jupiter); box-shadow: inset 0 0 0 var(--cell-outline-width) var(--planet-jupiter); }
+.cell[data-planet="mars"]    { background: var(--tint-mars);    box-shadow: inset 0 0 0 var(--cell-outline-width) var(--planet-mars); }
+.cell[data-planet="sun"]     { background: var(--tint-sun);     box-shadow: inset 0 0 0 var(--cell-outline-width) var(--planet-sun); }
+.cell[data-planet="venus"]   { background: var(--tint-venus);   box-shadow: inset 0 0 0 var(--cell-outline-width) var(--planet-venus); }
+.cell[data-planet="mercury"] { background: var(--tint-mercury); box-shadow: inset 0 0 0 var(--cell-outline-width) var(--planet-mercury); }
+.cell[data-planet="moon"]    { background: var(--tint-moon);    box-shadow: inset 0 0 0 var(--cell-outline-width) var(--planet-moon); }
+.cell { border-radius: var(--r-cell); }
+
+/* State textures — one per state. */
+.is-void          { background: var(--tex-void); outline: var(--void-outline); outline-offset: -1px; }
+.dignity-debility { background: var(--tex-debility); }
+.season-closed    { outline: var(--closed-outline); outline-offset: -1px; }
+.testimony.is-broken .bar { margin-inline-end: var(--break-gap); }   /* + struck end-cap drawn in SVG */
+.caution { color: var(--state-caution-ink); background: var(--state-caution-fill); }
+
+/* Edition */
+.edition {
+  background: var(--mat-paper); color: var(--ink);
+  font: var(--type-read); font-variant-numeric: var(--numeric-prose);
+  text-wrap: pretty; hanging-punctuation: first last; max-width: var(--measure-read);
+}
+
+/* ---------- Legacy compatibility (Phase 1, until each room is redesigned) ----------
+   The class names stay; their meaning becomes opaque platters. A build-time
+   transform clamps every numeric fontSize literal and T()/L() helper result to
+   ≥ 10px inside [data-legacy]; CSS removes tracking and capitals. */
+.card, .glass-ultra, .glass-heavy, .glass-medium {
+  background: var(--mat-platter);
+  border-radius: var(--r-platter);
+  padding: var(--pad-platter);
+  box-shadow: var(--shadow-platter);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  border: 0;
+}
+.chip {
+  background: var(--fill);
+  color: var(--label-2);
+  border-radius: var(--r-chip);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  border: 0;
+}
+[data-legacy] { font-family: var(--font-ui); }
+[data-legacy] * { letter-spacing: normal !important; text-transform: none !important; }
+[data-legacy] .card .card { border-radius: var(--r-tile); background: var(--mat-raised); }
